@@ -26,3 +26,4 @@ glconsts.POLYGON = uint32(9);
 % Matrix Modes
 glconsts.MODELVIEW = uint32(5888);  % 0x1700
 glconsts.PROJECTION = uint32(5889);  % 0x1701
+glconsts.TEXTURE = uint32(5890);  % 0x1702

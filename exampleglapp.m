@@ -13,9 +13,6 @@ function exampleglapp()
     t = linspace(0,2*pi, 17);
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
-    t = linspace(0,2*pi, 9);
-    glex.circ9 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
-
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', true);
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');

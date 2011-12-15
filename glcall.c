@@ -51,6 +51,9 @@
 // clear
 #define CLEAR_IN_COLOR (prhs[1])
 
+// newtexture
+#define NEWTEXTURE_IN_TEXAR (prhs[1])
+
 
 enum glcalls_setcallback_
 {
@@ -88,6 +91,7 @@ enum glcalls_
     GLC_CLEAR,
     GLC_POSTREDISPLAY,
     GLC_GETERRSTR,
+    GLC_NEWTEXTURE,
     NUM_GLCALLS,  // must be last
 };
 
@@ -102,6 +106,7 @@ const char *glcall_names[] =
     "clear",
     "postredisplay",
     "geterrstr",
+    "newtexture",
 };
 
 
@@ -111,6 +116,11 @@ const char *glcall_names[] =
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
 
+// XXX: bad?
+#define MAXTEXTURES 128
+static int32_t numtextures = 0;
+static GLuint texnames[MAXTEXTURES];
+
 ////////// UTIL //////////
 static char errstr[128];
 
@@ -118,7 +128,7 @@ static char errstr[128];
 static mxArray *exceptionar;
 static const char *errstrptr;
 
-# define mexErrMsgTxt(msg) do {                  \
+# define mexErrMsgTxt(msg) do {                 \
         if (numentered)                         \
         {                                       \
             if (errstrptr)                      \
@@ -162,7 +172,10 @@ enum verifyparam_flags
     VP_SCALAR = 0x00000100,
     VP_VECTOR = 0x00000200,
     VP_MATRIX = 0x00000300,
+    VP_DIMN = 0x00000400,
     VP_SVM_MASK = 0x00000300,
+    VP_DIMN_MASK = 0x0000f000,
+    VP_DIMN_SHIFT = 12,
 
     VP_VECLEN_SHIFT = 16,
     VP_VECLEN_MASK = 0x00ff0000,  // shift down 16 bits to get length
@@ -232,6 +245,16 @@ static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
         if (mxGetNumberOfDimensions(ar) != 2)
             GLC_MEX_ERROR("%s must be a matrix", arname);
         break;
+
+    case VP_DIMN:
+    {
+        mwSize reqddim = (vpflags&VP_DIMN_MASK)>>VP_DIMN_SHIFT;
+
+        if (mxGetNumberOfDimensions(ar) != reqddim)
+            GLC_MEX_ERROR("%s must have dimension %d", arname, reqddim);
+        break;
+    }
+
     }
 }
 
@@ -794,6 +817,28 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         plhs[1] = mxCreateCharMatrixFromStrings(1, &errstr_ptr);
         plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
 #endif
+    }
+
+    case GLC_NEWTEXTURE:
+    {
+        GLuint texname;
+
+        if (nlhs != 1 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8");
+
+        verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_UINT8|VP_DIMN|(3<<VP_DIMN_SHIFT));
+
+        // TODO >.....<
+
+        if (numtextures==MAXTEXTURES)
+            GLC_MEX_ERROR("GLCALL.newtexture: maximum texture count %d exceeded", MAXTEXTURES);
+
+        glGenTextures(1, &texname);
+        texnames[numtextures++] = texname;
+
+        glBindTexture(GL_TEXTURE_2D, texname);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
 
     }  // end switch(cmd)
