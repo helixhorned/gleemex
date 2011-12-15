@@ -330,7 +330,7 @@ function ex_mouse(button, downp, x, y, mods)
     glex.bdown(log2(button)+1) = downp;
     glex.bdownxy(1:2) = glex.mxy;
 
-    if (button==GL.LEFT_BUTTON && downp)
+    if (button==GL.BUTTON_LEFT && downp)
         glc_callbutton([80 400 120 20], glex.mxy, 'glc_listdlg(''ListString'', {''qwe'',''asd'',''QWEQWE'',''ASDASD''}, ''Name'',''SDFG'');');
 %        @uigetfile);
 %        glc_callbutton([80 430 120 20], glex.mxy, @toggle_button);

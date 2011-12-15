@@ -10,7 +10,7 @@
 %  * all glPush/PopAttrib bits (most have no effect, though)
 %
 %  * the GLUT special keys (w/o freeglut ones), stripped of the GLUT_ prefix
-%  * GLUT_{LEFT,MIDDLE,RIGHT}_BUTTON  (1<<X), stripped of the GLUT_ prefix
+%  * GLUT_BUTTON_{LEFT,MIDDLE,RIGHT}  (1<<X), stripped of the GLUT_ prefix
 %
 function GL = getglconsts()
 
@@ -104,11 +104,13 @@ GL.WINDOW_SIZE = int32(-101);
 GL.MOD_SHIFT = 1;
 GL.MOD_CTRL = 2;
 GL.MOD_ALT = 4;
+GL.MODS_ALL = 7;
 
 % mouse buttons, 1<<X
-GL.LEFT_BUTTON = 1;
-GL.MIDDLE_BUTTON = 2;
-GL.RIGHT_BUTTON = 4;
+GL.BUTTON_LEFT = 1;
+GL.BUTTON_MIDDLE = 2;
+GL.BUTTON_RIGHT = 4;
+GL.BUTTONS_ALL = 7;
 
 % GLUT API macro definitions -- the special key codes:
 GL.KEY_F1 = 65536+1;

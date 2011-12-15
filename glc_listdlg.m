@@ -200,7 +200,7 @@ function glc_listdlg_mouse(button, downp, x, y, mods)
 
     winid = glcall(glc.get, GL.WINDOW_ID);
 
-    if (button==GL.LEFT_BUTTON && downp)
+    if (button==GL.BUTTON_LEFT && downp)
         glc_listdlg_s(winid).clicked = [glc_listdlg_s(winid).mxy mods];
     end
 
