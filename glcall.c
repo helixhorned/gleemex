@@ -17,10 +17,6 @@
 # define mwSize unsigned long
 #endif
 
-#ifdef _MSC_VER
-# define inline _inline
-#endif
-
 /*////////*/
 
 /* 1 lhs, 0 rhs */
@@ -420,7 +416,7 @@ static void cleanup_after_mainloop(void)
 }
 
 #define MAX_CB_ARGS 5  /* REMEMBER */
-static inline int check_callback(int CallbackID)
+static int check_callback(int CallbackID)
 {
     return (curglutwinidx=glutGetWindow()) &&
         (curourwinidx=ourwinidx[curglutwinidx],  /* assumed >= 0 */
@@ -758,7 +754,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nlhs > 0)
         {
-            // +1 is a convenience for the Octave coder
+            /* +1 is a convenience for the Octave coder */
             int32_t ret_ourwidx = ourwinidx[winid]+1;
             NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ret_ourwidx);
         }
