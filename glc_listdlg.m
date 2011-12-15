@@ -20,6 +20,9 @@ function [sel,ok]=glc_listdlg(varargin)
     okstr = 'OK';
     cancelstr = 'Cancel';
 
+    % either function handle @f(ok, sel), or string eval'd with 'sel' and 'ok' in scope
+    finish_cb = '';
+
     for i=1:2:nargin-1
         if (~ischar(varargin{i}))
             error('Keys must be string values');
@@ -72,6 +75,13 @@ function [sel,ok]=glc_listdlg(varargin)
           case 'cancelstring',
             assert(isvector(val) && ischar(val), 'CancelString value must be a char vector');
             cancelstr = val;
+
+            %% non-standard
+          case 'finish_cb',
+            assert((isvector(val) && ischar(val)) || isa(val, 'function_handle'), ...
+                   'Finish_Cb must be wither a srting or a function handle @f(ok, sel)');
+            finish_cb = val;
+
           otherwise,
             warning(sprintf('unrecognized option ''%s''', varargin{i}));
         end
@@ -102,6 +112,8 @@ function [sel,ok]=glc_listdlg(varargin)
     s.okstr = okstr;
     s.cancelstr = cancelstr;
 
+    s.finish_cb = finish_cb;
+
     s.selected = logical(zeros(size(liststring),'uint8'));
     s.selected(initialval) = true;
 
@@ -109,6 +121,7 @@ function [sel,ok]=glc_listdlg(varargin)
     s.ofs = 0;
     s.downreq = 0;  % set to 1 if pressed 'down' key, 10 if 'pgdn'
 
+    s.oksel = {0, []};
     s.clicked = [];
     s.lastclickidx = 0;
     s.mxy = [1 1];
@@ -144,6 +157,12 @@ function [sel,ok]=glc_listdlg(varargin)
     glcall(glc.setcallback, glc.cb_display, 'glc_listdlg_display');
 
     glcall(glc.entermainloop);
+
+    [ok, sel] = glc_listdlg_get_ok_sel(winid);
+end
+
+function [ok,sel]=glc_listdlg_get_ok_sel(winid)
+    global glc_listdlg_s
 
     ok = (glc_listdlg_s(winid).done==1);
     sel = find(glc_listdlg_s(winid).selected);
@@ -374,5 +393,15 @@ function glc_listdlg_display()
 
     if (glc_listdlg_s(winid).done)
         glcall(glc.closewindow);
+
+        finish_cb = glc_listdlg_s(winid).finish_cb;
+
+        if (ischar(finish_cb) && ~isempty(finish_cb))
+            [ok, sel] = glc_listdlg_get_ok_sel(winid);
+            eval(finish_cb);
+        elseif (isa(finish_cb, 'function_handle'))
+            [ok, sel] = glc_listdlg_get_ok_sel(winid);
+            finish_cb(ok, sel);
+        end
     end
 end
