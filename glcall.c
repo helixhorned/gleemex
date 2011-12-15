@@ -109,6 +109,11 @@
 #define READPIXELS_IN_XYWH (prhs[1])
 #define READPIXELS_OUT_PIXELS (plhs[0])
 
+/* fog */
+#define FOG_IN_MODE (prhs[1])
+#define FOG_IN_PARAM (prhs[2])
+#define FOG_IN_COLOR (prhs[3])
+
 
 /**** GET tokens ****/
 /* Use negative values for GLC tokens since we might want to allow GL ones
@@ -170,6 +175,7 @@ enum glcalls_
     GLC_LEAVEMAINLOOP,
     GLC_CLOSEWINDOW,
     GLC_READPIXELS,
+    GLC_FOG,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -201,6 +207,7 @@ const char *glcall_names[] =
     "leavemainloop",
     "closewindow",
     "readpixels",
+    "fog",
 };
 
 
@@ -759,6 +766,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+        /* probably default anyway, but not mentioned in glFog doc: */
+        if (GLEW_VERSION_1_4)
+            glFogi(GL_FOG_COORD_SRC, GL_FRAGMENT_DEPTH);
 
         if (nlhs > 0)
         {
@@ -1432,7 +1442,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         static const GLenum accessible_enables[] = {
             GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH,
-            GL_LINE_STIPPLE, GL_POLYGON_SMOOTH,
+            GL_LINE_STIPPLE, GL_POLYGON_SMOOTH, GL_FOG,
         };
 
         if (nlhs != 0 || nrhs != 2)
@@ -2016,6 +2026,49 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glReadPixels(x, y, w, h, GL_RGB, GL_UNSIGNED_BYTE, mxGetData(pixels_mxar));
 
         READPIXELS_OUT_PIXELS = pixels_mxar;
+    }
+    break;
+
+    case GLC_FOG:
+    {
+        int32_t fogmode;
+        const float *fogparamptr;
+
+        if (nlhs != 0 || nrhs != 4)
+            mexErrMsgTxt("Usage: GLCALL(glc.fog, GL.<FOG_MODE>, FOG_PARAM, FOG_COLOR)\n"
+                         "        - FOG_PARAM: 2-vector if mode is GL.LINEAR, scalar else\n"
+                         "        - FOG_COLOR: 4-vector;  both must be of 'single' type\n");
+
+        verifyparam(FOG_IN_MODE, "GLCALL: fog: MODE", VP_SCALAR|VP_INT32);
+        fogmode = *(int32_t *)mxGetData(FOG_IN_MODE);
+
+        if (fogmode != GL_LINEAR && fogmode != GL_EXP && fogmode != GL_EXP2)
+            mexErrMsgTxt("GLCALL: fog: GL.<FOG_MODE> must be one of GL.LINEAR, GL.EXP or GL.EXP2");
+
+        if (fogmode == GL_LINEAR)
+            verifyparam(FOG_IN_PARAM, "GLCALL: fog: PARAM", VP_VECTOR|VP_SINGLE|(2<<VP_VECLEN_SHIFT));
+        else
+            verifyparam(FOG_IN_PARAM, "GLCALL: fog: PARAM", VP_SCALAR|VP_SINGLE);
+
+        verifyparam(FOG_IN_COLOR, "GLCALL: fog: COLOR", VP_VECTOR|VP_SINGLE|(4<<VP_VECLEN_SHIFT));
+
+        /* param verification OK */
+
+        fogparamptr = mxGetData(FOG_IN_PARAM);
+
+        glFogi(GL_FOG_MODE, fogmode);
+
+        if (fogmode == GL_LINEAR)
+        {
+            glFogf(GL_FOG_START, fogparamptr[0]);
+            glFogf(GL_FOG_END, fogparamptr[1]);
+        }
+        else
+        {
+            glFogf(GL_FOG_DENSITY, fogparamptr[0]);
+        }
+
+        glFogfv(GL_FOG_COLOR, (float *)mxGetData(FOG_IN_COLOR));
     }
     break;
 

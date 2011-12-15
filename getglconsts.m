@@ -90,6 +90,12 @@ GL.FUNC_ADD = int32(32774);  % 0x8006
 GL.FUNC_SUBTRACT = int32(32778);  % 0x800A
 GL.FUNC_REVERSE_SUBTRACT = int32(32779);  % 0x800B
 
+%% Fog
+GL.FOG = int32(2912);  % 0x0B60
+GL.LINEAR = int32(9729);  % 0x2601
+GL.EXP = int32(2048);  % 0x0800
+GL.EXP2 = int32(2049);  % 0x0801
+
 
 %% GLC specific
 
