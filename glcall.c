@@ -1094,14 +1094,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_SETCALLBACK:
     {
-        int32_t callbackid, i, slen, glutwinidx;
+        int32_t callbackid, i, slen, glutwidx;
         char tmpbuf[MAXCBNAMELEN+1], c;
 
         if (nlhs != 0 || nrhs != 3)
             mexErrMsgTxt("Usage: GLCALL(glc.setcallback, glc.cb_<callbacktype>, 'mfuncname'), pass '' to reset");
 
-        glutwinidx = glutGetWindow();
-        if (glutwinidx==0)
+        glutwidx = glutGetWindow();
+        if (glutwidx==0)
             mexErrMsgTxt("GLCALL: glc.setcallback: no current window!");
 
         verifyparam(SETCALLBACK_IN_TYPE, "GLCALL: setcallback: CALLBACKTYPE", VP_SCALAR|VP_INT32);
@@ -1124,7 +1124,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 mexErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
         }
 
-        memcpy(&callback_funcname[ourwinidx[glutwinidx]][callbackid], tmpbuf, sizeof(tmpbuf));
+        memcpy(&callback_funcname[ourwinidx[glutwidx]][callbackid], tmpbuf, sizeof(tmpbuf));
     }
     return;
 
@@ -1175,6 +1175,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs != 0 || nrhs != 1)
             mexErrMsgTxt("Usage: GLCALL(glc.postredisplay)");
 
+        if (glutGetWindow() == 0)
+            mexErrMsgTxt("GLCALL: postredisplay: called with no current window!");
         glutPostRedisplay();
     }
     return;
