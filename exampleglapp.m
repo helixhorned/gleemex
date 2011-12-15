@@ -97,8 +97,7 @@ function ex_reshape(w, h)
 
     glex.wh = [w h];
 
-    glcall(glc.viewport, [0 0 w h]);
-    glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]+0.5);
+    glc_setup2d(w, h);
 
 %    aspect = w/h;
 %    if (aspect >= 1)
@@ -106,8 +105,6 @@ function ex_reshape(w, h)
 %    else
 %        glcall(glc.setmatrix, GL.PROJECTION, [-1 1, -1/aspect 1/aspect, -1 1]);
 %    end
-
-    glcall(glc.setmatrix, GL.MODELVIEW, []);
 end
 
 function ex_display()
