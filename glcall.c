@@ -1729,6 +1729,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             break;  /* glGetError handles invalid enum vals */
         }
 
+        case GL_DEPTH_FUNC:
+        {
+            verifyparam(SET_IN_VALUE, "GLC: set GL.DEPTH_FUNC: FUNC", VP_SCALAR|VP_INT32);
+            glDepthFunc(*(int32_t *)mxGetData(SET_IN_VALUE));
+            break;  /* glGetError handles invalid enum vals */
+        }
+
         case GL_LINE_STIPPLE_PATTERN:
         {
             verifyparam(SET_IN_VALUE, "GLC: set GL.LINE_STIPPLE_PATTERN: PATTERN", VP_SCALAR|VP_UINT16);
