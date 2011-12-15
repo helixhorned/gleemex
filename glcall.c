@@ -818,6 +818,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
 #endif
     }
+    return;
 
     case GLC_NEWTEXTURE:
     {
@@ -840,6 +841,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
+    return;
 
     }  // end switch(cmd)
 }
