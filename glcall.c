@@ -70,6 +70,12 @@
 #define RENDERTEXT_IN_HEIGHT (prhs[2])
 #define RENDERTEXT_IN_TEXT (prhs[3])
 
+/* toggle */
+#define TOGGLE_IN_KV (prhs[1])
+
+/* scissor */
+#define SCISSOR_IN_XYWH (prhs[1])
+
 
 enum glcalls_setcallback_
 {
@@ -112,6 +118,8 @@ enum glcalls_
     GLC_SETWINDOWSIZE,
     GLC_GETWINDOWSIZE,
     GLC_RENDERTEXT,
+    GLC_TOGGLE,
+    GLC_SCISSOR,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -131,6 +139,8 @@ const char *glcall_names[] =
     "setwindowsize",
     "getwindowsize",
     "rendertext",
+    "toggle",
+    "scissor",
 };
 
 
@@ -167,7 +177,7 @@ static const char *errstrptr;
 
 enum verifyparam_flags
 {
-    /* 0: no requirement*/
+    /* 0: no requirement */
 
     /* Classes (data types) */
     VP_CELL = 1,
@@ -1095,6 +1105,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             glColor3d(0.2, 0.2, 0.2);  // XXX
             glDisable(GL_TEXTURE_2D);
+//            glEnable(GL_LINE_SMOOTH);
 
             glLoadIdentity();
             glTranslated(pos[0], pos[1], pos[2]);
@@ -1113,6 +1124,59 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         mxFree(text);
+    }
+    return;
+
+    case GLC_TOGGLE:
+    {
+        mwSize numkeys, i;
+        const int32_t *kv;
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.toggle, [GL.<WHAT1> <state1> [, GL.<WHAT2> <state2>, ...]]))");
+
+        verifyparam(TOGGLE_IN_KV, "GLCALL: toggle: KV", VP_VECTOR|VP_INT32);
+        numkeys = mxGetNumberOfElements(TOGGLE_IN_KV);
+        if (numkeys&1)
+            mexErrMsgTxt("GLCALL: toggle: key-value vector must have even length");
+        numkeys /= 2;
+
+        kv = mxGetData(TOGGLE_IN_KV);
+
+        /* validation */
+        for (i=0; i<numkeys; i++)
+            if (kv[2*i] != GL_DEPTH_TEST && kv[2*i] != GL_SCISSOR_TEST)
+                mexErrMsgTxt("GLCALL: toggle: currently only supported: DEPTH_TEST and SCISSOR_TEST");
+
+        for (i=0; i<numkeys; i++)
+        {
+            int32_t val = kv[2*i+1];
+
+            if (val < 0)  // flip
+                val = !glIsEnabled(kv[2*i]);
+
+            if (val)
+                glEnable(kv[2*i]);
+            else
+                glDisable(kv[2*i]);
+        }
+    }
+    return;
+
+    case GLC_SCISSOR:
+    {
+        int32_t *xywh;
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.scissor, int32([x y w h]))");
+
+        verifyparam(SCISSOR_IN_XYWH, "GLCALL: scissor: XYWH", VP_VECTOR|VP_INT32|(4<<VP_VECLEN_SHIFT));
+
+        xywh = mxGetData(SCISSOR_IN_XYWH);
+        if (xywh[2]<0 || xywh[3]<0)
+            mexErrMsgTxt("GLCALL: scissor: XYWH(3) and XYWH(4) must be non-negative");
+
+        glScissor(xywh[0], xywh[1], xywh[2], xywh[3]);
     }
     return;
 

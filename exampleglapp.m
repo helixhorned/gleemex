@@ -91,6 +91,18 @@ function ex_display()
 
     glcall(glc.clear, 1-[0 0 0]);
 
+    % scissor test
+    glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
+    glcall(glc.scissor, int32([64 64 128 128]));
+    glcall(glc.clear, [0.2 0.2 0.8]);
+    glcall(glc.toggle, [GL.SCISSOR_TEST 0]);
+
+    % depth test
+    glcall(glc.toggle, [GL.DEPTH_TEST 1]);
+    glcall(glc.draw, GL.TRIANGLES, [80 190 280; 100 340 230; 0.5 0.5 0.5], struct('colors',[0.9 0.5 0.5]));
+    glcall(glc.draw, GL.TRIANGLES, [180 220 260; 140 140 330; -0.5 -0.5 -0.5], struct('colors',[0.5 0.9 0.5]));
+    glcall(glc.toggle, [GL.DEPTH_TEST 0]);
+
     numchans = 16;
 
     %% blue rect

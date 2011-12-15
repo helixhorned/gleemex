@@ -6,6 +6,7 @@
 %
 %  * Primitives (GL_POINTS .. GL_POLYGON)
 %  * The matrix modes GL_MODELVIEW and GL_PROJECTION
+%  * the constants GL_SCISSOR_TEST and GL_DEPTH_TEST
 %
 function glconsts = getglconsts()
 
@@ -27,3 +28,7 @@ glconsts.POLYGON = uint32(9);
 glconsts.MODELVIEW = uint32(5888);  % 0x1700
 glconsts.PROJECTION = uint32(5889);  % 0x1701
 glconsts.TEXTURE = uint32(5890);  % 0x1702
+
+% tests
+glconsts.SCISSOR_TEST = int32(3089);  % 0x0C11
+glconsts.DEPTH_TEST = int32(2929);  % 0x0B71
