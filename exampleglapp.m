@@ -224,9 +224,9 @@ function ex_display()
     end
 %}
 
-    glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
+    glcall(glc.rendertext, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
-    glcall(glc.rendertext, [460 510 0], 16, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
+    glcall(glc.rendertext, [460 510], 16, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
 
     glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
     glc_drawbutton([80 430 120 20], 'Toggle Btn', glex.togbtnstate, false);
@@ -253,7 +253,7 @@ function ex_display()
     glcall(glc.draw, GL.LINE_LOOP, [tmpxywh(1) tmpxywh(1)+tmpxywh(3) tmpxywh(1)+tmpxywh(3) tmpxywh(1); ...
                         tmpxywh(2) tmpxywh(2) tmpxywh(2)+tmpxywh(4) tmpxywh(2)+tmpxywh(4)], ...
            struct('colors',[0 0 0]));
-    glcall(glc.rendertext, [tmpxywh(1:2)+[2 tmpxywh(4)-16] 0], 14, 'OCz');
+    glcall(glc.rendertext, tmpxywh(1:2)+[2 tmpxywh(4)-16], 14, 'OCz');
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
@@ -275,7 +275,7 @@ function ex_keyboard(key, x, y, mods)
         dir = -1;
     end
 
-    if (mods==100)  % CTRL
+    if (mods==10)  % CTRL
         idx = 1;
     end
 

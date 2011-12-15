@@ -154,6 +154,7 @@ enum glcalls_
     GLC_NEWFRAGPROG,
     GLC_USEFRAGPROG,
     GLC_SETUNIFORM,
+    GLC_LEAVEMAINLOOP,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -183,6 +184,7 @@ const char *glcall_names[] =
     "newfragprog",
     "usefragprog",
     "setuniform",
+    "leavemainloop",
 };
 
 
@@ -586,11 +588,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         posptr = mxGetPr(NEWWIN_IN_POS);
         extentptr = mxGetPr(NEWWIN_IN_EXTENT);
 
+        // XXX: the magic constants here are pretty bad!
         pos[0] = util_dtoi(posptr[0], 0, 1680, "GLCALL: newwindow: POS(1)");
         pos[1] = util_dtoi(posptr[1], 0, 1050, "GLCALL: newwindow: POS(2)");
 
-        extent[0] = util_dtoi(extentptr[0], 320, 1680, "GLCALL: newwindow: EXTENT(1)");
-        extent[1] = util_dtoi(extentptr[1], 200, 1050, "GLCALL: newwindow: EXTENT(2)");
+        extent[0] = util_dtoi(extentptr[0], 1, 1680, "GLCALL: newwindow: EXTENT(1)");
+        extent[1] = util_dtoi(extentptr[1], 1, 1050, "GLCALL: newwindow: EXTENT(2)");
 
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
 
@@ -1218,12 +1221,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         double height;
         char *text;
 
-        mwSize slen, i;
+        mwSize slen, i, vlen;
 
         if (nlhs != 0 || nrhs != 4)
             mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y z], height, text)");
 
-        verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE|(3<<VP_VECLEN_SHIFT));
+        verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE);
+        vlen = mxGetNumberOfElements(RENDERTEXT_IN_POS);
+        if (vlen != 2 && vlen != 3)
+            mexErrMsgTxt("GLC: rendertext: POS must have length 2 or 3");
         pos = mxGetPr(RENDERTEXT_IN_POS);
 
         verifyparam(RENDERTEXT_IN_HEIGHT, "GLC: rendertext: HEIGHT", VP_SCALAR|VP_DOUBLE);
@@ -1245,8 +1251,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glEnable(GL_LINE_SMOOTH);
             glEnable(GL_BLEND);
 
-            glLoadIdentity();
-            glTranslated(pos[0], pos[1], pos[2]);
+//            glLoadIdentity();
+            glTranslated(pos[0], pos[1], vlen==2 ? 0.0 : pos[2]);
 
             glScaled(height/119.05, height/119.05, height/119.05);
 
@@ -1687,6 +1693,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
     }
     break;
+
+    case GLC_LEAVEMAINLOOP:
+    {
+        // don't leave out the opportunity to mock the user even if the effect is the same :P
+        if (nlhs!=0 || nrhs!=1)
+            mexErrMsgTxt("Usage: GLCALL(glc.leavemainloop)");
+
+        glutLeaveMainLoop();
+    }
+    return;
 
     }  /* end switch(cmd) */
 

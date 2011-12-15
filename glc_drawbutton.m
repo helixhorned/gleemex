@@ -1,7 +1,6 @@
-% GLC_DRAWBUTTON(XYWH, THETEXT, TEXTHEIGHT, MARKEDP)
+% GLC_DRAWBUTTON(XYWH, THETEXT, MARKEDP)
 %  XYWH - [x y width height], height must be >=5
 %  THETEXT - text string
-%  TEXTHEIGHT - text height
 %  MARKEDP - either a scalar logical, or a numeric [X Y] vector which is
 %   checked against the button bounds
 function glc_drawbutton(xywh, thetext, markedp, clickedp)
