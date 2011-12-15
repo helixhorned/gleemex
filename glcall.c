@@ -1634,6 +1634,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
+        case GL_BLEND_EQUATION:
+        {
+            verifyparam(SET_IN_VALUE, "GLC: set GL.BLEND_EQUATION: EQN", VP_SCALAR|VP_INT32);
+            glBlendEquation(*(int32_t *)mxGetData(SET_IN_VALUE));
+            break;  /* glGetError handles invalid enum vals */
+        }
+
         default:
             mexErrMsgTxt("GLCALL: set: WHAT token unknown");
         }
@@ -2017,8 +2024,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }  /* end switch(cmd) */
 
     {
+        static const char *errmacronames[] = {
+            "INVALID_ENUM",  /* 0x500 */
+            "INVALID_VALUE",
+            "INVALID_OPERATION",
+            "STACK_OVERFLOW",
+            "STACK_UNDERFLOW",
+            "OUT_OF_MEMORY",  /* 0x505 */
+            "TABLE_TOO_LARGE",  /* 0x8031 */
+        };
+
         int32_t err = glGetError();
+
         if (err != GL_NO_ERROR)
+        {
+            if (err == GL_TABLE_TOO_LARGE)  /* GL 1.2 */
+                err = 0x506;
+            if (err >= 0x500 && err <= 0x506)
+                GLC_MEX_ERROR("glGetError returned GL_%s", errmacronames[err-0x500]);
             GLC_MEX_ERROR("glGetError returned 0x%x", err);
+        }
     }
 }
