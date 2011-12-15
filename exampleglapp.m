@@ -19,7 +19,7 @@ function exampleglapp(vertposns)
     glex.xbord = [60 460];
     glex.ybord = [40 440];
     glex.mxy = [0 0];
-    glex.bdown = [false false false];  % which button is down, left, middle, right
+    glex.bdown = [false false false];  % which button is down: left, middle, right
     glex.togbtnstate = false;
     glex.bdownxy = [0 0];
     glex.wh = [1100 800];
@@ -152,31 +152,13 @@ function ex_display()
         i = min(numchans-1, floor((mxy(1)-glex.xbord(1))./xdif));
         j = min(numchans-1, floor((mxy(2)-glex.ybord(1))./ydif));
 
-        verts = zeros(2, 4);
-
-        verts(:, 1) = [glex.xbord(1) + i*xdif; glex.ybord(1) + j*ydif];
-        verts(:, 2) = verts(:, 1) + [xdif; 0];
-        verts(:, 3) = verts(:, 1) + [xdif; ydif];
-        verts(:, 4) = verts(:, 1) + [0; ydif];
-
-        glcall(glc.draw, GL.QUADS, verts, struct('colors',[0.4 0.4 0.8]));
+        verts = [glex.xbord(1) + i*xdif; glex.ybord(1) + j*ydif];
+        verts = [verts, verts+[xdif; ydif]];
+        glcall(glc.draw, GL.QUADS, glc_expandrect(verts), struct('colors',[0.4 0.4 0.8]));
     end
 
     %% grid lines
-    xx = linspace(glex.xbord(1), glex.xbord(2), numchans+1);
-    yy = linspace(glex.ybord(1), glex.ybord(2), numchans+1);
-
-    vlines = zeros(2, 2*(numchans+1));
-    vlines(1, :) = repmat(glex.xbord, 1,(numchans+1));
-    vlines(2, 1:2:end-1) = yy;
-    vlines(2, 2:2:end) = yy;
-
-    hlines = zeros(2, 2*(numchans+1));
-    hlines(2, :) = repmat(glex.ybord, 1,(numchans+1));
-    hlines(1, 1:2:end-1) = xx;
-    hlines(1, 2:2:end) = xx;
-
-    glcall(glc.draw, GL.LINES, [vlines, hlines]);
+    glc_draw_grid([glex.xbord; glex.ybord], numchans+1);
 
     %% brain image
     texcoords = [1 0 0 1; ...
