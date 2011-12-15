@@ -5,10 +5,6 @@ function [sel,ok]=glc_listdlg(varargin)
     GL = getglconsts();
     glc = glcall();
 
-    if (~isstruct(glc_listdlg_s))
-        glc_listdlg_s = struct;
-    end
-
     if (mod(nargin,2)~=0)
         error('Must pass an even number of input arguments');
     end
@@ -125,15 +121,27 @@ function [sel,ok]=glc_listdlg(varargin)
     if (isempty(s.name))
         s.name = ' ';
     end
+
+    if (~isstruct(glc_listdlg_s))
+        % init woes: in MATLAB, we can't do either
+        %  - S(n) = S2, where S and S2 are structs with different fields
+        %  - S(n) = S2, where S is [] (globals on init)
+        % WARNING: this means that it's a bad idea to assign to nonexistent
+        %  fields of glc_listdlg_s in callbacks, in other words they should be
+        %  'declared' above first
+        glc_listdlg_s = glc_listdlg_dummyize_struct(s);
+    end
+
     winid = glcall(glc.newwindow, [200 200], s.wh, s.name);
+
+    % should be before setting the callbacks
+    glc_listdlg_s(winid) = s;
 
     glcall(glc.setcallback, glc.cb_reshape, 'glc_listdlg_reshape');
     glcall(glc.setcallback, glc.cb_motion, 'glc_listdlg_motion');
     glcall(glc.setcallback, glc.cb_keyboard, 'glc_listdlg_keyboard');
     glcall(glc.setcallback, glc.cb_mouse, 'glc_listdlg_mouse');
     glcall(glc.setcallback, glc.cb_display, 'glc_listdlg_display');
-
-    glc_listdlg_s(winid) = s;
 
     glcall(glc.entermainloop);
 
@@ -146,6 +154,14 @@ function [sel,ok]=glc_listdlg(varargin)
     end
 end
 
+function s=glc_listdlg_dummyize_struct(s)
+    assert(numel(s)==1 && isstruct(s));
+
+    fn = fieldnames(s);
+    for i=1:length(fn)
+        s.(fn{i}) = [];
+    end
+end
 
 function glc_listdlg_motion(buttonsdown, x, y)
     global GL glc glc_listdlg_s

@@ -1170,6 +1170,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const char *emptystr = "<empty>";
         const char *errstr_ptr = errstr;
 
+        if (numentered)
+            mexErrMsgTxt("GLCALL.geterrstr should only be called after an error from the prompt");
+
         if (nlhs != 3 || nrhs != 1)
             return;
 

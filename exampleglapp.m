@@ -304,7 +304,7 @@ function ex_motion(buttonsdown, x, y)
         glcall(glc.newtexture, glex.im, glex.tex);
     else
         glex.mxy = [x y];
-        glex.mxy(2) = glex.wh(2)-glex.mxy(2);        
+        glex.mxy(2) = glex.wh(2)-glex.mxy(2);
     end
 
     glcall(glc.postredisplay);

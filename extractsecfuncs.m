@@ -10,7 +10,11 @@ else
     end
 end
 
-SP = repmat(' ', 1,numspace);
+if (numspace <= 0)
+    SP = '';
+else
+    SP = repmat(' ', 1,numspace);
+end
 
 if (~exist('thedir', 'var'))
     thedir = '.';
