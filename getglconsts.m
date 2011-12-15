@@ -24,5 +24,5 @@ glconsts.QUAD_STRIP = uint32(8);
 glconsts.POLYGON = uint32(9);
 
 % Matrix Modes
-glconsts.GL_MODELVIEW = uint32(5888);  % 0x1700
-glconsts.GL_PROJECTION = uint32(5889);  % 0x1701
+glconsts.MODELVIEW = uint32(5888);  % 0x1700
+glconsts.PROJECTION = uint32(5889);  % 0x1701

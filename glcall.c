@@ -34,7 +34,7 @@
 // draw
 #define DRAW_IN_PRIMITIVETYPE (prhs[1])
 #define DRAW_IN_VERTEXDATA (prhs[2])
-#define DRAW_IN_INDICES (prhs[3])
+#define DRAW_IN_OPTSTRUCT (prhs[3])
 
 // setmatrix
 #define SETMATRIX_IN_MODE (prhs[1])
@@ -46,6 +46,10 @@
 
 // viewport
 #define VIEWPORT_IN_XYWH (prhs[1])
+
+// clear
+#define CLEAR_IN_COLOR (prhs[1])
+
 
 enum glcalls_setcallback_
 {
@@ -80,6 +84,8 @@ enum glcalls_
     GLC_SETMATRIX,
     GLC_SETCALLBACK,
     GLC_VIEWPORT,
+    GLC_CLEAR,
+    GLC_POSTREDISPLAY,
     NUM_GLCALLS,  // must be last
 };
 
@@ -91,6 +97,8 @@ const char *glcall_names[] =
     "setmatrix",
     "setcallback",
     "viewport",
+    "clear",
+    "postredisplay",
 };
 
 
@@ -241,6 +249,8 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     if (mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[callbackid]))
         err = 1;
 #endif
+    if (err)
+        glutLeaveMainLoop();
 
     return err;
 }
@@ -258,7 +268,7 @@ static void mouse_cb(int button, int state, int x, int y)
 {
     if (CHECK_CALLBACK(CB_MOUSE))
     {
-        int args[MAX_CB_ARGS] = {button, state, x, y, 0};
+        int args[MAX_CB_ARGS] = {button, state==GLUT_DOWN, x, y, 0};
         args[4] = getModifiers();
         call_mfile_callback(CB_MOUSE, 5, args);
     }
@@ -327,20 +337,6 @@ static void reshape_cb(int w, int h)
     {
         glViewport(0, 0, (GLsizei)w, (GLsizei)h);
     }
-
-#if 0
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-//    if (ortho)
-    {
-        GLfloat aspect = (GLfloat)w / (GLfloat)h;
-        glOrtho(-2.0*aspect, 2.0*aspect,  -2.0, 2.0,  0.0, 100.0);
-    }
-//    else
-//        gluPerspective (60, (GLfloat)w / (GLfloat)h, 1.0, 200.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-#endif
 }
 
 ////////// MEX ENTRY POINT //////////
@@ -457,10 +453,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         unsigned int primitivetype;
         mwSize i, numdims, numtotalverts, numverts;
 
-        unsigned int *indices;
+        int singlecolorp;
+
+        const mxArray *colorsar=NULL, *indicesar=NULL;
+
+        const double *colors=NULL;
+        uint32_t *indices=NULL;
 
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
-            mexErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, INDICES])");
+            mexErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, OPTSTRUCT])");
 
         if (!mxIsUint32(DRAW_IN_PRIMITIVETYPE))
             mexErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be of uint32 type");
@@ -472,7 +473,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_DOUBLE);
 
         if (nrhs > 3)
-            verifyparam(DRAW_IN_INDICES, "GLCALL: draw: INDICES", VP_VECTOR|VP_UINT32);
+        {
+            verifyparam(DRAW_IN_OPTSTRUCT, "GLCALL: draw: OPTSTRUCT", VP_SCALAR|VP_STRUCT);
+
+            colorsar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "colors");
+            indicesar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "indices");
+        }
 
         numdims = mxGetM(DRAW_IN_VERTEXDATA);
         numtotalverts = mxGetN(DRAW_IN_VERTEXDATA);
@@ -480,10 +486,35 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!(numdims >=2 && numdims <= 4))
             mexErrMsgTxt("GLCALL: draw: VERTEXDATA must have between 2 and 4 rows (number of coordinates)");
 
-        if (nrhs > 3)
+        singlecolorp = 0;
+
+        if (colorsar)
         {
-            numverts = mxGetNumberOfElements(DRAW_IN_INDICES);
-            indices = mxGetData(DRAW_IN_INDICES);
+            mwSize sz[2];
+
+            verifyparam(colorsar, "GLCALL: draw: OPTSTRUCT.colors", VP_MATRIX|VP_DOUBLE);
+
+            sz[0] = mxGetM(colorsar);
+            sz[1] = mxGetN(colorsar);
+
+            if ((sz[0]==3 && sz[1]==1) || (sz[0]==1 && sz[1]==3))
+                singlecolorp = 1;
+            else
+            {
+                if (sz[0] != 3 || sz[1] != numtotalverts)
+                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must either have length 3 "
+                                 " or have 3 rows and size(VERTEXDATA,2) columns");
+            }
+
+            colors = (const double *)mxGetData(colorsar);
+        }
+
+        if (indicesar)
+        {
+            verifyparam(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_VECTOR|VP_UINT32);
+
+            numverts = mxGetNumberOfElements(indicesar);
+            indices = mxGetData(indicesar);
 
             if (numverts==0)
                 return;
@@ -506,12 +537,26 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         // draw them at last!
 
-        glEnableClientState(GL_VERTEX_ARRAY);
+        if (!colors || singlecolorp)
+        {
+            glDisableClientState(GL_COLOR_ARRAY);
+            if (singlecolorp)
+                glColor3d(colors[0], colors[1], colors[2]);
+            else
+                glColor3f(0.5f, 0.5f, 0.5f);
+        }
+        else
+        {
+            glEnableClientState(GL_COLOR_ARRAY);
+            glColorPointer(3, GL_DOUBLE, 0, colors);
+        }
 
+        glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(numdims, GL_DOUBLE, 0, mxGetPr(DRAW_IN_VERTEXDATA));
+
         glDrawElements(primitivetype, numverts, GL_UNSIGNED_INT, indices);
 
-        if (nrhs <= 3)
+        if (!indicesar)
             mxFree(indices);
     }
     return;
@@ -558,7 +603,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             "  * a 4x4 double matrix\n"
             "  * the empty matrix [], meaning 'load identity matrix', or\n"
             "  * in the case if GL.PROJECTION, a double vector [left right bottom top nearVal farVal]\n"
-            "    which is passed to glOrtho(). No matrix manipulation is performed beforehand.";
+            "    which is passed to glOrtho() after loading the identity matrix";
 
         if (nlhs != 0 || nrhs != 3)
             mexErrMsgTxt(usageText);
@@ -584,17 +629,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glMatrixMode(matrixmode);
             glLoadMatrixd(mxGetPr(SETMATRIX_IN_MATRIX));
         }
-        else if (numel == 6)
+        else if (numel == 6 || numel == 4)
         {
             const double *vec;
 
             if (matrixmode != GL_PROJECTION)
-                mexErrMsgTxt("GLCALL: setmatrix: invalid call, passing a length-6 vector as X is"
+                mexErrMsgTxt("GLCALL: setmatrix: invalid call, passing a length-6 (or 4) vector as X is"
                              " only allowed with GL_PROJECTION matrix mode.");
 
             vec = mxGetPr(SETMATRIX_IN_MATRIX);
             glMatrixMode(GL_PROJECTION);
-            glOrtho(vec[0], vec[1], vec[2], vec[3], vec[4], vec[5]);
+            glLoadIdentity();
+
+            if (numel == 6)
+                glOrtho(vec[0], vec[1], vec[2], vec[3], vec[4], vec[5]);
+            else
+                gluPerspective(vec[0], vec[1], vec[2], vec[3]);
         }
         else
         {
@@ -637,7 +687,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_VIEWPORT:
     {
-        double *xywh_d;
+        const double *xywh_d;
         int32_t xywh[4];
 
         if (nlhs != 0 || nrhs != 2)
@@ -646,12 +696,42 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(VIEWPORT_IN_XYWH, "GLCALL: viewport: XYWH", VP_VECTOR|VP_DOUBLE|(4<<VP_VECLEN_SHIFT));
         xywh_d = mxGetPr(VIEWPORT_IN_XYWH);
 
+        // XXX: magic constants bad!
         xywh[0] = util_dtoi(xywh_d[0], -16384, 16384, "GLCALL: viewport: XYWH(1)");
         xywh[1] = util_dtoi(xywh_d[1], -16384, 16384, "GLCALL: viewport: XYWH(2)");
         xywh[2] = util_dtoi(xywh_d[2], 0, 16384, "GLCALL: viewport: XYWH(3)");
         xywh[3] = util_dtoi(xywh_d[3], 0, 16384, "GLCALL: viewport: XYWH(4)");
 
         glViewport(xywh[0], xywh[1], xywh[2], xywh[3]);
+    }
+    return;
+
+    case GLC_CLEAR:
+    {
+        mwSize numel;
+        const double *color;
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.viewport, [r g b [a]]), color must have 'double' type");
+
+        verifyparam(CLEAR_IN_COLOR, "GLCALL: clear: COLOR", VP_VECTOR|VP_DOUBLE);
+        numel = mxGetNumberOfElements(CLEAR_IN_COLOR);
+        if (numel != 3 && numel != 4)
+            mexErrMsgTxt("GLCALL: clear: COLOR must have length 3 or 4");
+
+        color = mxGetPr(CLEAR_IN_COLOR);
+
+        glClearColor(color[0], color[1], color[2], numel==4?color[3]:0);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    }
+    return;
+
+    case GLC_POSTREDISPLAY:
+    {
+        if (nlhs != 0 || nrhs != 1)
+            mexErrMsgTxt("Usage: GLCALL(glc.postredisplay)");
+
+        glutPostRedisplay();
     }
     return;
 
