@@ -16,8 +16,7 @@ function exampleglapp(vertposns)
     glex.im = permute(im, [3 2 1]);  % swap x/y, make rgb consecutive in mem
 
     glex.imwh = [size(glex.im,2) size(glex.im,3)];  % width, height
-    glex.xbord = [60 460];
-    glex.ybord = [40 440];
+    glex.adjbbox = [60 40 460 440];  % adj-mat bbox, [x1 y1 x2 y2]
     glex.mxy = [0 0];
     glex.bdown = [false false false];  % which button is down: left, middle, right
     glex.togbtnstate = false;
@@ -140,22 +139,18 @@ function ex_display()
     %% blue rect
     mxy = glex.mxy;
 
-    if (mxy(1)>=glex.xbord(1) && mxy(1)<=glex.xbord(2) ...
-        && mxy(2)>=glex.ybord(1) && mxy(2)<=glex.ybord(2))
+    if (glc_pointinrect(mxy, glex.adjbbox))
+        xydif = glc_rectdiffs(glex.adjbbox)/numchans;
 
-        xdif = (glex.xbord(2)-glex.xbord(1))/numchans;
-        ydif = (glex.ybord(2)-glex.ybord(1))/numchans;
+        ij = min(numchans-1, floor((mxy-glex.adjbbox([1 2]))./xydif));
 
-        i = min(numchans-1, floor((mxy(1)-glex.xbord(1))./xdif));
-        j = min(numchans-1, floor((mxy(2)-glex.ybord(1))./ydif));
-
-        verts = [glex.xbord(1) + i*xdif; glex.ybord(1) + j*ydif];
-        verts = [verts, verts+[xdif; ydif]];
+        verts = glex.adjbbox(1:2) + xydif.*ij;
+        verts = [verts, verts+xydif];
         glcall(glc.draw, GL.QUADS, glc_expandrect(verts), struct('colors',[0.4 0.4 0.8]));
     end
 
     %% grid lines
-    glc_draw_grid([glex.xbord; glex.ybord], numchans+1);
+    glc_draw_grid(glex.adjbbox, numchans+1);
 
     %% brain image
     texcoords = [1 0 0 1; ...
@@ -163,8 +158,8 @@ function ex_display()
     verts = [0 glex.imwh(1) glex.imwh(1) 0; ...
              0 0 glex.imwh(2) glex.imwh(2)];
 
-    verts(1, :) = verts(1, :) + glex.xbord(1);
-    verts(2, :) = verts(2, :) + glex.ybord(2) + 40;
+    verts(1, :) = verts(1, :) + glex.adjbbox(1);
+    verts(2, :) = verts(2, :) + glex.adjbbox(4) + 40;
 
     if (glex.togbtnstate)
         glcall(glc.usefragprog, glex.shaderid);
@@ -180,8 +175,8 @@ function ex_display()
 
     %% vertex points
     vertposns = round(glex.posns * 256);
-    vertposns(1, :) = vertposns(1, :) + glex.xbord(2) + 80;
-    vertposns(2, :) = vertposns(2, :) + glex.ybord(1) + 30;
+    vertposns(1, :) = vertposns(1, :) + glex.adjbbox(3) + 80;
+    vertposns(2, :) = vertposns(2, :) + glex.adjbbox(2) + 30;
 
     nslices = 17;
     indices = uint32([ones(1,nslices); 1:nslices; 2:nslices+1]-1);

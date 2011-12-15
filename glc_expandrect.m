@@ -1,5 +1,9 @@
+% rectborders: (2, 2)  (TODO: 2, 2*n)
 function rectverts=glc_expandrect(rectborders)
-    % rectborders: (2, 2)  (TODO: 2, 2*n)
+
+    if (size(rectborders,1)==1)
+        rectborders = reshape(rectborders, 2,[]);
+    end
 
     rectverts = rectborders;
 
