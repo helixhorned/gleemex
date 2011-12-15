@@ -43,7 +43,7 @@
 
 /* mulmatrix */
 #define MULMATRIX_IN_MODE (prhs[1])
-#define MULMATRIX_IN_MATRIX (prhs[2])
+#define MULMATRIX_IN_MATRIX (nrhs==3 ? prhs[2] : prhs[1])
 
 /* setcallback */
 #define SETCALLBACK_IN_TYPE (prhs[1])
@@ -1030,21 +1030,28 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize numel;
 
         static const char *usageText =
-            "Usage: GLCALL(glc.mulmatrix, GL.<MATRIX_MODE>, X), where X can be\n"
+            "Usage: GLCALL(glc.mulmatrix [, GL.<MATRIX_MODE>], X), where X can be\n"
             "  * a 4x4 double matrix\n"
-            "  * the empty matrix [], meaning no-op, or\n"
             "  * a length-3 vector, whose elements are passed to glTranslate, or\n"
-            "  * a length-4 vector, whose elements are passed to glRotate";
+            "  * a length-4 vector, whose elements are passed to glRotate."
+            " Omitting the matrix mode means to multiply the modelview matrix.";
 
-        if (nlhs != 0 || nrhs != 3)
+        if (nlhs != 0 || (nrhs != 2 && nrhs != 3))
             mexErrMsgTxt(usageText);
 
-        verifyparam(MULMATRIX_IN_MODE, "GLCALL: mulmatrix: MATRIX_MODE", VP_SCALAR|VP_UINT32);
-        matrixmode = *(uint32_t *)mxGetData(MULMATRIX_IN_MODE);
+        if (nrhs == 2)
+        {
+            matrixmode = GL_MODELVIEW;
+        }
+        else
+        {
+            verifyparam(MULMATRIX_IN_MODE, "GLCALL: mulmatrix: MATRIX_MODE", VP_SCALAR|VP_UINT32);
+            matrixmode = *(uint32_t *)mxGetData(MULMATRIX_IN_MODE);
 
-        if (matrixmode != GL_MODELVIEW && matrixmode != GL_PROJECTION && matrixmode != GL_TEXTURE)
-            mexErrMsgTxt("GLCALL: mulmatrix: MATRIX_MODE must be one of GL_MODELVIEW, "
-                         "GL_PROJECTION or GL_TEXTURE");
+            if (matrixmode != GL_MODELVIEW && matrixmode != GL_PROJECTION && matrixmode != GL_TEXTURE)
+                mexErrMsgTxt("GLCALL: mulmatrix: MATRIX_MODE must be one of GL_MODELVIEW, "
+                             "GL_PROJECTION or GL_TEXTURE");
+        }
 
         if (!mxIsDouble(MULMATRIX_IN_MATRIX))
             mexErrMsgTxt("GLCALL: mulmatrix: X must have class double");
@@ -1054,11 +1061,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glMatrixMode(matrixmode);
 
-        if (numel == 0)
-        {
-            return;
-        }
-        else if (numel == 16)
+        if (numel == 16)
         {
             glMultMatrixd(mxGetPr(MULMATRIX_IN_MATRIX));
         }
