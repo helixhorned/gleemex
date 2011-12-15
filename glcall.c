@@ -158,7 +158,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             for (i=0; i<NUM_GLCALLS; i++)
             {
-                tmpar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, 0);
+                tmpar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
                 *(int *)mxGetData(tmpar) = i;
                 mxSetFieldByNumber(glcstruct, 0, i, tmpar);
             }
@@ -225,7 +225,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         {
             int winid = glutCreateWindow(windowname);
-            mxArray *outar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, 0);
+            mxArray *outar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
             *(int *)mxGetData(outar) = winid;
 
             NEWWIN_OUT_WINID = outar;
