@@ -4,10 +4,10 @@
 #include <stdint.h>
 #include <string.h>
 
-//#include <GL/gl.h>
+/*#include <GL/gl.h>*/
 #include <GL/freeglut.h>
 
-//////////
+/*////////*/
 #include "mex.h"
 #ifndef HAVE_OCTAVE
 # include "matrix.h"
@@ -17,52 +17,52 @@
 # define mwSize unsigned long
 #endif
 
-//////////
+/*////////*/
 
-// 1 lhs, 0 rhs
+/* 1 lhs, 0 rhs*/
 #define OUT_GLCSTRUCT (plhs[0])
 
-// > 0 rhs
+/* > 0 rhs*/
 #define IN_COMMAND (prhs[0])
 
-// init
+/* init*/
 #define NEWWIN_IN_POS (prhs[1])
 #define NEWWIN_IN_EXTENT (prhs[2])
 #define NEWWIN_IN_NAME (prhs[3])
 #define NEWWIN_IN_MULTISAMPLEP (prhs[4])
 #define NEWWIN_OUT_WINID (plhs[0])
 
-// draw
+/* draw*/
 #define DRAW_IN_PRIMITIVETYPE (prhs[1])
 #define DRAW_IN_VERTEXDATA (prhs[2])
 #define DRAW_IN_OPTSTRUCT (prhs[3])
 
-// setmatrix
+/* setmatrix*/
 #define SETMATRIX_IN_MODE (prhs[1])
 #define SETMATRIX_IN_MATRIX (prhs[2])
 
-// mulmatrix
+/* mulmatrix*/
 #define MULMATRIX_IN_MODE (prhs[1])
 #define MULMATRIX_IN_MATRIX (prhs[2])
 
-// setcallback
+/* setcallback*/
 #define SETCALLBACK_IN_TYPE (prhs[1])
 #define SETCALLBACK_IN_FUNCNAME (prhs[2])
 
-// viewport
+/* viewport*/
 #define VIEWPORT_IN_XYWH (prhs[1])
 
-// clear
+/* clear*/
 #define CLEAR_IN_COLOR (prhs[1])
 
-// newtexture
+/* newtexture*/
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
 #define NEWTEXTURE_OUT_OURTEXID (plhs[0])
 
-// setwindowsize
+/* setwindowsize*/
 #define SETWINDOWSIZE_IN_WH (prhs[1])
 
-// getwindowsize
+/* getwindowsize*/
 #define GETWINDOWSIZE_OUT_WH (plhs[0])
 
 
@@ -75,7 +75,7 @@ enum glcalls_setcallback_
     CB_MOUSE,
     CB_MOTION,
     CB_PASSIVEMOTION,
-    NUM_CALLBACKS,  // must be last
+    NUM_CALLBACKS,  /* must be last */
 };
 
 const char *glcall_callback_names[] = 
@@ -106,7 +106,7 @@ enum glcalls_
     GLC_NEWTEXTURE,
     GLC_SETWINDOWSIZE,
     GLC_GETWINDOWSIZE,
-    NUM_GLCALLS,  // must be last
+    NUM_GLCALLS,  /* must be last */
 };
 
 const char *glcall_names[] =
@@ -127,22 +127,22 @@ const char *glcall_names[] =
 };
 
 
-////////// DATA //////////
+/*//////// DATA //////////*/
 
 #define MAXCBNAMELEN 63
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
 
-// XXX: bad?
+/* XXX: bad?*/
 #define MAXTEXTURES 128
 static int32_t numtextures = 0;
 static GLuint texnames[MAXTEXTURES];
 
-////////// UTIL //////////
+/*//////// UTIL //////////*/
 static char errstr[128];
 
 #ifndef HAVE_OCTAVE
-static mxArray *exceptionar;
+static const mxArray *exceptionar;
 static const char *errstrptr;
 
 # define mexErrMsgTxt(msg) do {                 \
@@ -165,24 +165,24 @@ static const char *errstrptr;
 
 enum verifyparam_flags
 {
-    // 0: no requirement
+    /* 0: no requirement*/
 
     /* Classes (data types) */
     VP_CELL = 1,
     VP_STRUCT,
     VP_LOGICAL,
     VP_CHAR,
-    VP_DOUBLE,  // 5
+    VP_DOUBLE,  /* 5 */
     VP_SINGLE,
     VP_INT8,
     VP_UINT8,
     VP_INT16,
-    VP_UINT16,  // 10
+    VP_UINT16,  /* 10 */
     VP_INT32,
     VP_UINT32,
     VP_INT64,
     VP_UINT64,
-    VP_FP_TYPE,  // 15
+    VP_FP_TYPE,  /* 15 */
     VP_INDEX_TYPE,
     VP_CLASS_MASK = 0x0000001f,
 
@@ -196,7 +196,7 @@ enum verifyparam_flags
     VP_DIMN_SHIFT = 12,
 
     VP_VECLEN_SHIFT = 16,
-    VP_VECLEN_MASK = 0x00ff0000,  // shift down 16 bits to get length
+    VP_VECLEN_MASK = 0x00ff0000,  /* shift down 16 bits to get length */
 };
 
 static mxClassID class_ids[] = {
@@ -294,14 +294,14 @@ static void delete_textures(void)
     memset(texnames, 0, numtextures*sizeof(texnames[0]));
 }
 
-////////// FUNCTIONS //////////
+/*//////// FUNCTIONS //////////*/
 
 static void clear_callback_names(void)
 {
     memset(callback_funcname, 0, sizeof(callback_funcname));
 }
 
-#define MAX_CB_ARGS 5  // REMEMBER
+#define MAX_CB_ARGS 5  /* REMEMBER */
 #define CHECK_CALLBACK(CallbackID) (callback_funcname[CallbackID][0]!='\0')
 
 static int call_mfile_callback(int callbackid, int numargs, const int *args)
@@ -348,9 +348,9 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     return err;
 }
 
-// 1: ALT
-// 10: CTRL
-// 100: SHIFT
+/* 1: ALT*/
+/* 10: CTRL*/
+/* 100: SHIFT*/
 static int getModifiers()
 {
     int mods = glutGetModifiers();
@@ -432,7 +432,7 @@ static void reshape_cb(int w, int h)
     }
 }
 
-////////// MEX ENTRY POINT //////////
+/*//////// MEX ENTRY POINT //////////*/
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -444,7 +444,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         if (nlhs==1)
         {
-            // the user queries available glcalls
+            /* the user queries available glcalls*/
             mxArray *glcstruct = mxCreateStructMatrix(1,1, NUM_GLCALLS, glcall_names);
             mxArray *tmpar;
             int i, fieldnum;
@@ -473,7 +473,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("Usage: GLCALLINFO_STRUCT = GLCALL(), query available subcommands.");
     }
 
-    // nrhs > 0
+    /* nrhs > 0*/
 
     verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
@@ -481,7 +481,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     if ((cmd != GLC_NEWWINDOW && cmd != GLC_GETERRSTR) && !inited)
         mexErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
 
-    //////////
+    /*////////*/
     switch (cmd)
     {
     case GLC_NEWWINDOW:
@@ -515,13 +515,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
 
-        // init!
+        /* init!*/
         if (!inited)
         {
             char *argvdummy[1] = {"QWEASDproggy"};
             int argcdummy = 1;
 
-            glutInit(&argcdummy, argvdummy);  // XXX
+            glutInit(&argcdummy, argvdummy);  /* XXX */
             glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
             glEnable(GL_POINT_SMOOTH);
@@ -549,7 +549,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_DRAW:
     {
-        // TODO: pass color array
+        /* TODO: pass color array*/
 
         unsigned int primitivetype;
         mwSize i, numdims, numtotalverts, numverts;
@@ -559,7 +559,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const mxArray *colorsar=NULL, *indicesar=NULL;
 
         const double *colors=NULL;
-        const void *indices=NULL;  // uint8_t or uint32_t
+        const void *indices=NULL;  /* uint8_t or uint32_t */
         int indicestype = 0, vertdatatype;
         GLuint texname = 0;
 
@@ -670,7 +670,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (numverts==0)
                 return;
 
-            // bounds check!
+            /* bounds check!*/
             for (i=0; i<numverts; i++)
             {
                 if (indicestype==GL_UNSIGNED_INT)
@@ -693,7 +693,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             numverts = numtotalverts;
         }
 
-        // draw them at last!
+        /* draw them at last!*/
 
         if (!colors || singlecolorp)
         {
@@ -728,12 +728,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: entermainloop: entered recursively!");
         numentered++;
 
-        // these two are always there
+        /* these two are always there*/
         glutDisplayFunc(display_cb);
         glutReshapeFunc(reshape_cb);
 
-        // X: make register/unregister on demand (when GLCALL(glc.setcallback, ...)
-        //    is called)? Doesn't seem really necessary...
+        /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...)*/
+        /*    is called)? Doesn't seem really necessary...*/
         glutMouseFunc(mouse_cb);
         glutMotionFunc(motion_cb);
         glutPassiveMotionFunc(passivemotion_cb);
@@ -776,7 +776,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: setmatrix: X must have class double");
 
         numel = mxGetNumberOfElements(SETMATRIX_IN_MATRIX);
-        // XXX: no dim check this way, but also simpler
+        /* XXX: no dim check this way, but also simpler*/
         if (numel == 0)
         {
             glMatrixMode(matrixmode);
@@ -837,7 +837,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: mulmatrix: X must have class double");
 
         numel = mxGetNumberOfElements(MULMATRIX_IN_MATRIX);
-        // XXX: no dim check this way, but also simpler
+        /* XXX: no dim check this way, but also simpler*/
 
         glMatrixMode(matrixmode);
 
@@ -909,7 +909,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(VIEWPORT_IN_XYWH, "GLCALL: viewport: XYWH", VP_VECTOR|VP_DOUBLE|(4<<VP_VECLEN_SHIFT));
         xywh_d = mxGetPr(VIEWPORT_IN_XYWH);
 
-        // XXX: magic constants bad!
+        /* XXX: magic constants bad!*/
         xywh[0] = util_dtoi(xywh_d[0], -16384, 16384, "GLCALL: viewport: XYWH(1)");
         xywh[1] = util_dtoi(xywh_d[1], -16384, 16384, "GLCALL: viewport: XYWH(2)");
         xywh[2] = util_dtoi(xywh_d[2], 0, 16384, "GLCALL: viewport: XYWH(3)");
@@ -969,7 +969,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_NEWTEXTURE:
     {
         GLuint texname;
-        const mwSize *dimsizes;  // XXX: older versions w/o mwSize?
+        const mwSize *dimsizes;  /* XXX: older versions w/o mwSize? */
         const uint8_t *texdata;
         GLint tmpwidth;
 
@@ -1000,7 +1000,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
         texdata = mxGetData(NEWTEXTURE_IN_TEXAR);
-        // target, level, internalFormat, width, height, border, format, type, data
+        /* target, level, internalFormat, width, height, border, format, type, data*/
         glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGB,  dimsizes[1], dimsizes[2],
                      0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
         glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tmpwidth);
@@ -1053,5 +1053,5 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     return;
 
-    }  // end switch(cmd)
+    }  /* end switch(cmd) */
 }
