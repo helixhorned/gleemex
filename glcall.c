@@ -57,6 +57,7 @@
 
 /* newtexture */
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
+#define NEWTEXTURE_IN_TEXNAME (prhs[2])
 #define NEWTEXTURE_OUT_TEXNAME (plhs[0])
 
 /* setwindowsize */
@@ -75,6 +76,9 @@
 
 /* scissor */
 #define SCISSOR_IN_XYWH (prhs[1])
+
+/* deltextures */
+#define DELTEXTURES_IN_TEXNAMES (prhs[1])
 
 
 enum glcalls_setcallback_
@@ -120,6 +124,7 @@ enum glcalls_
     GLC_RENDERTEXT,
     GLC_TOGGLE,
     GLC_SCISSOR,
+    GLC_DELTEXTURES,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -141,6 +146,7 @@ const char *glcall_names[] =
     "rendertext",
     "toggle",
     "scissor",
+    "deltextures",
 };
 
 
@@ -1001,8 +1007,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const uint8_t *texdata;
         GLint tmpwidth;
 
-        if (nlhs != 1 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8");
+        int32_t newtex = (nlhs == 1 && nrhs == 2);
+        int32_t repltex = (nlhs == 0 && nrhs == 3);
+
+        if (!newtex && !repltex)
+            mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8;  or\n"
+                         "       GLCALL(glc.newtexture, texar, texname)  to replace an earlier texture");
 
         verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_UINT8|VP_DIMN|(3<<VP_DIMN_SHIFT));
 
@@ -1012,7 +1022,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (dimsizes[1] <= 0 || dimsizes[1] > 16384 || dimsizes[2] <= 0 || dimsizes[2] > 16384)
             mexErrMsgTxt("GLCALL: mextexture: TEXAR's 1st and 2nd dims must have length in [1, 16384]");
 
-        glGenTextures(1, &texname);
+        if (repltex)
+        {
+            verifyparam(NEWTEXTURE_IN_TEXNAME, "GLCALL: newtexture: TEXNAME", VP_SCALAR|VP_UINT32);
+            texname = *(uint32_t *)mxGetData(NEWTEXTURE_IN_TEXNAME);
+            if (texname == 0)
+                mexErrMsgTxt("GLCALL: newtexture: TEXNAME must be greater 0");
+        }
+        else
+        {
+            glGenTextures(1, &texname);
+        }
 
         glBindTexture(GL_TEXTURE_2D, texname);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1036,7 +1056,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  dimsizes[1], dimsizes[2],
                      0, GL_RGB, GL_UNSIGNED_BYTE, texdata);
 
-        NEWTEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
+        if (newtex)
+            NEWTEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
     }
     return;
 
@@ -1178,6 +1199,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: scissor: XYWH(3) and XYWH(4) must be non-negative");
 
         glScissor(xywh[0], xywh[1], xywh[2], xywh[3]);
+    }
+    return;
+
+    case GLC_DELTEXTURES:
+    {
+        mwSize numtexs;
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.deltextures, [texname1 texname2 ...])");
+
+        verifyparam(DELTEXTURES_IN_TEXNAMES, "GLCALL: deltextures: TEXNAMES", VP_VECTOR|VP_UINT32);
+        numtexs = mxGetNumberOfElements(DELTEXTURES_IN_TEXNAMES);
+
+        glDeleteTextures(numtexs, (uint32_t *)mxGetData(DELTEXTURES_IN_TEXNAMES));
     }
     return;
 

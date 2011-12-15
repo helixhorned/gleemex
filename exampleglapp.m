@@ -13,9 +13,9 @@ function exampleglapp(vertposns)
         im(:, end+1, :) = im(:, end, :);
     end
 
-    im = permute(im, [3 2 1]);  % swap x/y, make rgb consecutive in mem
+    glex.im = permute(im, [3 2 1]);  % swap x/y, make rgb consecutive in mem
 
-    glex.imwh = [size(im,2) size(im,3)];  % width, height
+    glex.imwh = [size(glex.im,2) size(glex.im,3)];  % width, height
     glex.xbord = [60 460];
     glex.ybord = [40 440];
     glex.mxy = [0 0];
@@ -47,7 +47,8 @@ function exampleglapp(vertposns)
     % init!
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', false);
 
-    glex.tex = glcall(glc.newtexture, im);
+    % XXX: treat errors between newwindow and entermainloop properly
+    glex.tex = glcall(glc.newtexture, glex.im);
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
     glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
@@ -187,6 +188,10 @@ function ex_passivemotion(x, y)
     global glc glex
 
     glex.mxy = [x y];
+
+%    glex.im = glex.im+1;
+%    glcall(glc.newtexture, glex.im, glex.tex);
+
     glcall(glc.postredisplay);
 end
 
