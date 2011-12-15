@@ -65,7 +65,7 @@ void verifyparam(const mxArray *ar, const char *arname, const char *typedesc)
     switch (typedesc[0])
     {
     case 's':  // string
-        if (mxGetClassID(ar) != mxCHAR_CLASS)
+        if (!mxIsChar(ar))
             GLC_MEX_ERROR("%s must be a character array", arname);
         break;
     case 'd':  // double scalar
@@ -73,7 +73,7 @@ void verifyparam(const mxArray *ar, const char *arname, const char *typedesc)
             GLC_MEX_ERROR("%s must be a double scalar", arname);
         break;
     case 'i':  // int32 scalar
-        if (mxGetNumberOfElements(ar) != 1 || mxGetClassID(ar) != mxINT32_CLASS)
+        if (mxGetNumberOfElements(ar) != 1 || !mxIsInt32(ar))
             GLC_MEX_ERROR("%s must be a int32 scalar", arname);
         break;
     case 'v':  // vector
@@ -243,7 +243,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
             mexErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, INDICES])");
 
-        if (mxGetClassID(DRAW_IN_PRIMITIVETYPE) != mxUINT32_CLASS)
+        if (!mxIsUint32(DRAW_IN_PRIMITIVETYPE))
             mexErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be of uint32 type");
         primitivetype = *(int *)mxGetData(DRAW_IN_PRIMITIVETYPE);
 
@@ -255,7 +255,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nrhs > 3)
         {
-            if (mxGetClassID(DRAW_IN_INDICES) != mxUINT32_CLASS)
+            if (!mxIsUint32(DRAW_IN_INDICES))
                 mexErrMsgTxt("GLCALL: draw: VERTEXDATA must be of uint32 type");
         }
 
