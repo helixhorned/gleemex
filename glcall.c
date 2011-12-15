@@ -87,6 +87,9 @@
 #define SET_WHAT (prhs[1])
 #define SET_VALUE (prhs[2])
 
+/* colormap */
+#define COLORMAP_COLORMAP (prhs[1])
+
 
 enum glcalls_setcallback_
 {
@@ -135,6 +138,7 @@ enum glcalls_
     GLC_PUSH,
     GLC_POP,
     GLC_SET,
+    GLC_COLORMAP,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -160,6 +164,7 @@ const char *glcall_names[] =
     "push",
     "pop",
     "set",
+    "colormap",
 };
 
 
@@ -168,6 +173,8 @@ const char *glcall_names[] =
 #define MAXCBNAMELEN 63
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
+
+static GLuint cmaptexname = 0;
 
 /*//////// UTIL //////////*/
 static char errstr[128];
@@ -1050,7 +1057,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
             if (dimsizes[0] != 3)
-                mexErrMsgTxt("GLCALL: newtexture: TEXAR's 3rd dim must have length 3");
+                mexErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 3");
 
             width = dimsizes[1];
             height = dimsizes[2];
@@ -1341,6 +1348,35 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 break;
             }
         }
+    }
+    return;
+
+    case GLC_COLORMAP:
+    {
+        const mwSize *dimsizes;
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.colormap, COLORMAP), COLORMAP should be 3x256 uint8");
+
+        verifyparam(COLORMAP_COLORMAP, "GLCALL: colormap: COLORMAP", VP_UINT8|VP_DIMN|(2<<VP_DIMN_SHIFT));
+        dimsizes = mxGetDimensions(COLORMAP_COLORMAP);
+        if (dimsizes[0] != 3 || dimsizes[1] != 256)
+            mexErrMsgTxt("GLCALL: colormap: COLORMAP must be a 3x256 matrix");
+
+        if (cmaptexname==0)
+            glGenTextures(1, &cmaptexname);
+
+        glBindTexture(GL_TEXTURE_1D, cmaptexname);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, 256,
+                     0, GL_RGB, GL_UNSIGNED_BYTE, mxGetData(COLORMAP_COLORMAP));
     }
     return;
 

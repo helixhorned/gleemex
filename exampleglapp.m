@@ -23,6 +23,7 @@ function exampleglapp(vertposns)
     glex.togbtnstate = false;
     glex.bdownxy = [0 0];
     glex.wh = [1100 800];
+    glex.randdat = randn(1,30);
 
     nlotsa = 256000;
     glex.lotsofverts = single(rand(2,nlotsa))*600 + 100;
@@ -52,6 +53,7 @@ function exampleglapp(vertposns)
 
     % XXX: treat errors between newwindow and entermainloop properly
     glex.tex = glcall(glc.newtexture, glex.im);
+    glcall(glc.colormap, uint8(jet(256)' * 255));
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
     glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
@@ -201,7 +203,8 @@ function ex_display()
     glcall(glc.scissor, int32(tmpxywh));
 
     glcall(glc.clear, [0.8 0.8 0.4]);
-    glcall(glc.draw, GL.LINE_STRIP, [linspace(0,1,32); [0.5, 0.5+randn(1,30)/5, 0.5]]);
+    glcall(glc.draw, GL.LINE_STRIP, [linspace(0,1,32); [0.5, 0.5+glex.randdat/5, 0.5]]);
+    glex.randdat = [glex.randdat(2:30) randn(1)];
 
     glcall(glc.pop, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
     %%
