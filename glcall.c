@@ -1075,33 +1075,63 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8 or NxM single\n"
                          "   or: GLCALL(glc.newtexture, texar, texname)  to replace an earlier texture");
 
-        if (mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR)==3)
+        if (mxIsUint8(NEWTEXTURE_IN_TEXAR))
         {
             /* RBG uint8 */
-            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_UINT8|VP_DIMN|(3<<VP_DIMN_SHIFT));
+            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_DIMN|(3<<VP_DIMN_SHIFT));
 
             dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
-            if (dimsizes[0] != 3)
-                mexErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 3");
+            if (dimsizes[0] != 3 && dimsizes[0] != 4)
+                mexErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 3 (RGB) or 4 (RGBA)");
 
             width = dimsizes[1];
             height = dimsizes[2];
 
-            internalFormat = GL_RGB;
-            format = GL_RGB;
+            if (dimsizes[0] == 3)
+            {
+                internalFormat = GL_RGB;
+                format = GL_RGB;
+            }
+            else
+            {
+                internalFormat = GL_RGBA;
+                format = GL_RGBA;
+            }
+
             type = GL_UNSIGNED_BYTE;
         }
         else
         {
+            int32_t numdims;
+
             /* grayscale float */
-            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_SINGLE|VP_DIMN|(2<<VP_DIMN_SHIFT));
+            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_SINGLE);
+
+            numdims = mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR);
+            if (numdims != 2 && numdims != 3)
+                mexErrMsgTxt("GLCALL: newtexture: TEXAR must have 2 or 3 dimensions with 'single' type");
 
             dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
-            width = dimsizes[0];
-            height = dimsizes[1];
+            if (numdims == 2)
+            {
+                width = dimsizes[0];
+                height = dimsizes[1];
 
-            internalFormat = GL_LUMINANCE16;
-            format = GL_LUMINANCE;
+                internalFormat = GL_LUMINANCE16;
+                format = GL_LUMINANCE;
+            }
+            else
+            {
+                if (dimsizes[0] != 2)
+                    mexErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 2 (LUMINANCE_ALPHA)");
+
+                width = dimsizes[1];
+                height = dimsizes[2];
+
+                internalFormat = GL_LUMINANCE16_ALPHA16;
+                format = GL_LUMINANCE_ALPHA;
+            }
+
             type = GL_FLOAT;
         }
 
