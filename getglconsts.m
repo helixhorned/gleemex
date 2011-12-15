@@ -97,6 +97,11 @@ GL.EXP = int32(2048);  % 0x0800
 GL.EXP2 = int32(2049);  % 0x0801
 
 
+%% Get tokens
+GL.MODELVIEW_MATRIX = int32(2982);  % 0x0BA6
+GL.PROJECTION_MATRIX = int32(2983);  % 0x0BA7
+
+
 %% GLC specific
 
 % GET tokens

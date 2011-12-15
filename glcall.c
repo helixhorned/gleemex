@@ -1600,6 +1600,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
+        case GL_MODELVIEW_MATRIX:
+        case GL_PROJECTION_MATRIX:
+        {
+            mxArray *matrixAr = mxCreateDoubleMatrix(4,4, mxREAL);
+            double *matrixptr = mxGetPr(matrixAr);
+
+            glGetDoublev(what, matrixptr);
+
+            GET_OUT_VALUE = matrixAr;
+            return;
+        }
+
         default:
             mexErrMsgTxt("GLCALL: get: WHAT token unknown");
         }
