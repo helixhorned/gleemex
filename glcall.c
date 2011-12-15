@@ -19,51 +19,56 @@
 
 /*////////*/
 
-/* 1 lhs, 0 rhs*/
+/* 1 lhs, 0 rhs */
 #define OUT_GLCSTRUCT (plhs[0])
 
-/* > 0 rhs*/
+/* > 0 rhs */
 #define IN_COMMAND (prhs[0])
 
-/* init*/
+/* init */
 #define NEWWIN_IN_POS (prhs[1])
 #define NEWWIN_IN_EXTENT (prhs[2])
 #define NEWWIN_IN_NAME (prhs[3])
 #define NEWWIN_IN_MULTISAMPLEP (prhs[4])
 #define NEWWIN_OUT_WINID (plhs[0])
 
-/* draw*/
+/* draw */
 #define DRAW_IN_PRIMITIVETYPE (prhs[1])
 #define DRAW_IN_VERTEXDATA (prhs[2])
 #define DRAW_IN_OPTSTRUCT (prhs[3])
 
-/* setmatrix*/
+/* setmatrix */
 #define SETMATRIX_IN_MODE (prhs[1])
 #define SETMATRIX_IN_MATRIX (prhs[2])
 
-/* mulmatrix*/
+/* mulmatrix */
 #define MULMATRIX_IN_MODE (prhs[1])
 #define MULMATRIX_IN_MATRIX (prhs[2])
 
-/* setcallback*/
+/* setcallback */
 #define SETCALLBACK_IN_TYPE (prhs[1])
 #define SETCALLBACK_IN_FUNCNAME (prhs[2])
 
-/* viewport*/
+/* viewport */
 #define VIEWPORT_IN_XYWH (prhs[1])
 
-/* clear*/
+/* clear */
 #define CLEAR_IN_COLOR (prhs[1])
 
-/* newtexture*/
+/* newtexture */
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
 #define NEWTEXTURE_OUT_TEXNAME (plhs[0])
 
-/* setwindowsize*/
+/* setwindowsize */
 #define SETWINDOWSIZE_IN_WH (prhs[1])
 
-/* getwindowsize*/
+/* getwindowsize */
 #define GETWINDOWSIZE_OUT_WH (plhs[0])
+
+/* rendertext */
+#define RENDERTEXT_IN_POS (prhs[1])
+#define RENDERTEXT_IN_HEIGHT (prhs[2])
+#define RENDERTEXT_IN_TEXT (prhs[3])
 
 
 enum glcalls_setcallback_
@@ -106,6 +111,7 @@ enum glcalls_
     GLC_NEWTEXTURE,
     GLC_SETWINDOWSIZE,
     GLC_GETWINDOWSIZE,
+    GLC_RENDERTEXT,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -124,6 +130,7 @@ const char *glcall_names[] =
     "newtexture",
     "setwindowsize",
     "getwindowsize",
+    "rendertext",
 };
 
 
@@ -1013,7 +1020,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (tmpwidth==0)
         {
             glDeleteTextures(1, &texname);
-            mexErrMsgTxt("GLCALL.newtexture: cannot accomodate texture");
+            mexErrMsgTxt("GLCALL: newtexture: cannot accomodate texture");
         }
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  dimsizes[1], dimsizes[2],
                      0, GL_RGB, GL_UNSIGNED_BYTE, texdata);
@@ -1055,6 +1062,57 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
 
         GETWINDOWSIZE_OUT_WH = whar;
+    }
+    return;
+
+    case GLC_RENDERTEXT:
+    {
+        const double *pos;
+        double height;
+        char *text;
+
+        mwSize slen, i;
+
+        if (nlhs != 0 || nrhs != 4)
+            mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y z], height, text)");
+
+        verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE|(3<<VP_VECLEN_SHIFT));
+        pos = mxGetPr(RENDERTEXT_IN_POS);
+
+        verifyparam(RENDERTEXT_IN_HEIGHT, "GLC: rendertext: HEIGHT", VP_SCALAR|VP_DOUBLE);
+        height = *mxGetPr(RENDERTEXT_IN_HEIGHT);
+
+        verifyparam(RENDERTEXT_IN_TEXT, "GLC: rendertext: TEXT", VP_VECTOR|VP_CHAR);
+        text = mxArrayToString(RENDERTEXT_IN_TEXT);
+
+        if (!text)
+            mexErrMsgTxt("GLCALL: rendertext: Out of memory!");
+
+        {
+            glMatrixMode(GL_MODELVIEW);
+            glPushMatrix();
+            glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT);
+
+            glColor3d(0.2, 0.2, 0.2);  // XXX
+            glDisable(GL_TEXTURE_2D);
+
+            glLoadIdentity();
+            glTranslated(pos[0], pos[1], pos[2]);
+
+            glScaled(height/119.05, height/119.05, height/119.05);
+
+            slen = strlen(text);
+            for (i=0; i<slen; i++)
+            {
+                glutStrokeCharacter(GLUT_STROKE_ROMAN, text[i]);
+                glTranslated(119.05/10.0, 0, 0);  // a bit of spacing...
+            }
+
+            glPopMatrix();
+            glPopAttrib();
+        }
+
+        mxFree(text);
     }
     return;
 

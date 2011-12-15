@@ -45,7 +45,7 @@ function exampleglapp(vertposns)
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
     % init!
-    winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', true);
+    winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', false);
 
     glex.tex = glcall(glc.newtexture, im);
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
@@ -160,6 +160,8 @@ function ex_display()
         glcall(glc.draw, GL.TRIANGLES, vpos, struct(...
             'colors',[0.5 0.5 0.5] + glex.zposns(i)/2, 'indices',indices));
     end
+
+    glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
