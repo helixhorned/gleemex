@@ -52,7 +52,7 @@ function exampleglapp(vertposns)
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
     % init!
-    winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', false);
+    winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1');
 
     % XXX: treat errors between newwindow and entermainloop properly
     glex.tex = glcall(glc.newtexture, glex.im);

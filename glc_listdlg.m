@@ -34,6 +34,9 @@ function [sel,ok]=glc_listdlg(varargin)
 
     % either function handle @f(ok, sel), or string eval'd with 'sel' and 'ok' in scope
     finish_cb = '';
+    % create in subwindow?
+    subwindowp = false;
+    listpos = [200 200];
 
     for i=1:2:nargin-1
         if (~ischar(varargin{i}))
@@ -93,6 +96,13 @@ function [sel,ok]=glc_listdlg(varargin)
             assert((isvector(val) && ischar(val)) || isa(val, 'function_handle'), ...
                    'Finish_Cb must be wither a srting or a function handle @f(ok, sel)');
             finish_cb = val;
+          case 'subwindow',
+            assert(isscalar(val) && islogical(val));
+            subwindowp = val;
+          case 'listpos',
+            assert(isvector(val) && isnumeric(val) && numel(val)==2, 'ListPos value must be a numeric 2-vector');
+            assert(all(val>=1), 'All elements in Listpos value must be greater or equal 1');
+            listpos = double(val);
 
           otherwise,
             warning(sprintf('unrecognized option ''%s''', varargin{i}));
@@ -158,7 +168,8 @@ function [sel,ok]=glc_listdlg(varargin)
         glc_listdlg_s = glc_listdlg_dummyize_struct(s);
     end
 
-    winid = glcall(glc.newwindow, [200 200], s.wh, s.name);
+    winid = glcall(glc.newwindow, listpos, s.wh, s.name, ...
+                   struct('subwindow',subwindowp));
 
     % should be before setting the callbacks
     glc_listdlg_s(winid) = s;
@@ -169,7 +180,12 @@ function [sel,ok]=glc_listdlg(varargin)
     glcall(glc.setcallback, glc.cb_mouse, 'glc_listdlg_mouse');
     glcall(glc.setcallback, glc.cb_display, 'glc_listdlg_display');
 
-    glcall(glc.entermainloop);
+    if (subwindowp)
+        % note that we may have not entered the main loop yet
+        glcall(glc.set, GL.WINDOW_ID, s.parentwinid);
+    else
+        glcall(glc.entermainloop);
+    end
 
     [ok, sel] = glc_listdlg_get_ok_sel(winid);
 end
