@@ -57,7 +57,7 @@
 
 /* newtexture*/
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
-#define NEWTEXTURE_OUT_OURTEXID (plhs[0])
+#define NEWTEXTURE_OUT_TEXNAME (plhs[0])
 
 /* setwindowsize*/
 #define SETWINDOWSIZE_IN_WH (prhs[1])
@@ -132,11 +132,6 @@ const char *glcall_names[] =
 #define MAXCBNAMELEN 63
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
-
-/* XXX: bad?*/
-#define MAXTEXTURES 128
-static int32_t numtextures = 0;
-static GLuint texnames[MAXTEXTURES];
 
 /*//////// UTIL //////////*/
 static char errstr[128];
@@ -288,10 +283,39 @@ static int32_t util_dtoi(double d, double minnum, double maxnum, const char *arn
     return (int32_t)d;
 }
 
-static void delete_textures(void)
+static mxArray *createScalar(mxClassID cid, const void *ptr)
 {
-    glDeleteTextures(numtextures, texnames);
-    memset(texnames, 0, numtextures*sizeof(texnames[0]));
+    mxArray *tmpar = mxCreateNumericMatrix(1,1, cid, mxREAL);
+
+    switch (cid)
+    {
+    case mxLOGICAL_CLASS:
+        *(int8_t *)mxGetData(tmpar) = !!*(int8_t *)ptr;
+        break;
+    case mxCHAR_CLASS:
+    case mxINT8_CLASS:
+    case mxUINT8_CLASS:
+        *(int8_t *)mxGetData(tmpar) = *(int8_t *)ptr;
+        break;
+    case mxINT16_CLASS:
+    case mxUINT16_CLASS:
+        *(int16_t *)mxGetData(tmpar) = *(int16_t *)ptr;
+        break;
+    case mxINT32_CLASS:
+    case mxUINT32_CLASS:
+    case mxSINGLE_CLASS:
+        *(int32_t *)mxGetData(tmpar) = *(int32_t *)ptr;
+        break;
+    case mxINT64_CLASS:
+    case mxUINT64_CLASS:
+    case mxDOUBLE_CLASS:
+        *(int64_t *)mxGetData(tmpar) = *(int64_t *)ptr;
+        break;
+    default:
+        mexErrMsgTxt("INTERNAL ERROR in createScalar: invalid cid!");
+    }
+
+    return tmpar;
 }
 
 /*//////// FUNCTIONS //////////*/
@@ -361,7 +385,7 @@ static void mouse_cb(int button, int state, int x, int y)
 {
     if (CHECK_CALLBACK(CB_MOUSE))
     {
-        int args[MAX_CB_ARGS] = {button, state==GLUT_DOWN, x, y, 0};
+        int args[MAX_CB_ARGS] = {button, (state==GLUT_DOWN), x, y, 0};
         args[4] = getModifiers();
         call_mfile_callback(CB_MOUSE, 5, args);
     }
@@ -444,22 +468,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         if (nlhs==1)
         {
-            /* the user queries available glcalls*/
+            /* the user queries available glcalls */
             mxArray *glcstruct = mxCreateStructMatrix(1,1, NUM_GLCALLS, glcall_names);
             mxArray *tmpar;
-            int i, fieldnum;
+            int32_t i, fieldnum;
 
             for (i=0; i<NUM_GLCALLS; i++)
             {
-                tmpar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
-                *(int *)mxGetData(tmpar) = i;
+                tmpar = createScalar(mxINT32_CLASS, &i);
                 mxSetFieldByNumber(glcstruct, 0, i, tmpar);
             }
 
             for (i=0; i<NUM_CALLBACKS; i++)
             {
-                tmpar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
-                *(int *)mxGetData(tmpar) = i;
+                tmpar = createScalar(mxINT32_CLASS, &i);
 
                 fieldnum = mxAddField(glcstruct, glcall_callback_names[i]);
                 mxSetFieldByNumber(glcstruct, 0, fieldnum, tmpar);
@@ -473,7 +495,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("Usage: GLCALLINFO_STRUCT = GLCALL(), query available subcommands.");
     }
 
-    /* nrhs > 0*/
+    /* nrhs > 0 */
 
     verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
@@ -539,17 +561,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nlhs > 0)
         {
-            mxArray *outar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
-            *(int *)mxGetData(outar) = winid;
-
-            NEWWIN_OUT_WINID = outar;
+            NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &winid);
         }
     }
     return;
 
     case GLC_DRAW:
     {
-        /* TODO: pass color array*/
+        /* TODO: pass color array */
 
         unsigned int primitivetype;
         mwSize i, numdims, numtotalverts, numverts;
@@ -596,18 +615,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             texar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "tex");
             if (texar)
             {
-                double texid_d;
-                int32_t texid;
+                verifyparam(texar, "GLCALL: draw: OPTSTRUCT.tex", VP_SCALAR|VP_UINT32);
 
-                verifyparam(texar, "GLCALL: draw: OPTSTRUCT.tex", VP_SCALAR|VP_DOUBLE);
-
-                texid_d = *mxGetPr(texar);
-                texid = util_dtoi(texid_d, 0, MAXTEXTURES-1, "GLCALL: draw: OPTSTRUCT.tex");
-                texname = texnames[texid];
-
+                texname = *(uint32_t *)mxGetData(texar);
                 if (texname == 0)
-                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.tex must be a valid texture ID "
-                                 "returned by GLCALL(glc.newtexture, ...)");
+                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.tex must be greater zero");
 
                 texcoordsar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "texcoords");
                 if (!texcoordsar)
@@ -670,7 +682,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (numverts==0)
                 return;
 
-            /* bounds check!*/
+            /* bounds check! */
             for (i=0; i<numverts; i++)
             {
                 if (indicestype==GL_UNSIGNED_INT)
@@ -693,7 +705,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             numverts = numtotalverts;
         }
 
-        /* draw them at last!*/
+        /* draw them at last! */
 
         if (!colors || singlecolorp)
         {
@@ -728,12 +740,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: entermainloop: entered recursively!");
         numentered++;
 
-        /* these two are always there*/
+        /* these two are always there */
         glutDisplayFunc(display_cb);
         glutReshapeFunc(reshape_cb);
 
-        /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...)*/
-        /*    is called)? Doesn't seem really necessary...*/
+        /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...) */
+        /*    is called)? Doesn't seem really necessary... */
         glutMouseFunc(mouse_cb);
         glutMotionFunc(motion_cb);
         glutPassiveMotionFunc(passivemotion_cb);
@@ -741,8 +753,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glutSpecialFunc(special_cb);
 
         glutMainLoop();
-
-        delete_textures();
 
         numentered--;
         inited = 0;
@@ -837,7 +847,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: mulmatrix: X must have class double");
 
         numel = mxGetNumberOfElements(MULMATRIX_IN_MATRIX);
-        /* XXX: no dim check this way, but also simpler*/
+        /* XXX: no dim check this way, but also simpler */
 
         glMatrixMode(matrixmode);
 
@@ -909,7 +919,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(VIEWPORT_IN_XYWH, "GLCALL: viewport: XYWH", VP_VECTOR|VP_DOUBLE|(4<<VP_VECLEN_SHIFT));
         xywh_d = mxGetPr(VIEWPORT_IN_XYWH);
 
-        /* XXX: magic constants bad!*/
+        /* XXX: magic constants bad! */
         xywh[0] = util_dtoi(xywh_d[0], -16384, 16384, "GLCALL: viewport: XYWH(1)");
         xywh[1] = util_dtoi(xywh_d[1], -16384, 16384, "GLCALL: viewport: XYWH(2)");
         xywh[2] = util_dtoi(xywh_d[2], 0, 16384, "GLCALL: viewport: XYWH(3)");
@@ -984,11 +994,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (dimsizes[1] <= 0 || dimsizes[1] > 16384 || dimsizes[2] <= 0 || dimsizes[2] > 16384)
             mexErrMsgTxt("GLCALL: mextexture: TEXAR's 1st and 2nd dims must have length in [1, 16384]");
 
-        if (numtextures==MAXTEXTURES)
-            GLC_MEX_ERROR("GLCALL.newtexture: maximum texture count %d exceeded", MAXTEXTURES);
-
         glGenTextures(1, &texname);
-        texnames[numtextures] = texname;
 
         glBindTexture(GL_TEXTURE_2D, texname);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1006,14 +1012,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tmpwidth);
         if (tmpwidth==0)
         {
-            glDeleteTextures(1, &texnames[numtextures]);
-            texnames[numtextures] = 0;
+            glDeleteTextures(1, &texname);
             mexErrMsgTxt("GLCALL.newtexture: cannot accomodate texture");
         }
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  dimsizes[1], dimsizes[2],
                      0, GL_RGB, GL_UNSIGNED_BYTE, texdata);
 
-        NEWTEXTURE_OUT_OURTEXID = mxCreateDoubleScalar(numtextures++);
+        NEWTEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
     }
     return;
 
