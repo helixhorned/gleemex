@@ -100,6 +100,11 @@ GL.WINDOW_SIZE = int32(-101);
 
 %% GLUT stuff follows
 
+% modifiers, GLUT_ACTIVE_*
+GL.MOD_SHIFT = 1;
+GL.MOD_CTRL = 2;
+GL.MOD_ALT = 4;
+
 % mouse buttons, 1<<X
 GL.LEFT_BUTTON = 1;
 GL.MIDDLE_BUTTON = 2;

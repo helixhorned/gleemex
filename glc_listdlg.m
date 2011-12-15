@@ -322,12 +322,12 @@ function glc_listdlg_display()
 
             if (~isempty(glc_listdlg_s(winid).clicked))
                 if (glc_listdlg_s(winid).selmode_multiple)
-                    if (glc_listdlg_s(winid).clicked(3)==100)  % Shift
+                    if (glc_listdlg_s(winid).clicked(3)==GL.MOD_SHIFT)
                         if (glc_listdlg_s(winid).lastclickidx > 0)
                             bounds = sort([idx glc_listdlg_s(winid).lastclickidx]);
                             glc_listdlg_s(winid).selected(bounds(1):bounds(2)) = true;
                         end
-                    elseif (glc_listdlg_s(winid).clicked(3)==10)  % Ctrl
+                    elseif (glc_listdlg_s(winid).clicked(3)==GL.MOD_CTRL)
                         glc_listdlg_s(winid).selected(idx) = ~glc_listdlg_s(winid).selected(idx);
                     else
                         glc_listdlg_s(winid).selected(:) = false;

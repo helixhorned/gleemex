@@ -477,13 +477,9 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     return err;
 }
 
-/* 1: ALT*/
-/* 10: CTRL*/
-/* 100: SHIFT*/
 static int getModifiers()
 {
-    int mods = glutGetModifiers();
-    return (!!(mods&GLUT_ACTIVE_ALT)) + (10*!!(mods&GLUT_ACTIVE_CTRL)) + (100*!!(mods&GLUT_ACTIVE_SHIFT));
+    return glutGetModifiers();
 }
 
 static void mouse_cb(int button, int state, int x, int y)

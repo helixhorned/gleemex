@@ -281,7 +281,7 @@ function ex_keyboard(key, x, y, mods)
         dir = -1;
     end
 
-    if (mods==10)  % CTRL
+    if (bitand(mods, GL.MOD_CTRL))
         idx = 1;
     end
 
