@@ -19,6 +19,8 @@ function exampleglapp(vertposns)
     glex.xbord = [60 460];
     glex.ybord = [40 440];
     glex.mxy = [0 0];
+    glex.bdown = [false false false];  % which button is down, left, middle, right
+    glex.bdownxy = [0 0];
     glex.wh = [1100 800];
 
     nlotsa = 256000;
@@ -108,7 +110,6 @@ function ex_display()
 
     %% blue rect
     mxy = glex.mxy;
-    mxy(2) = glex.wh(2) - mxy(2);
 
     if (mxy(1)>=glex.xbord(1) && mxy(1)<=glex.xbord(2) ...
         && mxy(2)>=glex.ybord(1) && mxy(2)<=glex.ybord(2))
@@ -176,6 +177,8 @@ function ex_display()
 
     glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
+    glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
+
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
     
@@ -188,6 +191,7 @@ function ex_passivemotion(x, y)
     global glc glex
 
     glex.mxy = [x y];
+    glex.mxy(2) = glex.wh(2)-glex.mxy(2);
 
 %    glex.im = glex.im+1;
 %    glcall(glc.newtexture, glex.im, glex.tex);
@@ -196,5 +200,14 @@ function ex_passivemotion(x, y)
 end
 
 function ex_mouse(button, downp, x, y, mods)
+    global glex
+
     ex_passivemotion(x, y);
+
+    glex.bdown(button+1) = downp;
+    glex.bdownxy(1:2) = glex.mxy;
+
+    if (button==0 && downp)
+        glc_callbutton([80 400 120 20], glex.mxy, @uigetfile);
+    end
 end
