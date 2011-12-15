@@ -104,6 +104,10 @@
 /* closewindow */
 #define CLOSEWINDOW_IN_OURWINID (prhs[1])
 
+/* readpixels */
+#define READPIXELS_IN_XYWH (prhs[1])
+#define READPIXELS_OUT_PIXELS (plhs[0])
+
 
 /**** GET tokens ****/
 /* Use negative values for GLC tokens since we might want to allow GL ones
@@ -164,6 +168,7 @@ enum glcalls_
     GLC_SETUNIFORM,
     GLC_LEAVEMAINLOOP,
     GLC_CLOSEWINDOW,
+    GLC_READPIXELS,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -194,6 +199,7 @@ const char *glcall_names[] =
     "setuniform",
     "leavemainloop",
     "closewindow",
+    "readpixels",
 };
 
 
@@ -1932,6 +1938,52 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glutwinidx[ourwidx] = 0;
     }
     return;
+
+    case GLC_READPIXELS:
+    {
+        int32_t winw, winh, x, y, w, h;
+        mwSize thedims[3]={3, 0, 0};
+        const double *xywh_d;
+
+        mxArray *pixels_mxar;
+
+        if (nlhs != 1 || (nrhs != 1 && nrhs != 2))
+            mexErrMsgTxt("Usage: PIXELS = GLCALL(glc.readpixels [, XYWH]), PIXELS is 3xWxH");
+
+        winw = glutGet(GLUT_WINDOW_WIDTH);
+        winh = glutGet(GLUT_WINDOW_HEIGHT);
+
+        if (nrhs == 1)
+        {
+            /* grab whole screen */
+            x = 0;
+            y = 0;
+            w = winw;
+            h = winh;
+        }
+        else
+        {
+            verifyparam(READPIXELS_IN_XYWH, "GLCALL: readpixels: XYWH", VP_VECTOR|VP_DOUBLE|(4<<VP_VECLEN_SHIFT));
+            xywh_d = mxGetPr(READPIXELS_IN_XYWH);
+
+            x = util_dtoi(xywh_d[0], 0, winw-1, "GLCALL: readpixels: XYWH(1)");
+            y = util_dtoi(xywh_d[1], 0, winh-1, "GLCALL: readpixels: XYWH(2)");
+            w = util_dtoi(xywh_d[2], 1, winw-x, "GLCALL: readpixels: XYWH(3)");
+            h = util_dtoi(xywh_d[3], 1, winh-y, "GLCALL: readpixels: XYWH(4)");
+        }
+
+        thedims[1] = w;
+        thedims[2] = h;
+
+        pixels_mxar = mxCreateNumericArray(3, thedims, mxUINT8_CLASS, mxREAL);
+        /* alloc'd OK or out of here */
+
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(x, y, w, h, GL_RGB, GL_UNSIGNED_BYTE, mxGetData(pixels_mxar));
+
+        READPIXELS_OUT_PIXELS = pixels_mxar;
+    }
+    break;
 
     }  /* end switch(cmd) */
 
