@@ -240,7 +240,7 @@ static char errstr[256];
 static const mxArray *exceptionar;
 static const char *errstrptr;
 
-# define mexErrMsgTxt(msg) do {                 \
+# define ourErrMsgTxt(msg) do {                 \
         if (numentered)                         \
         {                                       \
             if (errstrptr)                      \
@@ -256,7 +256,7 @@ static const char *errstrptr;
 
 #define GLC_MEX_ERROR(Text, ...) do {           \
         sprintf(errstr, Text, ## __VA_ARGS__);  \
-        mexErrMsgTxt(errstr);                   \
+        ourErrMsgTxt(errstr);                   \
     } while (0)
 
 enum verifyparam_flags
@@ -433,7 +433,7 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
         *(int64_t *)mxGetData(tmpar) = *(int64_t *)ptr;
         break;
     default:
-        mexErrMsgTxt("INTERNAL ERROR in createScalar: invalid cid!");
+        ourErrMsgTxt("INTERNAL ERROR in createScalar: invalid cid!");
     }
 
     return tmpar;
@@ -501,7 +501,8 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
         char buf[128];
         sprintf(buf, "left main loop: error in callback %s: %d",
                  callback_funcname[curourwinidx][callbackid], err);
-        mexErrMsgTxt(buf);
+
+        ourErrMsgTxt(buf);
     }
 
 #endif
@@ -664,7 +665,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
         else
-            mexErrMsgTxt("Usage: GLCALLINFO_STRUCT = GLCALL(), query available subcommands.");
+            ourErrMsgTxt("Usage: GLCALLINFO_STRUCT = GLCALL(), query available subcommands.");
     }
 
     /* nrhs > 0 */
@@ -677,7 +678,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                      || cmd == GLC_GETERRSTR
 #endif
             ))
-        mexErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
+        ourErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
 
     /*////////*/
     switch (cmd)
@@ -691,7 +692,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         char windowname[80];
 
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
-            mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
+            ourErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
                          " create new window.");
 
         verifyparam(NEWWIN_IN_POS, "GLCALL: newwindow: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
@@ -731,7 +732,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
 
         if (subwindowp && !inited)
-            mexErrMsgTxt("Must have initialized GLCALL (i.e. created a"
+            ourErrMsgTxt("Must have initialized GLCALL (i.e. created a"
                          " top-level window) before creating subwindow");
 
         /* init!*/
@@ -792,7 +793,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             winid = glutCreateWindow(windowname);
 
         if (winid <= 0)
-            mexErrMsgTxt("GLCALL: newwindow: failed creating window!");
+            ourErrMsgTxt("GLCALL: newwindow: failed creating window!");
 
         if (winid >= MAXLIFETIMEWINDOWS)
             GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum lifetime window count (%d)", MAXLIFETIMEWINDOWS);
@@ -861,16 +862,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         GLenum vertdatatype, indicestype=0 /* compiler-happy */;
 
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
-            mexErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, OPTSTRUCT])");
+            ourErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, OPTSTRUCT])");
 
         if (!mxIsUint32(DRAW_IN_PRIMITIVETYPE))
-            mexErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be of uint32 type");
+            ourErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be of uint32 type");
         primitivetype = *(int *)mxGetData(DRAW_IN_PRIMITIVETYPE);
         doline = primitivetype&16;
         primitivetype &= ~16;
 
         if (!(/*primitivetype >= GL_POINTS &&*/ primitivetype <= GL_POLYGON))
-            mexErrMsgTxt("GLCALL: draw: invalid GL primitive type");
+            ourErrMsgTxt("GLCALL: draw: invalid GL primitive type");
 
         vertdatatype = verifyparam(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_FP_TYPE);
 
@@ -878,7 +879,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         numtotalverts = mxGetN(DRAW_IN_VERTEXDATA);
 
         if (!(numdims >=2 && numdims <= 4))
-            mexErrMsgTxt("GLCALL: draw: VERTEXDATA must have between 2 and 4 rows (number of coordinates)");
+            ourErrMsgTxt("GLCALL: draw: VERTEXDATA must have between 2 and 4 rows (number of coordinates)");
 
         if (nrhs > 3)
         {
@@ -897,15 +898,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
                 texname = *(uint32_t *)mxGetData(texar);
                 if (texname == 0)
-                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.tex must be greater zero");
+                    ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.tex must be greater zero");
 
                 texcoordsar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "texcoords");
                 if (!texcoordsar)
-                    mexErrMsgTxt("GLCALL: draw: When passing OPTSTRUCT.tex, must also have OPTSTRUCT.texcoords");
+                    ourErrMsgTxt("GLCALL: draw: When passing OPTSTRUCT.tex, must also have OPTSTRUCT.texcoords");
 
                 tcdatatype = verifyparam(texcoordsar, "GLCALL: draw: OPTSTRUCT.texcoords", VP_MATRIX|VP_FP_TYPE);
                 if (mxGetM(texcoordsar) != 2 || mxGetN(texcoordsar) != (unsigned long)numtotalverts)
-                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.texcoords must have "
+                    ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.texcoords must have "
                                  "2 rows and size(VERTEXDATA,2) columns");
 
                 glEnable(GL_TEXTURE_2D);
@@ -944,7 +945,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             else
             {
                 if ((sz[0] != 3 && sz[1] != 4) || sz[1] != numtotalverts)
-                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must either have length 3 or 4,\n"
+                    ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must either have length 3 or 4,\n"
                                  "              or have 3 or 4 rows and size(VERTEXDATA,2) columns");
                 colorsz = -sz[0];
             }
@@ -967,7 +968,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             {
                 if (((indicestype==GL_UNSIGNED_INT) ?
                      ((uint32_t *)indices)[i] : ((uint8_t *)indices)[i]) >= (unsigned)numverts)
-                    mexErrMsgTxt("GLCALL: draw: INDICES must contain values between 0 and size(VERTEXDATA,2)-1");
+                    ourErrMsgTxt("GLCALL: draw: INDICES must contain values between 0 and size(VERTEXDATA,2)-1");
             }
         }
         else
@@ -1009,11 +1010,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_ENTERMAINLOOP:
     {
         if (nlhs != 0 || nrhs != 1)
-            mexErrMsgTxt("Usage: GLCALL(glc.entermainloop), enter main loop.");
+            ourErrMsgTxt("Usage: GLCALL(glc.entermainloop), enter main loop.");
 
         if (numentered)
             return;
-/*            mexErrMsgTxt("GLCALL: entermainloop: entered recursively!"); */
+/*            ourErrMsgTxt("GLCALL: entermainloop: entered recursively!"); */
         numentered++;
 
         glutMainLoop();
@@ -1038,16 +1039,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             "    which is passed to glOrtho() after loading the identity matrix";
 
         if (nlhs != 0 || nrhs != 3)
-            mexErrMsgTxt(usageText);
+            ourErrMsgTxt(usageText);
 
         verifyparam(SETMATRIX_IN_MODE, "GLCALL: setmatrix: MATRIX_MODE", VP_SCALAR|VP_UINT32);
         matrixmode = *(uint32_t *)mxGetData(SETMATRIX_IN_MODE);
 
         if (matrixmode != GL_MODELVIEW && matrixmode != GL_PROJECTION)
-            mexErrMsgTxt("GLCALL: setmatrix: MATRIX_MODE must be one of GL_MODELVIEW or GL_PROJECTION");
+            ourErrMsgTxt("GLCALL: setmatrix: MATRIX_MODE must be one of GL_MODELVIEW or GL_PROJECTION");
 
         if (!mxIsDouble(SETMATRIX_IN_MATRIX))
-            mexErrMsgTxt("GLCALL: setmatrix: X must have class double");
+            ourErrMsgTxt("GLCALL: setmatrix: X must have class double");
 
         numel = mxGetNumberOfElements(SETMATRIX_IN_MATRIX);
         /* XXX: no dim check this way, but also simpler*/
@@ -1066,7 +1067,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             const double *vec;
 
             if (matrixmode != GL_PROJECTION)
-                mexErrMsgTxt("GLCALL: setmatrix: invalid call, passing a length-6 (or 4) vector as X is"
+                ourErrMsgTxt("GLCALL: setmatrix: invalid call, passing a length-6 (or 4) vector as X is"
                              " only allowed with GL_PROJECTION matrix mode.");
 
             vec = mxGetPr(SETMATRIX_IN_MATRIX);
@@ -1080,7 +1081,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
         else
         {
-            mexErrMsgTxt("GLCALL: setmatrix: invalid call, see GLCALL(glc.setmatrix) for usage.");
+            ourErrMsgTxt("GLCALL: setmatrix: invalid call, see GLCALL(glc.setmatrix) for usage.");
         }
     }
     break;
@@ -1098,7 +1099,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             " Omitting the matrix mode means to multiply the modelview matrix.";
 
         if (nlhs != 0 || (nrhs != 2 && nrhs != 3))
-            mexErrMsgTxt(usageText);
+            ourErrMsgTxt(usageText);
 
         if (nrhs == 2)
         {
@@ -1110,12 +1111,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             matrixmode = *(uint32_t *)mxGetData(MULMATRIX_IN_MODE);
 
             if (matrixmode != GL_MODELVIEW && matrixmode != GL_PROJECTION && matrixmode != GL_TEXTURE)
-                mexErrMsgTxt("GLCALL: mulmatrix: MATRIX_MODE must be one of GL_MODELVIEW, "
+                ourErrMsgTxt("GLCALL: mulmatrix: MATRIX_MODE must be one of GL_MODELVIEW, "
                              "GL_PROJECTION or GL_TEXTURE");
         }
 
         if (!mxIsDouble(MULMATRIX_IN_MATRIX))
-            mexErrMsgTxt("GLCALL: mulmatrix: X must have class double");
+            ourErrMsgTxt("GLCALL: mulmatrix: X must have class double");
 
         numel = mxGetNumberOfElements(MULMATRIX_IN_MATRIX);
         /* XXX: no dim check this way, but also simpler */
@@ -1138,7 +1139,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
         else
         {
-            mexErrMsgTxt("GLCALL: mulmatrix: invalid call, see GLCALL(glc.mulmatrix) for usage.");
+            ourErrMsgTxt("GLCALL: mulmatrix: invalid call, see GLCALL(glc.mulmatrix) for usage.");
         }
     }
     break;
@@ -1149,16 +1150,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         char tmpbuf[MAXCBNAMELEN+1], c;
 
         if (nlhs != 0 || nrhs != 3)
-            mexErrMsgTxt("Usage: GLCALL(glc.setcallback, glc.cb_<callbacktype>, 'mfuncname'), pass '' to reset");
+            ourErrMsgTxt("Usage: GLCALL(glc.setcallback, glc.cb_<callbacktype>, 'mfuncname'), pass '' to reset");
 
         glutwidx = glutGetWindow();
         if (glutwidx==0)
-            mexErrMsgTxt("GLCALL: glc.setcallback: no current window!");
+            ourErrMsgTxt("GLCALL: glc.setcallback: no current window!");
 
         verifyparam(SETCALLBACK_IN_TYPE, "GLCALL: setcallback: CALLBACKTYPE", VP_SCALAR|VP_INT32);
         callbackid = *(int32_t *)mxGetData(SETCALLBACK_IN_TYPE);
         if ((unsigned)callbackid >= NUM_CALLBACKS)
-            mexErrMsgTxt("GLCALL: setcallback: CALLBACKTYPE must be a valid callback ID");
+            ourErrMsgTxt("GLCALL: setcallback: CALLBACKTYPE must be a valid callback ID");
 
         verifyparam(SETCALLBACK_IN_FUNCNAME, "GLCALL: setcallback: FUNCNAME", VP_VECTOR|VP_CHAR);
         slen = mxGetNumberOfElements(SETCALLBACK_IN_FUNCNAME);
@@ -1172,7 +1173,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             if ((i==0 && (c=='_' || (c>='0' && c<='9'))) ||
                     (c!='_' && !(c>='0' && c<='9') && !(c>='a' && 'c'<='z') && !(c>='A' && c<='Z')))
-                mexErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
+                ourErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
         }
 
         memcpy(&callback_funcname[ourwinidx[glutwidx]][callbackid], tmpbuf, sizeof(tmpbuf));
@@ -1186,7 +1187,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t xywh[4];
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.viewport, [x y width height])");
+            ourErrMsgTxt("Usage: GLCALL(glc.viewport, [x y width height])");
 
         verifyparam(VIEWPORT_IN_XYWH, "GLCALL: viewport: XYWH", VP_VECTOR|VP_DOUBLE|(4<<VP_VECLEN_SHIFT));
         xywh_d = mxGetPr(VIEWPORT_IN_XYWH);
@@ -1209,7 +1210,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const double *color;
 
         if (nlhs != 0 || (nrhs != 1 && nrhs != 2))
-            mexErrMsgTxt("Usage: GLCALL(glc.viewport, [r g b [a]]), color must have 'double' type");
+            ourErrMsgTxt("Usage: GLCALL(glc.viewport, [r g b [a]]), color must have 'double' type");
 
         if (nrhs == 1)
         {
@@ -1220,7 +1221,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(CLEAR_IN_COLOR, "GLCALL: clear: COLOR", VP_VECTOR|VP_DOUBLE);
             numel = mxGetNumberOfElements(CLEAR_IN_COLOR);
             if (numel != 3 && numel != 4)
-                mexErrMsgTxt("GLCALL: clear: COLOR must have length 3 or 4");
+                ourErrMsgTxt("GLCALL: clear: COLOR must have length 3 or 4");
 
             color = mxGetPr(CLEAR_IN_COLOR);
 
@@ -1233,10 +1234,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_POSTREDISPLAY:
     {
         if (nlhs != 0 || nrhs != 1)
-            mexErrMsgTxt("Usage: GLCALL(glc.postredisplay)");
+            ourErrMsgTxt("Usage: GLCALL(glc.postredisplay)");
 
         if (glutGetWindow() == 0)
-            mexErrMsgTxt("GLCALL: postredisplay: called with no current window!");
+            ourErrMsgTxt("GLCALL: postredisplay: called with no current window!");
         glutPostRedisplay();
     }
     return;
@@ -1244,13 +1245,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_GETERRSTR:
     {
 #ifdef HAVE_OCTAVE
-        mexErrMsgTxt("CLGALL.geterrstr only available on MATLAB");
+        ourErrMsgTxt("CLGALL.geterrstr only available on MATLAB");
 #else
         const char *emptystr = "<empty>";
         const char *errstr_ptr = errstr;
 
         if (numentered)
-            mexErrMsgTxt("GLCALL.geterrstr should only be called after an error from the prompt");
+            ourErrMsgTxt("GLCALL.geterrstr should only be called after an error from the prompt");
 
         if (nlhs != 3 || nrhs != 1)
             return;
@@ -1288,7 +1289,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize width, height;
 
         if (!newtex && !repltex)
-            mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar [, opts]), texar must be 3xNxM uint8 or NxM single\n"
+            ourErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar [, opts]), texar must be 3xNxM uint8 or NxM single\n"
                          "   or: GLCALL(glc.newtexture, texar, texname [, opts])  to replace an earlier texture");
 
         if (mxIsUint8(NEWTEXTURE_IN_TEXAR))
@@ -1298,7 +1299,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
             if (dimsizes[0] != 3 && dimsizes[0] != 4)
-                mexErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 3 (RGB) or 4 (RGBA)");
+                ourErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 3 (RGB) or 4 (RGBA)");
 
             width = dimsizes[1];
             height = dimsizes[2];
@@ -1325,7 +1326,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             numdims = mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR);
             if (numdims != 2 && numdims != 3)
-                mexErrMsgTxt("GLCALL: newtexture: TEXAR must have 2 or 3 dimensions with 'single' type");
+                ourErrMsgTxt("GLCALL: newtexture: TEXAR must have 2 or 3 dimensions with 'single' type");
 
             dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
             if (numdims == 2)
@@ -1339,7 +1340,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             else
             {
                 if (dimsizes[0] != 2)
-                    mexErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 2 (LUMINANCE_ALPHA)");
+                    ourErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 2 (LUMINANCE_ALPHA)");
 
                 width = dimsizes[1];
                 height = dimsizes[2];
@@ -1364,13 +1365,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 verifyparam(minmag_mxar, "GLCALL: newtexture: OPTS.minmag", VP_VECTOR|VP_INT32);
                 nel = mxGetNumberOfElements(minmag_mxar);
                 if (nel != 1 && nel != 2)
-                    mexErrMsgTxt("GLCALL: newtexture: OPTS.minmag must have length 1 or 2");
+                    ourErrMsgTxt("GLCALL: newtexture: OPTS.minmag must have length 1 or 2");
                 minmagptr = mxGetData(minmag_mxar);
 
                 if ((minmagptr[0]!=GL_NEAREST && minmagptr[0]!=GL_LINEAR) ||
                     (nel > 1 && minmagptr[1]!=GL_NEAREST && minmagptr[1]!=GL_LINEAR))
                 {
-                    mexErrMsgTxt("GLCALL: newtexture: OPTS.minmag elements must be either GL.NEAREST or GL.LINEAR");
+                    ourErrMsgTxt("GLCALL: newtexture: OPTS.minmag elements must be either GL.NEAREST or GL.LINEAR");
                 }
 
                 minfilt = minmagptr[0];
@@ -1379,14 +1380,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         if (width <= 0 || width > 16384 || height <= 0 || height > 16384)
-            mexErrMsgTxt("GLCALL: mextexture: TEXAR's width and height must have length in [1, 16384]");
+            ourErrMsgTxt("GLCALL: mextexture: TEXAR's width and height must have length in [1, 16384]");
 
         if (repltex)
         {
             verifyparam(NEWTEXTURE_IN_TEXNAME, "GLCALL: newtexture: TEXNAME", VP_SCALAR|VP_UINT32);
             texname = *(uint32_t *)mxGetData(NEWTEXTURE_IN_TEXNAME);
             if (texname == 0)
-                mexErrMsgTxt("GLCALL: newtexture: TEXNAME must be greater 0");
+                ourErrMsgTxt("GLCALL: newtexture: TEXNAME must be greater 0");
         }
         else
         {
@@ -1413,7 +1414,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (tmpwidth==0)
         {
             glDeleteTextures(1, &texname);
-            mexErrMsgTxt("GLCALL: newtexture: cannot accomodate texture");
+            ourErrMsgTxt("GLCALL: newtexture: cannot accomodate texture");
         }
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,  width, height,
                      0, format, type, mxGetData(NEWTEXTURE_IN_TEXAR));
@@ -1440,12 +1441,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         double xyalign[2] = { 0.0, 0.0 };
 
         if (nlhs != 0 || (nrhs != 4 && nrhs != 5))
-            mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text [, xyalign])");
+            ourErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text [, xyalign])");
 
         verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE);
         vlen = mxGetNumberOfElements(RENDERTEXT_IN_POS);
         if (vlen != 2 && vlen != 3)
-            mexErrMsgTxt("GLC: rendertext: POS must have length 2 or 3");
+            ourErrMsgTxt("GLC: rendertext: POS must have length 2 or 3");
         pos = mxGetPr(RENDERTEXT_IN_POS);
 
         verifyparam(RENDERTEXT_IN_HEIGHT, "GLC: rendertext: HEIGHT", VP_SCALAR|VP_DOUBLE);
@@ -1471,7 +1472,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         text = mxArrayToString(RENDERTEXT_IN_TEXT);
 
         if (!text)
-            mexErrMsgTxt("GLCALL: rendertext: Out of memory!");
+            ourErrMsgTxt("GLCALL: rendertext: Out of memory!");
 
         {
             glMatrixMode(GL_MODELVIEW);
@@ -1527,12 +1528,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         };
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.toggle, [GL.<WHAT1> <state1> [, GL.<WHAT2> <state2>, ...]]))");
+            ourErrMsgTxt("Usage: GLCALL(glc.toggle, [GL.<WHAT1> <state1> [, GL.<WHAT2> <state2>, ...]]))");
 
         verifyparam(TOGGLE_IN_KV, "GLCALL: toggle: KV", VP_VECTOR|VP_INT32);
         numkeys = mxGetNumberOfElements(TOGGLE_IN_KV);
         if (numkeys&1)
-            mexErrMsgTxt("GLCALL: toggle: key-value vector must have even length");
+            ourErrMsgTxt("GLCALL: toggle: key-value vector must have even length");
         numkeys /= 2;
 
         kv = mxGetData(TOGGLE_IN_KV);
@@ -1567,13 +1568,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t *xywh;
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.scissor, int32([x y w h]))");
+            ourErrMsgTxt("Usage: GLCALL(glc.scissor, int32([x y w h]))");
 
         verifyparam(SCISSOR_IN_XYWH, "GLCALL: scissor: XYWH", VP_VECTOR|VP_INT32|(4<<VP_VECLEN_SHIFT));
 
         xywh = mxGetData(SCISSOR_IN_XYWH);
         if (xywh[2]<0 || xywh[3]<0)
-            mexErrMsgTxt("GLCALL: scissor: XYWH(3) and XYWH(4) must be non-negative");
+            ourErrMsgTxt("GLCALL: scissor: XYWH(3) and XYWH(4) must be non-negative");
 
         glScissor(xywh[0], xywh[1], xywh[2], xywh[3]);
     }
@@ -1584,7 +1585,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize numtexs;
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.deltextures, [texname1 texname2 ...])");
+            ourErrMsgTxt("Usage: GLCALL(glc.deltextures, [texname1 texname2 ...])");
 
         verifyparam(DELTEXTURES_IN_TEXNAMES, "GLCALL: deltextures: TEXNAMES", VP_VECTOR|VP_UINT32);
         numtexs = mxGetNumberOfElements(DELTEXTURES_IN_TEXNAMES);
@@ -1600,7 +1601,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const uint32_t *what;
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.push, [WHAT1 WHAT2 ...]);  WHAT* can be either\n"
+            ourErrMsgTxt("Usage: GLCALL(glc.push, [WHAT1 WHAT2 ...]);  WHAT* can be either\n"
                          " GL.PROJECTION, GL.MODELVIEW, GL.TEXTURE to push the respective matrices,\n"
                          " or a bit combination of GL.*_BIT that is passed to glPushAttrib()\n"
                          "(see getglconsts.m)");
@@ -1631,7 +1632,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (glGetError() == (cmd==GLC_PUSH ? GL_STACK_OVERFLOW : GL_STACK_UNDERFLOW))
         {
-            mexErrMsgTxt("GLCALL: push/pop: over/underflow");
+            ourErrMsgTxt("GLCALL: push/pop: over/underflow");
         }
     }
     break;
@@ -1641,13 +1642,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t what;
 
         if (nlhs != 1 || nrhs != 2)
-            mexErrMsgTxt("Usage: VALUE = GLCALL(glc.get, WHAT)");
+            ourErrMsgTxt("Usage: VALUE = GLCALL(glc.get, WHAT)");
 
         verifyparam(GET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(GET_IN_WHAT);
 
         if (!inited && what != GLC_GET_WINDOW_ID)
-            mexErrMsgTxt("GLCALL: get: Only GL.WINDOW_ID supported when not initialized");
+            ourErrMsgTxt("GLCALL: get: Only GL.WINDOW_ID supported when not initialized");
 
         switch (what)
         {
@@ -1672,7 +1673,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             glutwidx = glutGetWindow();
             if (glutwidx==0)
-                mexErrMsgTxt("GLCALL: get WINDOW_SIZE: no active window!");
+                ourErrMsgTxt("GLCALL: get WINDOW_SIZE: no active window!");
 
             whar = mxCreateNumericMatrix(1,2, mxDOUBLE_CLASS, mxREAL);
             wh = mxGetPr(whar);
@@ -1697,7 +1698,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         default:
-            mexErrMsgTxt("GLCALL: get: WHAT token unknown");
+            ourErrMsgTxt("GLCALL: get: WHAT token unknown");
         }
     }
     break; /* not reached */
@@ -1707,7 +1708,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t what;
 
         if (nlhs != 0 || nrhs != 3)
-            mexErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
+            ourErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
 
         verifyparam(SET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(SET_IN_WHAT);
@@ -1743,7 +1744,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourwidx--;
 
             if ((unsigned)ourwidx >= MAXACTIVEWINDOWS || (glutwidx=glutwinidx[ourwidx])==0)
-                mexErrMsgTxt("GLC: set GL.WINDOW_ID: window index invalid or nonexistent window");
+                ourErrMsgTxt("GLC: set GL.WINDOW_ID: window index invalid or nonexistent window");
 
             glutSetWindow(glutwidx);
             /* glutSetWindow might still come up empty; in that case following commands
@@ -1814,7 +1815,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         default:
-            mexErrMsgTxt("GLCALL: set: WHAT token unknown");
+            ourErrMsgTxt("GLCALL: set: WHAT token unknown");
         }
     }
     break;
@@ -1824,15 +1825,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const mwSize *dimsizes;
 
         if (!GLEW_VERSION_1_3 && !GLEW_ARB_multitexture)
-            mexErrMsgTxt("GLCALL: colormap needs OpenGL 1.3 or GL_ARB_multitexture");
+            ourErrMsgTxt("GLCALL: colormap needs OpenGL 1.3 or GL_ARB_multitexture");
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.colormap, COLORMAP), COLORMAP should be 3x256 uint8");
+            ourErrMsgTxt("Usage: GLCALL(glc.colormap, COLORMAP), COLORMAP should be 3x256 uint8");
 
         verifyparam(COLORMAP_IN_COLORMAP, "GLCALL: colormap: COLORMAP", VP_UINT8|VP_DIMN|(2<<VP_DIMN_SHIFT));
         dimsizes = mxGetDimensions(COLORMAP_IN_COLORMAP);
         if (dimsizes[0] != 3 || dimsizes[1] != 256)
-            mexErrMsgTxt("GLCALL: colormap: COLORMAP must be a 3x256 matrix");
+            ourErrMsgTxt("GLCALL: colormap: COLORMAP must be a 3x256 matrix");
 
         if (cmaptexname==0)
             glGenTextures(1, &cmaptexname);
@@ -1861,20 +1862,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         GLint status;
 
         if ((nlhs != 1 && nlhs != 2) || nrhs != 2)
-            mexErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newfragprog, FRAGSHADERSRC)");
+            ourErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newfragprog, FRAGSHADERSRC)");
 
         if (!GLEW_VERSION_2_0)
-            mexErrMsgTxt("GLCALL: newfragprog: OpenGL 2.0 required!");
+            ourErrMsgTxt("GLCALL: newfragprog: OpenGL 2.0 required!");
 
         verifyparam(NEWFRAGPROG_IN_SHADERSRC, "GLCALL: newfragprog: FRAGSHADERSRC", VP_VECTOR|VP_CHAR);
 
         progId = glCreateProgram();
         if (!progId)
-            mexErrMsgTxt("GLCALL: newfragprog: Error creating program object");
+            ourErrMsgTxt("GLCALL: newfragprog: Error creating program object");
 
         fragshaderId = glCreateShader(GL_FRAGMENT_SHADER);
         if (!fragshaderId)
-            mexErrMsgTxt("GLCALL: newfragprog: Error creating fragment shader object");
+            ourErrMsgTxt("GLCALL: newfragprog: Error creating fragment shader object");
 
         fragshaderSrc = mxArrayToString(NEWFRAGPROG_IN_SHADERSRC);
         glShaderSource(fragshaderId, 1, &fragshaderSrc, NULL);
@@ -1889,7 +1890,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             memcpy(errstr, "SH: ", 4);
             glGetShaderInfoLog(fragshaderId, sizeof(errstr)-4, NULL, errstr+4);
 
-            mexErrMsgTxt(errstr);
+            ourErrMsgTxt(errstr);
         }
 
         glAttachShader(progId, fragshaderId);
@@ -1902,7 +1903,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             memcpy(errstr, "PR: ", 4);
             glGetProgramInfoLog(progId, sizeof(errstr)-4, NULL, errstr+4);
 
-            mexErrMsgTxt(errstr);
+            ourErrMsgTxt(errstr);
         }
 
         NEWFRAGPROG_OUT_PROGID = createScalar(mxUINT32_CLASS, &progId);
@@ -1970,11 +1971,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
                 fieldnum = mxAddField(uniformStructAr, name);
                 if (fieldnum == -1)
-                    mexErrMsgTxt("GLCALL: INTERNAL ERROR calling mxAddField");
+                    ourErrMsgTxt("GLCALL: INTERNAL ERROR calling mxAddField");
                 /* uniform IDs != uniform locations !! */
                 uniformLocation = glGetUniformLocation(progId, name);
                 if (uniformLocation & (0xe0000000u))
-                    mexErrMsgTxt("GLCALL: INTERNAL ERROR: (uniformLocation & 0xe0000000u) != 0");
+                    ourErrMsgTxt("GLCALL: INTERNAL ERROR: (uniformLocation & 0xe0000000u) != 0");
 
                 uniformHandle = ((uint32_t)uniformLocation) | (floatp<<31) | (vecn<<29);
                 mxSetFieldByNumber(uniformStructAr, 0, fieldnum,
@@ -1992,7 +1993,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         GLint cmap_uniform;
 
         if (nlhs != 0 || (nrhs != 2 && nrhs != 1))
-            mexErrMsgTxt("Usage: GLCALL(glc.usefragprog [, PROGID])");
+            ourErrMsgTxt("Usage: GLCALL(glc.usefragprog [, PROGID])");
 
         if (nrhs == 1)
         {
@@ -2025,12 +2026,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t vptype;
 
         if (nlhs != 0 || nrhs != 3)
-            mexErrMsgTxt("Usage: GLCALL(glc.setuniform, UNIFORMHANDLE, VAL)");
+            ourErrMsgTxt("Usage: GLCALL(glc.setuniform, UNIFORMHANDLE, VAL)");
 
         glGetIntegerv(GL_CURRENT_PROGRAM, &progId);
 
         if (progId==0)
-            mexErrMsgTxt("GLCALL: setuniform: a fragment program must be active!");
+            ourErrMsgTxt("GLCALL: setuniform: a fragment program must be active!");
 
         verifyparam(SETUNIFORM_IN_UNIFORMHANDLE, "GLCALL: setuniform: UNIFORMHANDLE", VP_SCALAR|VP_UINT32);
         uniformHandle = *(uint32_t *)mxGetData(SETUNIFORM_IN_UNIFORMHANDLE);
@@ -2093,7 +2094,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         /* don't leave out the opportunity to mock the user even if the effect is the same :P */
         if (nlhs!=0 || nrhs!=1)
-            mexErrMsgTxt("Usage: GLCALL(glc.leavemainloop)");
+            ourErrMsgTxt("Usage: GLCALL(glc.leavemainloop)");
 
         glutLeaveMainLoop();
     }
@@ -2104,7 +2105,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t ourwidx, glutwidx;
 
         if (nlhs!=0 || (nrhs!=1 && nrhs!=2))
-            mexErrMsgTxt("Usage: GLCALL(glc.closewindow [, OURWINID])");
+            ourErrMsgTxt("Usage: GLCALL(glc.closewindow [, OURWINID])");
 
         if (nrhs == 2)
         {
@@ -2112,7 +2113,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourwidx = *(int32_t *)mxGetData(CLOSEWINDOW_IN_OURWINID);
 
             if (ourwidx <= 0 || ourwidx > MAXACTIVEWINDOWS)
-                mexErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
+                ourErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
             ourwidx--;
 
             glutwidx = glutwinidx[ourwidx];
@@ -2131,7 +2132,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         ourwinidx[glutwidx] = -1;
         if (ourwidx < 0)
-            mexErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
+            ourErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
         glutwinidx[ourwidx] = 0;
     }
     return;
@@ -2145,7 +2146,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mxArray *pixels_mxar;
 
         if (nlhs != 1 || (nrhs != 1 && nrhs != 2))
-            mexErrMsgTxt("Usage: PIXELS = GLCALL(glc.readpixels [, XYWH]), PIXELS is 3xWxH");
+            ourErrMsgTxt("Usage: PIXELS = GLCALL(glc.readpixels [, XYWH]), PIXELS is 3xWxH");
 
         winw = glutGet(GLUT_WINDOW_WIDTH);
         winh = glutGet(GLUT_WINDOW_HEIGHT);
@@ -2188,7 +2189,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const float *fogparamptr;
 
         if (nlhs != 0 || nrhs != 4)
-            mexErrMsgTxt("Usage: GLCALL(glc.fog, GL.<FOG_MODE>, FOG_PARAM, FOG_COLOR)\n"
+            ourErrMsgTxt("Usage: GLCALL(glc.fog, GL.<FOG_MODE>, FOG_PARAM, FOG_COLOR)\n"
                          "        - FOG_PARAM: 2-vector if mode is GL.LINEAR, scalar else\n"
                          "        - FOG_COLOR: 4-vector;  both must be of 'single' type\n");
 
@@ -2196,7 +2197,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         fogmode = *(int32_t *)mxGetData(FOG_IN_MODE);
 
         if (fogmode != GL_LINEAR && fogmode != GL_EXP && fogmode != GL_EXP2)
-            mexErrMsgTxt("GLCALL: fog: GL.<FOG_MODE> must be one of GL.LINEAR, GL.EXP or GL.EXP2");
+            ourErrMsgTxt("GLCALL: fog: GL.<FOG_MODE> must be one of GL.LINEAR, GL.EXP or GL.EXP2");
 
         if (fogmode == GL_LINEAR)
             verifyparam(FOG_IN_PARAM, "GLCALL: fog: PARAM", VP_VECTOR|VP_SINGLE|(2<<VP_VECLEN_SHIFT));
