@@ -58,6 +58,7 @@
 /* newtexture */
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
 #define NEWTEXTURE_IN_TEXNAME (prhs[2])
+#define NEWTEXTURE_IN_OPTS (prhs[3-nlhs])
 #define NEWTEXTURE_OUT_TEXNAME (plhs[0])
 
 /* rendertext */
@@ -1195,8 +1196,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const mwSize *dimsizes;  /* XXX: older versions w/o mwSize? */
         GLint tmpwidth;
 
-        int32_t newtex = (nlhs == 1 && nrhs == 2);
-        int32_t repltex = (nlhs == 0 && nrhs == 3);
+        int32_t newtex = (nlhs == 1 && (nrhs == 2 || nrhs == 3));
+        int32_t repltex = (nlhs == 0 && (nrhs == 3 || nrhs == 4));
+        int32_t haveopts = (nlhs + nrhs == 4);
+
+        GLint minfilt=GL_LINEAR, magfilt=GL_LINEAR;
 
         GLint internalFormat;
         GLenum format;
@@ -1205,8 +1209,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize width, height;
 
         if (!newtex && !repltex)
-            mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8 or NxM single\n"
-                         "   or: GLCALL(glc.newtexture, texar, texname)  to replace an earlier texture");
+            mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar [, opts]), texar must be 3xNxM uint8 or NxM single\n"
+                         "   or: GLCALL(glc.newtexture, texar, texname [, opts])  to replace an earlier texture");
 
         if (mxIsUint8(NEWTEXTURE_IN_TEXAR))
         {
@@ -1268,6 +1272,31 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             type = GL_FLOAT;
         }
 
+        if (haveopts)
+        {
+            const mxArray *minmag_mxar;
+
+            verifyparam(NEWTEXTURE_IN_OPTS, "GLCALL: newtexture: OPTS", VP_SCALAR|VP_STRUCT);
+
+            minmag_mxar = mxGetField(NEWTEXTURE_IN_OPTS, 0, "minmag");
+            if (minmag_mxar)
+            {
+                const int32_t *minmagptr;
+
+                verifyparam(minmag_mxar, "GLCALL: newtexture: OPTS.minmag", VP_VECTOR|VP_UINT32|(2<<VP_VECLEN_SHIFT));
+                minmagptr = mxGetData(minmag_mxar);
+
+                if ((minmagptr[0]!=GL_NEAREST && minmagptr[0]!=GL_LINEAR) ||
+                    (minmagptr[1]!=GL_NEAREST && minmagptr[1]!=GL_LINEAR))
+                {
+                    mexErrMsgTxt("GLCALL: newtexture: OPTS.minmag elements must be either GL.NEAREST or GL.LINEAR");
+                }
+
+                minfilt = minmagptr[0];
+                magfilt = minmagptr[1];
+            }
+        }
+
         if (width <= 0 || width > 16384 || height <= 0 || height > 16384)
             mexErrMsgTxt("GLCALL: mextexture: TEXAR's width and height must have length in [1, 16384]");
 
@@ -1284,8 +1313,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         glBindTexture(GL_TEXTURE_2D, texname);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minfilt);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magfilt);
 
         /* NOTE: CLAMP_TO_EDGE available if GL >= 1.2 */
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

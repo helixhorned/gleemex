@@ -76,6 +76,10 @@ GL.TEXTURE_BIT = uint32(262144);
 GL.SCISSOR_BIT = uint32(524288);
 GL.ALL_ATTRIB_BITS = uint32(1048575);  % 0xFFFFF
 
+%% texture filter types
+GL.NEAREST = uint32(9728);  % 0x2600
+GL.LINEAR = uint32(9729);  % 0x2601
+
 
 %% GLC specific
 
