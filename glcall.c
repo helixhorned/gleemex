@@ -925,6 +925,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     return;
 
+    /* TODO: merge with GLCALL(glc.scissor) ... */
     case GLC_VIEWPORT:
     {
         const double *xywh_d;
