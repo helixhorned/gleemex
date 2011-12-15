@@ -64,12 +64,6 @@
 #define NEWTEXTURE_IN_TEXNAME (prhs[2])
 #define NEWTEXTURE_OUT_TEXNAME (plhs[0])
 
-/* setwindowsize */
-#define SETWINDOWSIZE_IN_WH (prhs[1])
-
-/* getwindowsize */
-#define GETWINDOWSIZE_OUT_WH (plhs[0])
-
 /* rendertext */
 #define RENDERTEXT_IN_POS (prhs[1])
 #define RENDERTEXT_IN_HEIGHT (prhs[2])
@@ -117,7 +111,8 @@
 /**** GET tokens ****/
 /* Use negative values for GLC tokens since we might want to allow GL ones
  * later. This way there will be no collisions. */
-#define GLC_GET_WINID (-100)
+#define GLC_GET_WINDOW_ID (-100)
+#define GLC_GET_WINDOW_SIZE (-101)
 
 
 enum glcalls_setcallback_
@@ -158,8 +153,6 @@ enum glcalls_
     GLC_POSTREDISPLAY,
     GLC_GETERRSTR,
     GLC_NEWTEXTURE,
-    GLC_SETWINDOWSIZE,
-    GLC_GETWINDOWSIZE,
     GLC_RENDERTEXT,
     GLC_TOGGLE,
     GLC_SCISSOR,
@@ -190,8 +183,6 @@ const char *glcall_names[] =
     "postredisplay",
     "geterrstr",
     "newtexture",
-    "setwindowsize",
-    "getwindowsize",
     "rendertext",
     "toggle",
     "scissor",
@@ -1309,43 +1300,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     break;
 
-    /* TODO: move into 'set' */
-    case GLC_SETWINDOWSIZE:
-    {
-        const double *wh_d;
-        int32_t wh[2];
-
-        if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.setwindowsize, [width height])");
-
-        verifyparam(SETWINDOWSIZE_IN_WH, "GLC: setwindowsize: WH", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
-        wh_d = mxGetPr(SETWINDOWSIZE_IN_WH);
-
-        wh[0] = util_dtoi(wh_d[0], 1, 16384, "GLC: setwindowsize: WH(1)");
-        wh[1] = util_dtoi(wh_d[1], 1, 16384, "GLC: setwindowsize: WH(2)");
-
-        glutReshapeWindow(wh[0], wh[1]);
-    }
-    break;
-
-    case GLC_GETWINDOWSIZE:
-    {
-        mxArray *whar;
-        double *wh;
-
-        if (nlhs != 1 || nrhs != 1)
-            mexErrMsgTxt("Usage: WH=GLCALL(glc.getwindowsize)");
-
-        whar = mxCreateNumericMatrix(1,2, mxDOUBLE_CLASS, mxREAL);
-        wh = mxGetPr(whar);
-
-        wh[0] = glutGet(GLUT_WINDOW_WIDTH);
-        wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
-
-        GETWINDOWSIZE_OUT_WH = whar;
-    }
-    break;
-
     case GLC_RENDERTEXT:
     {
         const double *pos;
@@ -1533,7 +1487,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         switch (what)
         {
-        case GLC_GET_WINID:
+        case GLC_GET_WINDOW_ID:
         {
             int32_t glutwidx = glutGetWindow(), ret_ourwidx;
 
@@ -1546,6 +1500,26 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
+        case GLC_GET_WINDOW_SIZE:
+        {
+            mxArray *whar;
+            double *wh;
+            int32_t glutwidx;
+
+            glutwidx = glutGetWindow();
+            if (glutwidx==0)
+                mexErrMsgTxt("GLCALL: get WINDOW_SIZE: no active window!");
+
+            whar = mxCreateNumericMatrix(1,2, mxDOUBLE_CLASS, mxREAL);
+            wh = mxGetPr(whar);
+
+            wh[0] = glutGet(GLUT_WINDOW_WIDTH);
+            wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
+
+            GET_OUT_VALUE = whar;
+            return;
+        }
+
         default:
             mexErrMsgTxt("GLCALL: get: WHAT token unknown");
         }
@@ -1554,25 +1528,46 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_SET:
     {
+        int32_t what;
+
         if (nlhs != 0 || nrhs != 3)
             mexErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
 
         verifyparam(SET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
-        verifyparam(SET_IN_VALUE, "GLCALL: set: VALUE", VP_SCALAR|VP_DOUBLE);
+        what = *(int32_t *)mxGetData(SET_IN_WHAT);
 
+        switch (what)
         {
-            int32_t what = *(int32_t *)mxGetData(SET_IN_WHAT);
-            double value_d = *mxGetPr(SET_IN_VALUE);
+        case GL_POINT_SIZE:
+        {
+            double value_d;
 
-            switch (what)
-            {
-            case GL_POINT_SIZE:
-                glPointSize((GLfloat)value_d);  /* potential undefined behavoiur */
-                break;
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.POINT_SIZE: SIZE", VP_SCALAR|VP_DOUBLE);
+            value_d = *mxGetPr(SET_IN_VALUE);
 
-            default:
-                mexErrMsgTxt("GLCALL: set: WHAT token unknown");
-            }
+            /* potential undefined behavoiur when downcasting */
+            glPointSize((GLfloat)value_d);
+            break;
+        }
+
+        case GLC_GET_WINDOW_SIZE:
+        {
+            const double *wh_d;
+            int32_t wh[2];
+
+            verifyparam(SET_IN_VALUE, "GLC: set GL.WINDOW_SIZE: WH",
+                        VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+            wh_d = mxGetPr(SET_IN_VALUE);
+
+            wh[0] = util_dtoi(wh_d[0], 1, 16384, "GLC: setwindowsize: WH(1)");
+            wh[1] = util_dtoi(wh_d[1], 1, 16384, "GLC: setwindowsize: WH(2)");
+
+            glutReshapeWindow(wh[0], wh[1]);
+            return;
+        }
+
+        default:
+            mexErrMsgTxt("GLCALL: set: WHAT token unknown");
         }
     }
     break;
@@ -1787,7 +1782,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             GLC_MEX_ERROR("Error getting info for uniform #%d (program #%d)", uniformId, progId);
 
         sz = 0;
-        data = mxGetData(SETUNIFORM_IN_VAL);
 
         /* validation */
         switch (type)
@@ -1819,6 +1813,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         verifyparam(SETUNIFORM_IN_VAL, "GLCALL: setuniform: VAL", VP_VECTOR|vptype);
+        data = mxGetData(SETUNIFORM_IN_VAL);
 
         if (mxGetNumberOfElements(SETUNIFORM_IN_VAL) != (size_t)(sz*size))
             GLC_MEX_ERROR("Must set uniform '%s' with a length-%u vector", name, (uint32_t)(sz*size));

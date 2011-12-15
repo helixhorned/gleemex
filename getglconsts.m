@@ -81,6 +81,7 @@ GL.ALL_ATTRIB_BITS = uint32(1048575);  % 0xFFFFF
 
 % GET tokens
 GL.WINDOW_ID = int32(-100);
+GL.WINDOW_SIZE = int32(-101);
 
 
 %% GLUT stuff follows

@@ -114,14 +114,14 @@ function ex_display()
     global GL glc glex
 
     %% resize check
-    wh = glcall(glc.getwindowsize);
+    wh = glcall(glc.get, GL.WINDOW_SIZE);
     w = wh(1);
     h = wh(2);
     if (w < 800 || h < 600)
         % doesn't work very well
         w = max(800, glex.wh(1));
         h = max(600, glex.wh(2));
-        glcall(glc.setwindowsize, [w h]);
+        glcall(glc.set, GL.WINDOW_SIZE, [w h]);
     end
 
     glcall(glc.clear, 1-[0 0 0]);
