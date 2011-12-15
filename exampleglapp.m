@@ -5,10 +5,27 @@ function exampleglapp(vertposns)
     GL = getglconsts(); glc = glcall();
     glex = struct();
 
+    im = imread('../connectivity_visualization/brain_area.jpg');
+    if (mod(size(im,1),2)==1)
+        im(end+1, :, :) = im(end, :, :);
+    end
+    if (mod(size(im,2),2)==1)
+        im(:, end+1, :) = im(:, end, :);
+    end
+
+    im = permute(im, [3 2 1]);  % swap x/y, make rgb consecutive in mem
+
+    glex.imwh = [size(im,2) size(im,3)];  % width, height
     glex.xbord = [60 460];
     glex.ybord = [40 440];
     glex.mxy = [0 0];
-    glex.wh = [800 600];
+    glex.wh = [1100 800];
+
+    nlotsa = 256000;
+    glex.lotsofverts = single(rand(2,nlotsa))*600 + 100;
+    glex.lotsofverts(1, :) = glex.lotsofverts(1, :)+100;
+    glex.lotsofcolors = rand(3,nlotsa);
+    glex.lotsofidxs64 = uint8(floor(rand(1,nlotsa)*64));
 
     if (nargin >= 1)
         posmin = min(vertposns);
@@ -27,7 +44,10 @@ function exampleglapp(vertposns)
     t = linspace(0,2*pi, 17);
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
+    % init!
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', true);
+
+    glex.tex = glcall(glc.newtexture, im);
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
     glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
@@ -57,11 +77,23 @@ end
 
 function ex_display()
     global GL glc glex
-    glcall(glc.clear, [0 0 0]);
+
+    %% resize check
+    wh = glcall(glc.getwindowsize);
+    w = wh(1);
+    h = wh(2);
+    if (w < 800 || h < 600)
+        % doesn't work very well
+        w = max(800, glex.wh(1));
+        h = max(600, glex.wh(2));
+        glcall(glc.setwindowsize, [w h]);
+    end
+
+    glcall(glc.clear, 1-[0 0 0]);
 
     numchans = 16;
 
-    % blue rect
+    %% blue rect
     mxy = glex.mxy;
     mxy(2) = glex.wh(2) - mxy(2);
 
@@ -71,8 +103,8 @@ function ex_display()
         xdif = (glex.xbord(2)-glex.xbord(1))/numchans;
         ydif = (glex.ybord(2)-glex.ybord(1))/numchans;
 
-        i = floor((mxy(1)-glex.xbord(1))./xdif);
-        j = floor((mxy(2)-glex.ybord(1))./ydif);
+        i = min(numchans-1, floor((mxy(1)-glex.xbord(1))./xdif));
+        j = min(numchans-1, floor((mxy(2)-glex.ybord(1))./ydif));
 
         verts = zeros(2, 4);
 
@@ -84,7 +116,7 @@ function ex_display()
         glcall(glc.draw, GL.QUADS, verts, struct('colors',[0.4 0.4 0.8]));
     end
 
-    % grid lines
+    %% grid lines
     xx = linspace(glex.xbord(1), glex.xbord(2), numchans+1);
     yy = linspace(glex.ybord(1), glex.ybord(2), numchans+1);
 
@@ -100,10 +132,22 @@ function ex_display()
 
     glcall(glc.draw, GL.LINES, [vlines, hlines]);
 
-    % vertex points
+    %% brain image
+    texcoords = [1 0 0 1; ...
+                 1 1 0 0];
+    verts = [0 glex.imwh(1) glex.imwh(1) 0; ...
+             0 0 glex.imwh(2) glex.imwh(2)];
+
+    verts(1, :) = verts(1, :) + glex.xbord(1);
+    verts(2, :) = verts(2, :) + glex.ybord(2) + 40;
+
+    glcall(glc.draw, GL.QUADS, verts, struct(...
+        'colors',[1 1 1], 'tex',glex.tex, 'texcoords',texcoords));
+
+    %% vertex points
     vertposns = round(glex.posns * 256);
-    vertposns(1, :) = vertposns(1, :) + glex.xbord(2) + 40;
-    vertposns(2, :) = vertposns(2, :) + glex.ybord(1);
+    vertposns(1, :) = vertposns(1, :) + glex.xbord(2) + 80;
+    vertposns(2, :) = vertposns(2, :) + glex.ybord(1) + 30;
 
     nslices = 17;
     indices = uint32([ones(1,nslices); 1:nslices; 2:nslices+1]-1);
@@ -116,6 +160,13 @@ function ex_display()
         glcall(glc.draw, GL.TRIANGLES, vpos, struct(...
             'colors',[0.5 0.5 0.5] + glex.zposns(i)/2, 'indices',indices));
     end
+
+    % torture test 1
+%    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
+    
+    % torture test 2
+%    glcall(glc.draw, GL.LINES, glex.lotsofverts(:, 1:64), ...
+%           struct('colors', glex.lotsofcolors(:, 1:64), 'indices',glex.lotsofidxs64));
 end
 
 function ex_passivemotion(x, y)
