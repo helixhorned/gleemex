@@ -120,6 +120,7 @@ function [sel,ok]=glc_listdlg(varargin)
 
     s.bbox = [20 s.wh(1)-20; ...
                         20+24+20 s.wh(2)-20];
+    s.tmpwinid = 0;
 
     if (isempty(s.name))
         s.name = ' ';
@@ -241,10 +242,11 @@ function glc_listdlg_display()
     glc_drawbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).cancelstr, glc_listdlg_s(winid).mxy, false);
 
     if (~isempty(glc_listdlg_s(winid).clicked))
+        glc_listdlg_s(1).tmpwinid = winid;
         glc_callbutton([20 20; 60 24].', glc_listdlg_s(winid).mxy, ...
-                       'global glc_listdlg_s(winid); glc_listdlg_s(winid).done=1;');
+                       'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=1;');
         glc_callbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).mxy, ...
-                       'global glc_listdlg_s(winid); glc_listdlg_s(winid).done=2;');
+                       'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=2;');
     end
 
     bbox = glc_listdlg_s(winid).bbox;
