@@ -911,16 +911,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             /* bounds check! */
             for (i=0; i<numverts; i++)
             {
-                if (indicestype==GL_UNSIGNED_INT)
-                {
-                    if (((uint32_t *)indices)[i] >= (unsigned)numverts)
-                        mexErrMsgTxt("GLCALL: draw: INDICES must contain values between 0 and size(VERTEXDATA,2)-1");
-                }
-                else
-                {
-                    if (((uint8_t *)indices)[i] >= (unsigned)numverts)
-                        mexErrMsgTxt("GLCALL: draw: INDICES must contain values between 0 and size(VERTEXDATA,2)-1");
-                }
+                if (((indicestype==GL_UNSIGNED_INT) ?
+                     ((uint32_t *)indices)[i] : ((uint8_t *)indices)[i]) >= (unsigned)numverts)
+                    mexErrMsgTxt("GLCALL: draw: INDICES must contain values between 0 and size(VERTEXDATA,2)-1");
             }
         }
         else
