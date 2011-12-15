@@ -1132,9 +1132,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glPushMatrix();
             glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT);
 
-            glColor3d(0.2, 0.2, 0.2);  // XXX
+            glColor3d(0.2, 0.2, 0.2);  /* XXX */
             glDisable(GL_TEXTURE_2D);
-//            glEnable(GL_LINE_SMOOTH);
+/*            glEnable(GL_LINE_SMOOTH); */
 
             glLoadIdentity();
             glTranslated(pos[0], pos[1], pos[2]);
@@ -1145,7 +1145,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             for (i=0; i<slen; i++)
             {
                 glutStrokeCharacter(GLUT_STROKE_ROMAN, text[i]);
-                glTranslated(119.05/10.0, 0, 0);  // a bit of spacing...
+                glTranslated(119.05/10.0, 0, 0);  /* a bit of spacing... */
             }
 
             glPopMatrix();
@@ -1181,7 +1181,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             int32_t val = kv[2*i+1];
 
-            if (val < 0)  // flip
+            if (val < 0)  /* flip */
                 val = !glIsEnabled(kv[2*i]);
 
             if (val)
