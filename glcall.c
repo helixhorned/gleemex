@@ -35,12 +35,17 @@
 #define DRAW_IN_VERTEXDATA (prhs[2])
 #define DRAW_IN_INDICES (prhs[3])
 
+// setmatrix
+#define SETMATRIX_IN_MODE (prhs[1])
+#define SETMATRIX_IN_MATRIX (prhs[2])
+
 
 enum glcalls_
 {
-    GLC_NEWWINDOW,
+    GLC_NEWWINDOW = 0,
     GLC_DRAW,
     GLC_ENTERMAINLOOP,
+    GLC_SETMATRIX,
     NUM_GLCALLS,  // must be last
 };
 
@@ -49,6 +54,7 @@ const char *glcall_names[] =
     "newwindow",
     "draw",
     "entermainloop",
+    "setmatrix",
 };
 
 
@@ -258,11 +264,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int pos[2], extent[2];
+        int pos[2], extent[2], winid;
         char windowname[80];
 
-        if (nlhs != 1 || nrhs != 4)
-            mexErrMsgTxt("Usage: WINID = GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME), create new window.");
+        if (nlhs > 1 || nrhs != 4)
+            mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME), create new window.");
 
         verifyparam(NEWWIN_IN_POS, "POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
         verifyparam(NEWWIN_IN_EXTENT, "EXTENT", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
@@ -297,8 +303,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glutInitWindowPosition(pos[0], pos[1]);
         glutInitWindowSize(extent[0], extent[1]);
 
+        winid = glutCreateWindow(windowname);
+
+        if (nlhs > 0)
         {
-            int winid = glutCreateWindow(windowname);
             mxArray *outar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
             *(int *)mxGetData(outar) = winid;
 
@@ -394,5 +402,60 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         inited = 0;
     }
     return;
+
+    case GLC_SETMATRIX:
+    {
+        uint32_t matrixmode;
+        mwSize numel;
+
+        static const char *usageText =
+            "Usage: GLCALL(glc.setmatrix, GL.<MATRIX_MODE>, X), where X can be\n"
+            "  * a 4x4 double matrix\n"
+            "  * the empty matrix [], meaning 'load identity matrix', or\n"
+            "  * in the case if GL.PROJECTION, a double vector [left right bottom top nearVal farVal]\n"
+            "    which is passed to glOrtho(). No matrix manipulation is performed beforehand.";
+
+        if (nlhs != 0 || nrhs != 3)
+            mexErrMsgTxt(usageText);
+
+        verifyparam(SETMATRIX_IN_MODE, "GLCALL: setmatrix: MATRIX_MODE", VP_SCALAR|VP_UINT32);
+        matrixmode = *(uint32_t *)mxGetData(SETMATRIX_IN_MODE);
+
+        if (matrixmode != GL_MODELVIEW && matrixmode != GL_PROJECTION)
+            mexErrMsgTxt("GLCALL: setmatrix: MATRIX_MODE must be one of GL_MODELVIEW or GL_PROJECTION");
+
+        if (!mxIsDouble(SETMATRIX_IN_MATRIX))
+            mexErrMsgTxt("GLCALL: setmatrix: X must have class double");
+
+        numel = mxGetNumberOfElements(SETMATRIX_IN_MATRIX);
+        // XXX: no dim check this way, but also simpler
+        if (numel == 0)
+        {
+            glMatrixMode(matrixmode);
+            glLoadIdentity();
+        }
+        else if (numel == 16)
+        {
+            glMatrixMode(matrixmode);
+            glLoadMatrixd(mxGetPr(SETMATRIX_IN_MATRIX));
+        }
+        else if (numel == 6)
+        {
+            const double *vec;
+
+            if (matrixmode != GL_PROJECTION)
+                mexErrMsgTxt("GLCALL: setmatrix: invalid call, passing a length-6 vector as X is"
+                             " only allowed with GL_PROJECTION matrix mode.");
+
+            vec = mxGetPr(SETMATRIX_IN_MATRIX);
+            glMatrixMode(GL_PROJECTION);
+            glOrtho(vec[0], vec[1], vec[2], vec[3], vec[4], vec[5]);
+        }
+        else
+        {
+            mexErrMsgTxt("GLCALL: setmatrix: invalid call, see GLCALL(glc.setmatrix) for usage.");
+        }
     }
+
+    }  // end switch(cmd)
 }

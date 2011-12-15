@@ -5,6 +5,7 @@
 % Currently, the following sets of constants are returned:
 %
 %  * Primitives (GL_POINTS .. GL_POLYGON)
+%  * The matrix modes GL_MODELVIEW and GL_PROJECTION
 %
 function glconsts = getglconsts()
 
@@ -21,3 +22,7 @@ glconsts.TRIANGLE_FAN = uint32(6);
 glconsts.QUADS = uint32(7);
 glconsts.QUAD_STRIP = uint32(8);
 glconsts.POLYGON = uint32(9);
+
+% Matrix Modes
+glconsts.GL_MODELVIEW = uint32(5888);  % 0x1700
+glconsts.GL_PROJECTION = uint32(5889);  % 0x1701
