@@ -1,9 +1,9 @@
 % READFILESTR(FILENAME, READAS)  Reads whole file contents and returns
 % a string as row vector. Optional argument READAS specifies the type
 % passed to fopen(), the default is '*char'.
-% NaN is returned if file couldn't be opened.
+% -1 (a scalar double) is returned if file couldn't be opened.
 function str=readfilestr(filename, readas)
-    str = NaN;
+    str = -1;
 
     % BrainVision EEG VHDR files have some silly characters in them,
     % therefore open in ISO encoding...

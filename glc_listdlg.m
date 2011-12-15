@@ -84,7 +84,7 @@ function [sel,ok]=glc_listdlg(varargin)
         error('''ListString'' key/value is mandatory');
     end
 
-    if (~selmode_multiple && numel(initialval)!=1)
+    if (~selmode_multiple && numel(initialval)~=1)
         error('When in single selection mode, must have exactly one initial value');
     end
 

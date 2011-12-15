@@ -18,6 +18,10 @@ end
 
 %%
 str = readfilestr(filename);
+if (isequal(str, -1))
+    fprintf('coudn''t read ''%s''\n', filename);
+    return;
+end
 
 RE = ['^' SP 'function +(?:[^=' char(10) ']*?= *)?([A-Za-z][A-Za-z0-9_]*).*?^' SP 'end' char(13) '?$'];
 
