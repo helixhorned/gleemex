@@ -1,3 +1,10 @@
+% [SEL,OK] = GLC_LISTDLG('ListString',liststring, ...)
+%
+% Replacement for MATLAB's LISTDLG(), see its doc for most options.
+%
+% Non-MATLAB options:
+%  'Finish_Cb': if given, must be a handle to a function @(ok, sel)(...);
+%               sel is always passed as a row vector
 function [sel,ok]=glc_listdlg(varargin)
 
     global GL glc glc_listdlg_s
