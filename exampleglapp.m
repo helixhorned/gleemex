@@ -225,7 +225,14 @@ function ex_display()
 
     glcall(glc.rendertext, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
-    glcall(glc.rendertext, [460 510], 16, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
+    for ang=0:30:180
+        glcall(glc.push, GL.MODELVIEW);
+        %    glcall(glc.mulmatrix, GL.MODELVIEW, [90, 0 0 1]);
+        glcall(glc.mulmatrix, GL.MODELVIEW, [560 310 0]);  % translate text origin (lower left) to screen coords
+        glcall(glc.mulmatrix, GL.MODELVIEW, [ang, 0 0 1]);  % rotate wrt origin
+        glcall(glc.rendertext, [20 0], 8+8*ang/180, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
+        glcall(glc.pop, GL.MODELVIEW);
+    end
 
     glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
     glc_drawbutton([80 430 120 20], 'Toggle Btn', glex.togbtnstate, false);
