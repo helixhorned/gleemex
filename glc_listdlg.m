@@ -336,6 +336,6 @@ function glc_listdlg_display()
     glc_listdlg_s.clicked = [];
 
     if (glc_listdlg_s.done)
-        glcall(glc.leavemainloop);
+        glcall(glc.closewindow);
     end
 end

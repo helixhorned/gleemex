@@ -423,9 +423,6 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     for (i=0; i<numargs; i++)
         mxargs[i] = mxCreateDoubleScalar((double)args[i]);
 
-if (curourwinidx>0)
-    printf("called %s for our win %d\n", glcall_callback_names[callbackid], curourwinidx);
-
 #ifdef HAVE_OCTAVE
     mexSetTrapFlag(1);
     err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
@@ -525,10 +522,12 @@ static void display_cb(void)
     }
     else
     {
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        if (glutGetWindow())
+            glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     }
 
-    glutSwapBuffers();
+    if (glutGetWindow())
+        glutSwapBuffers();
 }
 
 static void reshape_cb(int w, int h)
@@ -540,7 +539,8 @@ static void reshape_cb(int w, int h)
     }
     else
     {
-        glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+        if (glutGetWindow())
+            glViewport(0, 0, (GLsizei)w, (GLsizei)h);
     }
 }
 
@@ -663,8 +663,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glutwinidx[i] = winid;
         ourwinidx[winid] = i;
-
-printf("created window glut %d, our %d, current glut=%d\n", winid, i, glutGetWindow());
 
         /** set callbacks for the newly created window **/
         /* these two are always there */
@@ -1042,8 +1040,6 @@ printf("created window glut %d, our %d, current glut=%d\n", winid, i, glutGetWin
                 mexErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
         }
 
-printf("set %s=%s for window glut %d, our %d\n", glcall_callback_names[callbackid],
-       tmpbuf, glutwinidx, ourwinidx[glutwinidx]);
         memcpy(&callback_funcname[ourwinidx[glutwinidx]][callbackid], tmpbuf, sizeof(tmpbuf));
     }
     return;
@@ -1766,21 +1762,35 @@ printf("set %s=%s for window glut %d, our %d\n", glcall_callback_names[callbacki
     {
         int32_t ourwidx, glutwidx;
 
-        if (nlhs!=0 || nrhs!=2)
-            mexErrMsgTxt("Usage: GLCALL(glc.closewindow, OURWINID)");
+        if (nlhs!=0 || (nrhs!=1 && nrhs!=2))
+            mexErrMsgTxt("Usage: GLCALL(glc.closewindow [, OURWINID])");
 
-        verifyparam(CLOSEWINDOW_IN_OURWINID, "GLCALL: closewindow: OURWINID", VP_SCALAR|VP_INT32);
-        ourwidx = *(int32_t *)mxGetData(CLOSEWINDOW_IN_OURWINID);
+        if (nrhs == 2)
+        {
+            verifyparam(CLOSEWINDOW_IN_OURWINID, "GLCALL: closewindow: OURWINID", VP_SCALAR|VP_INT32);
+            ourwidx = *(int32_t *)mxGetData(CLOSEWINDOW_IN_OURWINID);
 
-        if (ourwidx <= 0 || ourwidx > MAXACTIVEWINDOWS)
-            mexErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
-        ourwidx--;
+            if (ourwidx <= 0 || ourwidx > MAXACTIVEWINDOWS)
+                mexErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
+            ourwidx--;
 
-        glutwidx = glutwinidx[ourwidx];
+            glutwidx = glutwinidx[ourwidx];
+        }
+        else
+        {
+            glutwidx = glutGetWindow();
+            if (glutwidx <= 0)
+                GLC_MEX_ERROR("GLCALL: closewindow: glutGetWindow returned %d!", glutwidx);
+
+            ourwidx = ourwinidx[glutwidx];
+        }
+
         if (glutwidx > 0)  /* XXX: still might be nonexistent because closed by clicking [x] */
             glutDestroyWindow(glutwidx);
 
         ourwinidx[glutwidx] = -1;
+        if (ourwidx < 0)
+            mexErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
         glutwinidx[ourwidx] = 0;
     }
     return;
