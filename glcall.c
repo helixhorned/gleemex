@@ -1768,7 +1768,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 if (!strncmp(name, "gl_", 3))
                     continue;
 
-                for (j=sizeof(accepted_types)/sizeof(accepted_types[0]); j>=0; j--)
+                for (j=sizeof(accepted_types)/sizeof(accepted_types[0])-1; j>=0; j--)
                     if (type == accepted_types[j])
                         break;
                 if (j < 0)
