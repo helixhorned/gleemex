@@ -307,20 +307,13 @@ static const char *class_names[] = {
     "int64", "uint64",
 };
 
-static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
+/* return value: if vpflags contains VP_FP_TYPE or VP_INDEX_TYPE, either
+ *   GL_FLOAT/GL_DOUBLE, or GL_UNSIGNED_BYTE/GL_UNSIGNED_INT, respectively */
+static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
 {
     uint32_t vpclassidx = vpflags&VP_CLASS_MASK;
 
-    if (vpclassidx)
-    {
-        if (vpclassidx < VP_FP_TYPE && class_ids[vpclassidx] != mxGetClassID(ar))
-            GLC_MEX_ERROR("%s must have class %s", arname, class_names[vpclassidx]);
-        else if (vpclassidx == VP_FP_TYPE && !(mxIsDouble(ar) || mxIsSingle(ar)))
-            GLC_MEX_ERROR("%s must be of floating-point type", arname);
-        else if (vpclassidx == VP_INDEX_TYPE && !(mxIsUint32(ar) || mxIsUint8(ar)))
-            GLC_MEX_ERROR("%s must be of index type (uint8 or uint32)", arname);
-    }
-
+    /* check dimensionality requirements first */
     switch (vpflags & VP_SVM_MASK)
     {
     case VP_SCALAR:
@@ -373,7 +366,34 @@ static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
         break;
     }
 
+    }  /* switch */
+
+    /* next, check data 'class', i.e. the base data type */
+    if (vpclassidx)
+    {
+        if (vpclassidx < VP_FP_TYPE && class_ids[vpclassidx] != mxGetClassID(ar))
+        {
+            GLC_MEX_ERROR("%s must have class %s", arname, class_names[vpclassidx]);
+        }
+        else if (vpclassidx == VP_FP_TYPE)
+        {
+            if (mxIsDouble(ar))
+                return GL_DOUBLE;
+            else if (mxIsSingle(ar))
+                return GL_FLOAT;
+            GLC_MEX_ERROR("%s must be of floating-point type", arname);
+        }
+        else if (vpclassidx == VP_INDEX_TYPE)
+        {
+            if (mxIsUint32(ar))
+                return GL_UNSIGNED_INT;
+            else if (mxIsUint8(ar))
+                return GL_UNSIGNED_BYTE;
+            GLC_MEX_ERROR("%s must be of index type (uint8 or uint32)", arname);
+        }
     }
+
+    return 0;
 }
 
 static int32_t util_dtoi(double d, double minnum, double maxnum, const char *arname)
@@ -796,8 +816,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         const double *colors=NULL;
         const void *indices=NULL;  /* uint8_t or uint32_t */
-        int indicestype = 0, vertdatatype;
         GLuint texname = 0;
+        GLenum vertdatatype, indicestype=0 /* compiler-happy */;
 
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
             mexErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, OPTSTRUCT])");
@@ -811,11 +831,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!(/*primitivetype >= GL_POINTS &&*/ primitivetype <= GL_POLYGON))
             mexErrMsgTxt("GLCALL: draw: invalid GL primitive type");
 
-        verifyparam(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_FP_TYPE);
-        if (mxIsDouble(DRAW_IN_VERTEXDATA))
-            vertdatatype = GL_DOUBLE;
-        else
-            vertdatatype = GL_FLOAT;
+        vertdatatype = verifyparam(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_FP_TYPE);
 
         numdims = mxGetM(DRAW_IN_VERTEXDATA);
         numtotalverts = mxGetN(DRAW_IN_VERTEXDATA);
@@ -834,6 +850,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             texar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "tex");
             if (texar)
             {
+                GLenum tcdatatype;
+
                 verifyparam(texar, "GLCALL: draw: OPTSTRUCT.tex", VP_SCALAR|VP_UINT32);
 
                 texname = *(uint32_t *)mxGetData(texar);
@@ -844,7 +862,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 if (!texcoordsar)
                     mexErrMsgTxt("GLCALL: draw: When passing OPTSTRUCT.tex, must also have OPTSTRUCT.texcoords");
 
-                verifyparam(texcoordsar, "GLCALL: draw: OPTSTRUCT.texcoords", VP_MATRIX|VP_DOUBLE);
+                tcdatatype = verifyparam(texcoordsar, "GLCALL: draw: OPTSTRUCT.texcoords", VP_MATRIX|VP_FP_TYPE);
                 if (mxGetM(texcoordsar) != 2 || mxGetN(texcoordsar) != (unsigned long)numtotalverts)
                     mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.texcoords must have "
                                  "2 rows and size(VERTEXDATA,2) columns");
@@ -853,7 +871,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 glBindTexture(GL_TEXTURE_2D, texname);
 
                 glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-                glTexCoordPointer(2, GL_DOUBLE, 0, mxGetPr(texcoordsar));
+                glTexCoordPointer(2, tcdatatype, 0, mxGetData(texcoordsar));
             }
         }
 
@@ -895,15 +913,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (indicesar)
         {
-            verifyparam(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_VECTOR|VP_INDEX_TYPE);
+            indicestype = verifyparam(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_VECTOR|VP_INDEX_TYPE);
 
             numverts = mxGetNumberOfElements(indicesar);
             indices = mxGetData(indicesar);
-
-            if (mxIsUint32(indicesar))
-                indicestype = GL_UNSIGNED_INT;
-            else
-                indicestype = GL_UNSIGNED_BYTE;
 
             if (numverts==0)
                 return;
