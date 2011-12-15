@@ -1212,6 +1212,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t repltex = (nlhs == 0 && (nrhs == 3 || nrhs == 4));
         int32_t haveopts = (nlhs + nrhs == 4);
 
+        const mxArray *minmag_mxar = NULL;
         GLint minfilt=GL_LINEAR, magfilt=GL_LINEAR;
 
         GLint internalFormat;
@@ -1286,8 +1287,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (haveopts)
         {
-            const mxArray *minmag_mxar;
-
             verifyparam(NEWTEXTURE_IN_OPTS, "GLCALL: newtexture: OPTS", VP_SCALAR|VP_STRUCT);
 
             minmag_mxar = mxGetField(NEWTEXTURE_IN_OPTS, 0, "minmag");
@@ -1325,8 +1324,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         glBindTexture(GL_TEXTURE_2D, texname);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minfilt);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magfilt);
+        if (newtex || minmag_mxar)  /* keep the min/mag filters if reuploading and not explicitly given */
+        {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minfilt);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magfilt);
+        }
 
         /* NOTE: CLAMP_TO_EDGE available if GL >= 1.2 */
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
