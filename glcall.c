@@ -1671,6 +1671,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             break;
         }
 
+        case GL_LINE_WIDTH:
+        {
+            double value_d;
+
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.LINE_WIDTH: WIDTH", VP_SCALAR|VP_DOUBLE);
+            value_d = *mxGetPr(SET_IN_VALUE);
+
+            /* potential undefined behavoiur when downcasting */
+            glLineWidth((GLfloat)value_d);
+            break;
+        }
+
         case GLC_GET_WINDOW_SIZE:
         {
             const double *wh_d;
