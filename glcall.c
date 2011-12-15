@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 //#include <GL/gl.h>
 #include <GL/freeglut.h>
@@ -39,13 +40,42 @@
 #define SETMATRIX_IN_MODE (prhs[1])
 #define SETMATRIX_IN_MATRIX (prhs[2])
 
+// setcallback
+#define SETCALLBACK_IN_TYPE (prhs[1])
+#define SETCALLBACK_IN_FUNCNAME (prhs[2])
 
+enum glcalls_setcallback_
+{
+    CB_DISPLAY = 0,
+    CB_RESHAPE,
+    CB_KEYBOARD,
+    CB_SPECIAL,
+    CB_MOUSE,
+    CB_MOTION,
+    CB_PASSIVEMOTION,
+    NUM_CALLBACKS,  // must be last
+};
+
+const char *glcall_callback_names[] = 
+{
+    "cb_display",
+    "cb_reshape",
+    "cb_keyboard",
+    "cb_special",
+    "cb_mouse",
+    "cb_motion",
+    "cb_passivemotion",
+};
+
+
+/*** GLCALL commands enum ***/
 enum glcalls_
 {
     GLC_NEWWINDOW = 0,
     GLC_DRAW,
     GLC_ENTERMAINLOOP,
     GLC_SETMATRIX,
+    GLC_SETCALLBACK,
     NUM_GLCALLS,  // must be last
 };
 
@@ -55,11 +85,14 @@ const char *glcall_names[] =
     "draw",
     "entermainloop",
     "setmatrix",
+    "setcallback",
 };
 
 
 ////////// DATA //////////
-static uint32_t wwidth, wheight;
+
+#define MAXCBNAMELEN 63
+static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 
 ////////// UTIL //////////
 static char errstr[128];
@@ -114,7 +147,7 @@ static const char *class_names[] = {
     "int64", "uint64",
 };
 
-void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
+static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
 {
     uint32_t vpclassidx = vpflags&VP_CLASS_MASK;
 
@@ -168,7 +201,7 @@ void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
     }
 }
 
-int util_dtoi(double d, double minnum, double maxnum, const char *arname)
+static int util_dtoi(double d, double minnum, double maxnum, const char *arname)
 {
     if (!(d >= minnum && d <= maxnum))
         GLC_MEX_ERROR("%s must be between %d and %d", arname, (int)minnum, (int)maxnum);
@@ -177,31 +210,120 @@ int util_dtoi(double d, double minnum, double maxnum, const char *arname)
 
 ////////// FUNCTIONS //////////
 
-static void mousefunc(int button, int state, int x, int y)
+static void clear_callback_names(void)
 {
-    button = button;
-    state = state;
-    x = x;
-    y = y;
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glColor3f(0.5f, 0.5f, 0.5f);  // TMP
-
-    mexEvalString("glcall_display_example()");  // TMP: make cfg'able
-    glutPostRedisplay();
+    memset(callback_funcname, 0, sizeof(callback_funcname));
 }
 
-static void display(void)
+#define MAX_CB_ARGS 5  // REMEMBER
+#define CHECK_CALLBACK(CallbackID) (callback_funcname[CallbackID][0]!='\0')
+
+static int call_mfile_callback(int callbackid, int numargs, const int *args)
 {
+    int err, i;
+    mxArray *mxargs[MAX_CB_ARGS];
+
+    mxAssert(numargs <= MAX_CB_ARGS, "numargs > MAX_CB_ARGS, update MAX_CB_ARGS macro!");
+
+    for (i=0; i<numargs; i++)
+        mxargs[i] = mxCreateDoubleScalar((double)args[i]);
+
+#ifdef HAVE_OCTAVE
+    mexSetTrapFlag(1);
+    err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
+#else
+    err = 0;
+    if (mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[callbackid]))
+        err = 1;
+#endif
+
+    return err;
+}
+
+// 1: ALT
+// 10: CTRL
+// 100: SHIFT
+static int getModifiers()
+{
+    int mods = glutGetModifiers();
+    return (!!(mods&GLUT_ACTIVE_ALT)) + (10*!!(mods&GLUT_ACTIVE_CTRL)) + (100*!!(mods&GLUT_ACTIVE_SHIFT));
+}
+
+static void mouse_cb(int button, int state, int x, int y)
+{
+    if (CHECK_CALLBACK(CB_MOUSE))
+    {
+        int args[MAX_CB_ARGS] = {button, state, x, y, 0};
+        args[4] = getModifiers();
+        call_mfile_callback(CB_MOUSE, 5, args);
+    }
+}
+
+static void motion_cb(int x, int y)
+{
+    if (CHECK_CALLBACK(CB_MOTION))
+    {
+        int args[MAX_CB_ARGS] = {x, y};
+        call_mfile_callback(CB_MOTION, 2, args);
+    }
+}
+
+static void passivemotion_cb(int x, int y)
+{
+    if (CHECK_CALLBACK(CB_PASSIVEMOTION))
+    {
+        int args[MAX_CB_ARGS] = {x, y};
+        call_mfile_callback(CB_PASSIVEMOTION, 2, args);
+    }
+}
+
+static void keyboard_cb(unsigned char key, int x, int y)
+{
+    if (CHECK_CALLBACK(CB_KEYBOARD))
+    {
+        int args[MAX_CB_ARGS] = {key, x, y, 0};
+        args[3] = getModifiers();
+        call_mfile_callback(CB_KEYBOARD, 3, args);
+    }
+}
+
+static void special_cb(int key, int x, int y)
+{
+    if (CHECK_CALLBACK(CB_SPECIAL))
+    {
+        int args[MAX_CB_ARGS] = {key, x, y, 0};
+        args[3] = getModifiers();
+        call_mfile_callback(CB_SPECIAL, 4, args);
+    }
+}
+
+static void display_cb(void)
+{
+    if (CHECK_CALLBACK(CB_DISPLAY))
+    {
+        call_mfile_callback(CB_DISPLAY, 0, NULL);
+    }
+    else
+    {
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    }
+
     glutSwapBuffers();
 }
 
-static void reshape(int w, int h)
+static void reshape_cb(int w, int h)
 {
-    wwidth = w;
-    wheight = h;
+    if (CHECK_CALLBACK(CB_RESHAPE))
+    {
+        int args[MAX_CB_ARGS] = {w, h};
+        call_mfile_callback(CB_RESHAPE, 2, args);
+    }
+    else
+    {
+        glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+    }
 
-	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+#if 0
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 //    if (ortho)
@@ -213,9 +335,7 @@ static void reshape(int w, int h)
 //        gluPerspective (60, (GLfloat)w / (GLfloat)h, 1.0, 200.0);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
-//    wheight = h;
-//    wwidth = w;
+#endif
 }
 
 ////////// MEX ENTRY POINT //////////
@@ -233,7 +353,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             // the user queries available glcalls
             mxArray *glcstruct = mxCreateStructMatrix(1,1, NUM_GLCALLS, glcall_names);
             mxArray *tmpar;
-            int i;
+            int i, fieldnum;
 
             for (i=0; i<NUM_GLCALLS; i++)
             {
@@ -241,6 +361,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 *(int *)mxGetData(tmpar) = i;
                 mxSetFieldByNumber(glcstruct, 0, i, tmpar);
             }
+
+            for (i=0; i<NUM_CALLBACKS; i++)
+            {
+                tmpar = mxCreateNumericMatrix(1,1, mxINT32_CLASS, mxREAL);
+                *(int *)mxGetData(tmpar) = i;
+
+                fieldnum = mxAddField(glcstruct, glcall_callback_names[i]);
+                mxSetFieldByNumber(glcstruct, 0, fieldnum, tmpar);
+            }
+
             OUT_GLCSTRUCT = glcstruct;
 
             return;
@@ -392,14 +522,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: entermainloop: entered recursively!");
         numentered++;
 
-        glutMouseFunc(mousefunc);
-        glutDisplayFunc(display);
-        glutReshapeFunc(reshape);
+        // these two are always there
+        glutDisplayFunc(display_cb);
+        glutReshapeFunc(reshape_cb);
+
+        // X: make register/unregister on demand (when GLCALL(glc.setcallback, ...)
+        //    is called)? Doesn't seem really necessary...
+        glutMouseFunc(mouse_cb);
+        glutMotionFunc(motion_cb);
+        glutPassiveMotionFunc(passivemotion_cb);
+        glutKeyboardFunc(keyboard_cb);
+        glutSpecialFunc(special_cb);
 
         glutMainLoop();
 
         numentered--;
         inited = 0;
+
+        clear_callback_names();
     }
     return;
 
@@ -456,6 +596,39 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: setmatrix: invalid call, see GLCALL(glc.setmatrix) for usage.");
         }
     }
+    return;
+
+    case GLC_SETCALLBACK:
+    {
+        int32_t callbackid, i, slen;
+        char tmpbuf[MAXCBNAMELEN+1], c;
+
+        if (nlhs != 0 || nrhs != 3)
+            mexErrMsgTxt("Usage: GLCALL(glc.setcallback, glc.cb_<callbacktype>, 'mfuncname'), pass '' to reset");
+
+        verifyparam(SETCALLBACK_IN_TYPE, "GLCALL: setcallback: CALLBACKTYPE", VP_SCALAR|VP_INT32);
+        callbackid = *(int32_t *)mxGetData(SETCALLBACK_IN_TYPE);
+        if ((unsigned)callbackid >= NUM_CALLBACKS)
+            mexErrMsgTxt("GLCALL: setcallback: CALLBACKTYPE must be a valid callback ID");
+
+        verifyparam(SETCALLBACK_IN_FUNCNAME, "GLCALL: setcallback: FUNCNAME", VP_VECTOR|VP_CHAR);
+        slen = mxGetNumberOfElements(SETCALLBACK_IN_FUNCNAME);
+        if (slen > MAXCBNAMELEN)
+            GLC_MEX_ERROR("GLCALL: setcallback: FUNCNAME must not exceed %d chars", MAXCBNAMELEN);
+
+        mxGetString(SETCALLBACK_IN_FUNCNAME, tmpbuf, sizeof(tmpbuf));
+        for (i=0; i<slen; i++)
+        {
+            c = tmpbuf[i];
+
+            if ((i==0 && (c=='_' || (c>='0' && c<='9'))) ||
+                    (c!='_' && !(c>='0' && c<='9') && !(c>='a' && 'c'<='z') && !(c>='A' && c<='Z')))
+                mexErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
+        }
+
+        memcpy(&callback_funcname[callbackid], tmpbuf, sizeof(tmpbuf));
+    }
+    return;
 
     }  // end switch(cmd)
 }
