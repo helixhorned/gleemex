@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #include <GL/freeglut.h>
 
 //////////
@@ -27,7 +27,7 @@
 #define NEWWIN_IN_POS (prhs[1])
 #define NEWWIN_IN_EXTENT (prhs[2])
 #define NEWWIN_IN_NAME (prhs[3])
-#define NEWWIN_OUT_WINID (prhs[3])
+#define NEWWIN_OUT_WINID (plhs[0])
 
 // draw
 #define DRAW_IN_PRIMITIVETYPE (prhs[1])
