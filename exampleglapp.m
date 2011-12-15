@@ -20,6 +20,7 @@ function exampleglapp(vertposns)
     glex.ybord = [40 440];
     glex.mxy = [0 0];
     glex.bdown = [false false false];  % which button is down, left, middle, right
+    glex.togbtnstate = false;
     glex.bdownxy = [0 0];
     glex.wh = [1100 800];
 
@@ -177,6 +178,7 @@ function ex_display()
     glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
     glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
+    glc_drawbutton([80 430 120 20], 'Toggle Btn', glex.togbtnstate, false);
 
     % 'axes' test
     tmpxywh = [400 500 200 180];
@@ -195,10 +197,11 @@ function ex_display()
     glcall(glc.draw, GL.LINE_STRIP, [linspace(0,1,32); [0.5, 0.5+randn(1,30)/5, 0.5]]);
 
     glcall(glc.pop, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
+    %%
     glcall(glc.draw, GL.LINE_LOOP, [tmpxywh(1) tmpxywh(1)+tmpxywh(3) tmpxywh(1)+tmpxywh(3) tmpxywh(1); ...
                         tmpxywh(2) tmpxywh(2) tmpxywh(2)+tmpxywh(4) tmpxywh(2)+tmpxywh(4)], ...
            struct('colors',[0 0 0]));
-    %%
+    glcall(glc.rendertext, [tmpxywh(1:2)+[2 tmpxywh(4)-16] 0], 14, 'OCz');
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
@@ -214,11 +217,24 @@ function ex_passivemotion(x, y)
     glex.mxy = [x y];
     glex.mxy(2) = glex.wh(2)-glex.mxy(2);
 
-%    glex.im = glex.im+1;
-%    glcall(glc.newtexture, glex.im, glex.tex);
+    % texture reuploading
+    ov = (glex.im==245);
+    glex.im = glex.im+1;
+    glex.im(ov) = 0;
+
+    if (~glex.togbtnstate)
+        glcall(glc.newtexture, glex.im, glex.tex);
+    else
+        glcall(glc.newtexture, squeeze(single(glex.im(2,:,:))/255), glex.tex);
+    end
 
     glcall(glc.postredisplay);
 end
+
+%function toggle_button()
+%    global glex
+%    glex.togbtnstate=~glex.togbtnstate;
+%end
 
 function ex_mouse(button, downp, x, y, mods)
     global glex
@@ -230,5 +246,7 @@ function ex_mouse(button, downp, x, y, mods)
 
     if (button==0 && downp)
         glc_callbutton([80 400 120 20], glex.mxy, @uigetfile);
+%        glc_callbutton([80 430 120 20], glex.mxy, @toggle_button);
+        glc_callbutton([80 430 120 20], glex.mxy, 'global glex; glex.togbtnstate=~glex.togbtnstate;');
     end
 end

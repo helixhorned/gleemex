@@ -1011,23 +1011,53 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         GLuint texname;
         const mwSize *dimsizes;  /* XXX: older versions w/o mwSize? */
-        const uint8_t *texdata;
         GLint tmpwidth;
 
         int32_t newtex = (nlhs == 1 && nrhs == 2);
         int32_t repltex = (nlhs == 0 && nrhs == 3);
 
+        GLint internalFormat;
+        GLenum format;
+        GLenum type;
+
+        mwSize width, height;
+
         if (!newtex && !repltex)
-            mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8;  or\n"
-                         "       GLCALL(glc.newtexture, texar, texname)  to replace an earlier texture");
+            mexErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8 or NxM single\n"
+                         "   or: GLCALL(glc.newtexture, texar, texname)  to replace an earlier texture");
 
-        verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_UINT8|VP_DIMN|(3<<VP_DIMN_SHIFT));
+        if (mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR)==3)
+        {
+            /* RBG uint8 */
+            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_UINT8|VP_DIMN|(3<<VP_DIMN_SHIFT));
 
-        dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
-        if (dimsizes[0] != 3)
-            mexErrMsgTxt("GLCALL: newtexture: TEXAR's 3rd dim must have length 3");
-        if (dimsizes[1] <= 0 || dimsizes[1] > 16384 || dimsizes[2] <= 0 || dimsizes[2] > 16384)
-            mexErrMsgTxt("GLCALL: mextexture: TEXAR's 1st and 2nd dims must have length in [1, 16384]");
+            dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
+            if (dimsizes[0] != 3)
+                mexErrMsgTxt("GLCALL: newtexture: TEXAR's 3rd dim must have length 3");
+
+            width = dimsizes[1];
+            height = dimsizes[2];
+
+            internalFormat = GL_RGB;
+            format = GL_RGB;
+            type = GL_UNSIGNED_BYTE;
+        }
+        else
+        {
+            /* grayscale float */
+            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_SINGLE|VP_DIMN|(2<<VP_DIMN_SHIFT));
+
+            dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
+            width = dimsizes[0];
+            height = dimsizes[1];
+
+            internalFormat = GL_LUMINANCE;
+            format = GL_LUMINANCE;
+            type = GL_FLOAT;
+        }
+
+        if (width <= 0 || width > 16384 || height <= 0 || height > 16384)
+            mexErrMsgTxt("GLCALL: mextexture: TEXAR's width and height must have length in [1, 16384]");
 
         if (repltex)
         {
@@ -1048,20 +1078,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, type==GL_FLOAT ? 4 : 1);
 
-        texdata = mxGetData(NEWTEXTURE_IN_TEXAR);
         /* target, level, internalFormat, width, height, border, format, type, data*/
-        glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGB,  dimsizes[1], dimsizes[2],
-                     0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_PROXY_TEXTURE_2D, 0, internalFormat,  width, height,
+                     0, format, type, NULL);
         glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tmpwidth);
         if (tmpwidth==0)
         {
             glDeleteTextures(1, &texname);
             mexErrMsgTxt("GLCALL: newtexture: cannot accomodate texture");
         }
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  dimsizes[1], dimsizes[2],
-                     0, GL_RGB, GL_UNSIGNED_BYTE, texdata);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,  width, height,
+                     0, format, type, mxGetData(NEWTEXTURE_IN_TEXAR));
 
         if (newtex)
             NEWTEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
