@@ -1,5 +1,12 @@
 function exampleglapp()
     global GL glc glex
+%{
+    QWE_0 = [];
+    QWE_1 = [];
+    QWE_2 = [];
+    QWE_3 = [];
+    QWE_4 = [];
+%}
     GL = getglconsts(); glc = glcall();
     glex = struct();
 
@@ -9,16 +16,14 @@ function exampleglapp()
     glex.wh = [800 600];
 
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1');
-
-    glcall(glc.setcallback, glc.cb_reshape, 'reshape');
-    glcall(glc.setcallback, glc.cb_display, 'display');
-    glcall(glc.setcallback, glc.cb_passivemotion, 'passivemotion');
-    glcall(glc.setcallback, glc.cb_mouse, 'mouse');
-
+    glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
+    glcall(glc.setcallback, glc.cb_display, 'ex_display');
+    glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
+    glcall(glc.setcallback, glc.cb_mouse, 'ex_mouse');
     glcall(glc.entermainloop);
-end
 
-function reshape(w, h)
+%{
+function ex_reshape(w, h)
     global GL glc glex
 
     glex.wh = [w h];
@@ -27,19 +32,19 @@ function reshape(w, h)
 
     glcall(glc.viewport, [0 0 w h]);
     glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]);
-%{
-    if (aspect >= 1)
-        glcall(glc.setmatrix, GL.PROJECTION, [-aspect aspect, -1 1, -1 1]);
-    else
-        glcall(glc.setmatrix, GL.PROJECTION, [-1 1, -1/aspect 1/aspect, -1 1]);
-    end
-%}
+
+%    if (aspect >= 1)
+%        glcall(glc.setmatrix, GL.PROJECTION, [-aspect aspect, -1 1, -1 1]);
+%    else
+%        glcall(glc.setmatrix, GL.PROJECTION, [-1 1, -1/aspect 1/aspect, -1 1]);
+%    end
+
     glcall(glc.setmatrix, GL.MODELVIEW, []);
+%disp('resh')
 end
 
-function display()
+function ex_display(qwe, asd)
     global GL glc glex
-
     glcall(glc.clear, [0 0 0]);
 
     numchans = 16;
@@ -82,13 +87,14 @@ function display()
     end
 end
 
-function passivemotion(x, y)
+function ex_passivemotion(x, y)
     global glc glex
 
     glex.mxy = [x y];
     glcall(glc.postredisplay);
 end
 
-function mouse(button, downp, x, y)
+function ex_mouse(button, downp, x, y)
     passivemotion(x, y);
 end
+%}

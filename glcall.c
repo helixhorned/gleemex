@@ -86,6 +86,7 @@ enum glcalls_
     GLC_VIEWPORT,
     GLC_CLEAR,
     GLC_POSTREDISPLAY,
+    GLC_GETERRSTR,
     NUM_GLCALLS,  // must be last
 };
 
@@ -99,6 +100,7 @@ const char *glcall_names[] =
     "viewport",
     "clear",
     "postredisplay",
+    "geterrstr",
 };
 
 
@@ -106,9 +108,24 @@ const char *glcall_names[] =
 
 #define MAXCBNAMELEN 63
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
+static int numentered = 0;
 
 ////////// UTIL //////////
 static char errstr[128];
+static const char *errstrptr;
+#ifndef USE_OCTAVE
+static mxArray *exceptionar;
+#endif
+
+#define mexErrMsgTxt(msg) do { \
+    if (numentered)            \
+    {                          \
+        errstrptr = strdup(msg);                \
+        glutLeaveMainLoop();   \
+    }                          \
+    else                       \
+        mexErrMsgTxt(msg);     \
+    } while (0);
 
 #define GLC_MEX_ERROR(Text, ...) do {           \
         sprintf(errstr, Text, ## __VA_ARGS__);  \
@@ -245,9 +262,51 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     mexSetTrapFlag(1);
     err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
 #else
-    err = 0;
-    if (mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[callbackid]))
-        err = 1;
+    {
+#if 0
+        char tmpbuf[128];
+        char mcodebuf[512];
+
+        for (i=0; i<numargs; i++)
+        {
+            sprintf(mcodebuf, "QWE_%d = %f;\n", (double)args[i]);
+            err |= !!mexEvalString(mcodebuf);
+        }
+
+        sprintf(mcodebuf, "%s(", callback_funcname[callbackid]);
+        for (i=0; i<numargs; i++)
+        {
+            sprintf(tmpbuf, "QWE_%d%s", i, i==numargs-1 ? "" : ",");
+            strcat(mcodebuf, tmpbuf);
+        }
+        strcat(mcodebuf, ");\n");
+
+        err |= (!!mexEvalString(mcodebuf))<<1;
+#endif
+
+#if 1
+        const mxArray *ex;
+
+        ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
+        err = (ex != NULL);
+
+        if (err)
+        {
+            if (exceptionar)
+                mxDestroyArray(exceptionar);
+            exceptionar = ex;
+            mexMakeArrayPersistent(exceptionar);
+        }
+#endif
+    }
+
+    if (err)
+    {
+        char buf[80];
+        sprintf(buf, "left main loop: error in callback %s: %d", callback_funcname[callbackid], err);
+        mexErrMsgTxt(buf);
+    }
+
 #endif
     if (err)
         glutLeaveMainLoop();
@@ -385,7 +444,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
 
-    if (cmd != GLC_NEWWINDOW && !inited)
+    if ((cmd != GLC_NEWWINDOW && cmd != GLC_GETERRSTR) && !inited)
         mexErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
 
     //////////
@@ -563,8 +622,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_ENTERMAINLOOP:
     {
-        static int numentered = 0;
-
         if (nlhs != 0 || nrhs != 1)
             mexErrMsgTxt("Usage: GLCALL(glc.entermainloop), enter main loop.");
 
@@ -734,6 +791,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glutPostRedisplay();
     }
     return;
+
+    case GLC_GETERRSTR:
+    {
+        const char *emptystr = "<empty>";
+        const char *errstr_ptr = errstr;
+
+        if (nlhs != 3 || nrhs != 1)
+            return;
+
+        plhs[0] = mxCreateCharMatrixFromStrings(1, errstrptr ? &errstrptr : &emptystr);
+        plhs[1] = mxCreateCharMatrixFromStrings(1, &errstr_ptr);
+        plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
+    }
 
     }  // end switch(cmd)
 }
