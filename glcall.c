@@ -120,6 +120,7 @@
  * later. This way there will be no collisions. */
 #define GLC_GET_WINDOW_ID (-100)
 #define GLC_GET_WINDOW_SIZE (-101)
+#define GLC_GET_MOUSE_POS (-102)  /* SET only */
 
 
 enum glcalls_setcallback_
@@ -704,12 +705,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         posptr = mxGetPr(NEWWIN_IN_POS);
         extentptr = mxGetPr(NEWWIN_IN_EXTENT);
 
-        /* XXX: the magic constants here are pretty bad! */
-        pos[0] = util_dtoi(posptr[0], 0, 1680, "GLCALL: newwindow: POS(1)");
-        pos[1] = util_dtoi(posptr[1], 0, 1050, "GLCALL: newwindow: POS(2)");
+        /* XXX: the magic constants here are still pretty bad! */
+        pos[0] = util_dtoi(posptr[0], 0, 8000, "GLCALL: newwindow: POS(1)");
+        pos[1] = util_dtoi(posptr[1], 0, 4000, "GLCALL: newwindow: POS(2)");
 
-        extent[0] = util_dtoi(extentptr[0], 1, 1680, "GLCALL: newwindow: EXTENT(1)");
-        extent[1] = util_dtoi(extentptr[1], 1, 1050, "GLCALL: newwindow: EXTENT(2)");
+        extent[0] = util_dtoi(extentptr[0], 1, 8000, "GLCALL: newwindow: EXTENT(1)");
+        extent[1] = util_dtoi(extentptr[1], 1, 4000, "GLCALL: newwindow: EXTENT(2)");
 
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
 
@@ -1686,6 +1687,26 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         switch (what)
         {
+        case GLC_GET_MOUSE_POS:
+        {
+            int32_t wh[2], newposi[2];
+            const double *newpos;
+
+            verifyparam(SET_IN_VALUE, "GLC: set GL.MOUSE_POS: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+
+            wh[0] = glutGet(GLUT_WINDOW_WIDTH);
+            wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
+
+            newpos = mxGetPr(SET_IN_VALUE);
+            newposi[0] = util_dtoi(newpos[0], 0, wh[0], "GLC: set mouse pos: POS(1)");
+            newposi[1] = util_dtoi(newpos[1], 0, wh[1], "GLC: set mouse pos: POS(2)");
+
+            /* TODO: what if no current window? */
+            glutWarpPointer(newposi[0], newposi[1]);
+
+            return;
+        }
+
         case GLC_GET_WINDOW_ID:
         {
             int32_t ourwidx, glutwidx;

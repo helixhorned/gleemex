@@ -125,6 +125,7 @@ GL.PROJECTION_MATRIX = int32(2983);  % 0x0BA7
 % GET tokens
 GL.WINDOW_ID = int32(-100);
 GL.WINDOW_SIZE = int32(-101);
+GL.MOUSE_POS = int32(-102);  % SET only
 
 
 %% GLUT stuff follows
