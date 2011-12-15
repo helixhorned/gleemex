@@ -29,6 +29,7 @@
 #define NEWWIN_IN_POS (prhs[1])
 #define NEWWIN_IN_EXTENT (prhs[2])
 #define NEWWIN_IN_NAME (prhs[3])
+#define NEWWIN_IN_MULTISAMPLEP (prhs[4])
 #define NEWWIN_OUT_WINID (plhs[0])
 
 // draw
@@ -109,9 +110,6 @@ const char *glcall_names[] =
 #define MAXCBNAMELEN 63
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
-
-static double glpointszmin;
-static double glpointszmax;
 
 ////////// UTIL //////////
 static char errstr[128];
@@ -438,15 +436,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int32_t pos[2], extent[2], winid;
+        int32_t pos[2], extent[2], winid, multisamplep=0;
         char windowname[80];
 
-        if (nlhs > 1 || nrhs != 4)
-            mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME), create new window.");
+        if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
+            mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, MULTISAMPLEP]),"
+                         " create new window.");
 
         verifyparam(NEWWIN_IN_POS, "POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
         verifyparam(NEWWIN_IN_EXTENT, "EXTENT", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
         verifyparam(NEWWIN_IN_NAME, "WINDOWNAME", VP_VECTOR|VP_CHAR);
+        if (nrhs >= 5)
+        {
+            verifyparam(NEWWIN_IN_MULTISAMPLEP, "MULTISAMPLEP", VP_SCALAR|VP_LOGICAL);
+            multisamplep = *(uint8_t *)mxGetData(NEWWIN_IN_MULTISAMPLEP);
+        }
 
         posptr = mxGetPr(NEWWIN_IN_POS);
         extentptr = mxGetPr(NEWWIN_IN_EXTENT);
@@ -468,9 +472,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glutInit(&argcdummy, argvdummy);  // XXX
             glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
-            glGetDoublev(GL_POINT_SIZE_MIN, &glpointszmin);
-            glGetDoublev(GL_POINT_SIZE_MAX, &glpointszmax);
-printf("glpointszminmax: %f %f\n", glpointszmin, glpointszmax);
             glEnable(GL_POINT_SMOOTH);
 
             inited = 1;
@@ -478,7 +479,7 @@ printf("glpointszminmax: %f %f\n", glpointszmin, glpointszmax);
         else
             mexErrMsgTxt("GLCALL: newwindow: multiple windows not implemented!");
 
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA);
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | multisamplep*GLUT_MULTISAMPLE | GLUT_RGBA);
         glutInitWindowPosition(pos[0], pos[1]);
         glutInitWindowSize(extent[0], extent[1]);
 

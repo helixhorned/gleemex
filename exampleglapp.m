@@ -11,9 +11,12 @@ function exampleglapp()
     glex.posns = rand(2, 16);
 
     t = linspace(0,2*pi, 17);
-    glex.circ16 = [0 cos(t(1:end-1))/2; 0 sin(t(1:end-1))/2];
+    glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
-    winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1');
+    t = linspace(0,2*pi, 9);
+    glex.circ9 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
+
+    winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', true);
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
     glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
@@ -30,7 +33,7 @@ function ex_reshape(w, h)
     aspect = w/h;
 
     glcall(glc.viewport, [0 0 w h]);
-    glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]);
+    glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]+0.5);
 
 %    if (aspect >= 1)
 %        glcall(glc.setmatrix, GL.PROJECTION, [-aspect aspect, -1 1, -1 1]);
@@ -63,9 +66,9 @@ function ex_display(qwe, asd)
         verts = zeros(2, 4);
 
         verts(:, 1) = [glex.xbord(1) + i*xdif; glex.ybord(1) + j*ydif];
-        verts(:, 2) = verts(:, 1) + [xdif-1; 0];
-        verts(:, 3) = verts(:, 1) + [xdif-1; ydif-1];
-        verts(:, 4) = verts(:, 1) + [0; ydif-1];
+        verts(:, 2) = verts(:, 1) + [xdif; 0];
+        verts(:, 3) = verts(:, 1) + [xdif; ydif];
+        verts(:, 4) = verts(:, 1) + [0; ydif];
 
         glcall(glc.draw, GL.QUADS, verts, struct('colors',[0.4 0.4 0.8]));
     end
@@ -87,15 +90,16 @@ function ex_display(qwe, asd)
     glcall(glc.draw, GL.LINES, [vlines, hlines]);
 
     % vertex points
-    vertposns = glex.posns * 256;
+    vertposns = round(glex.posns * 256);
     vertposns(1, :) = vertposns(1, :) + glex.xbord(2) + 40;
     vertposns(2, :) = vertposns(2, :) + glex.ybord(1);
 
-    indices = uint32([ones(1,16); 1:16; [2:16 2]]-1);
+    nslices = 17;
+    indices = uint32([ones(1,nslices); 1:nslices; 2:nslices+1]-1);
     indices = indices(:);
 
     for i=1:size(vertposns,2)
-        vpos = glex.circ16 * 21;
+        vpos = glex.circ17 * 21;
         vpos(1, :) = vpos(1, :) + vertposns(1, i);
         vpos(2, :) = vpos(2, :) + vertposns(2, i);
         glcall(glc.draw, GL.TRIANGLES, vpos, struct(...
