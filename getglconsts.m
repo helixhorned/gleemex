@@ -10,94 +10,102 @@
 %  * all glPush/PopAttrib bits (most have no effect, though)
 %
 %  * the GLUT special keys (w/o freeglut ones), stripped of the GLUT_ prefix
+%  * GLUT_{LEFT,MIDDLE,RIGHT}_BUTTON  (1<<X), stripped of the GLUT_ prefix
 %
-function glconsts = getglconsts()
+function GL = getglconsts()
 
-glconsts = struct();
+GL = struct();
 
 %% Primitives
-glconsts.POINTS = uint32(0);
-glconsts.LINES = uint32(1);
-glconsts.LINE_LOOP = uint32(2);
-glconsts.LINE_STRIP = uint32(3);
-glconsts.TRIANGLES = uint32(4);
-glconsts.TRIANGLE_STRIP = uint32(5);
-glconsts.TRIANGLE_FAN = uint32(6);
-glconsts.QUADS = uint32(7);
-glconsts.QUAD_STRIP = uint32(8);
-glconsts.POLYGON = uint32(9);
+GL.POINTS = uint32(0);
+GL.LINES = uint32(1);
+GL.LINE_LOOP = uint32(2);
+GL.LINE_STRIP = uint32(3);
+GL.TRIANGLES = uint32(4);
+GL.TRIANGLE_STRIP = uint32(5);
+GL.TRIANGLE_FAN = uint32(6);
+GL.QUADS = uint32(7);
+GL.QUAD_STRIP = uint32(8);
+GL.POLYGON = uint32(9);
 
 %% Matrix Modes
-glconsts.MODELVIEW = uint32(5888);  % 0x1700
-glconsts.PROJECTION = uint32(5889);  % 0x1701
-glconsts.TEXTURE = uint32(5890);  % 0x1702
+GL.MODELVIEW = uint32(5888);  % 0x1700
+GL.PROJECTION = uint32(5889);  % 0x1701
+GL.TEXTURE = uint32(5890);  % 0x1702
 
 %% tests
-glconsts.SCISSOR_TEST = int32(3089);  % 0x0C11
-glconsts.DEPTH_TEST = int32(2929);  % 0x0B71
+GL.SCISSOR_TEST = int32(3089);  % 0x0C11
+GL.DEPTH_TEST = int32(2929);  % 0x0B71
 
 %% Texture mapping
-%glconsts.TEXTURE_1D = int32(3552);  % 0x0DE0
+%GL.TEXTURE_1D = int32(3552);  % 0x0DE0
 
 %% Blending
-glconsts.BLEND = int32(3042);  % 0x0BE2
+GL.BLEND = int32(3042);  % 0x0BE2
 
 %% Points
-glconsts.POINT_SMOOTH = int32(2832);  % 0x0B10
-glconsts.POINT_SIZE	= int32(2833);  % 0x0B11
+GL.POINT_SMOOTH = int32(2832);  % 0x0B10
+GL.POINT_SIZE	= int32(2833);  % 0x0B11
 
 %% Lines
-glconsts.LINE_SMOOTH = int32(2848);  % 0x0B20
+GL.LINE_SMOOTH = int32(2848);  % 0x0B20
 
 %% Polygons
-glconsts.POLYGON_SMOOTH = int32(2881);  % 0x0B41
+GL.POLYGON_SMOOTH = int32(2881);  % 0x0B41
 
 %% glPush/PopAttrib bits
-glconsts.CURRENT_BIT = uint32(1);
-glconsts.POINT_BIT = uint32(2);
-glconsts.LINE_BIT = uint32(4);
-glconsts.POLYGON_BIT = uint32(8);
-glconsts.POLYGON_STIPPLE_BIT = uint32(16);
-glconsts.PIXEL_MODE_BIT = uint32(32);
-glconsts.LIGHTING_BIT = uint32(64);
-glconsts.FOG_BIT = uint32(128);
-glconsts.DEPTH_BUFFER_BIT = uint32(256);
-glconsts.ACCUM_BUFFER_BIT = uint32(512);
-glconsts.STENCIL_BUFFER_BIT = uint32(1024);
-glconsts.VIEWPORT_BIT = uint32(2048);
-glconsts.TRANSFORM_BIT = uint32(4096);
-glconsts.ENABLE_BIT = uint32(8192);
-glconsts.COLOR_BUFFER_BIT = uint32(16384);
-glconsts.HINT_BIT = uint32(32768);
-glconsts.EVAL_BIT = uint32(65536);
-glconsts.LIST_BIT = uint32(131072);
-glconsts.TEXTURE_BIT = uint32(262144);
-glconsts.SCISSOR_BIT = uint32(524288);
-glconsts.ALL_ATTRIB_BITS = uint32(1048575);  % 0xFFFFF
+GL.CURRENT_BIT = uint32(1);
+GL.POINT_BIT = uint32(2);
+GL.LINE_BIT = uint32(4);
+GL.POLYGON_BIT = uint32(8);
+GL.POLYGON_STIPPLE_BIT = uint32(16);
+GL.PIXEL_MODE_BIT = uint32(32);
+GL.LIGHTING_BIT = uint32(64);
+GL.FOG_BIT = uint32(128);
+GL.DEPTH_BUFFER_BIT = uint32(256);
+GL.ACCUM_BUFFER_BIT = uint32(512);
+GL.STENCIL_BUFFER_BIT = uint32(1024);
+GL.VIEWPORT_BIT = uint32(2048);
+GL.TRANSFORM_BIT = uint32(4096);
+GL.ENABLE_BIT = uint32(8192);
+GL.COLOR_BUFFER_BIT = uint32(16384);
+GL.HINT_BIT = uint32(32768);
+GL.EVAL_BIT = uint32(65536);
+GL.LIST_BIT = uint32(131072);
+GL.TEXTURE_BIT = uint32(262144);
+GL.SCISSOR_BIT = uint32(524288);
+GL.ALL_ATTRIB_BITS = uint32(1048575);  % 0xFFFFF
 
 
 %% GLUT stuff follows
+
+% mouse buttons, 1<<X
+GL.LEFT_BUTTON = 1;
+GL.MIDDLE_BUTTON = 2;
+GL.RIGHT_BUTTON = 4;
+
+
 %
 % GLUT API macro definitions -- the special key codes:
 %
-glconsts.KEY_F1 = 65536+1;
-glconsts.KEY_F2 = 65536+2;
-glconsts.KEY_F3 = 65536+3;
-glconsts.KEY_F4 = 65536+4;
-glconsts.KEY_F5 = 65536+5;
-glconsts.KEY_F6 = 65536+6;
-glconsts.KEY_F7 = 65536+7;
-glconsts.KEY_F8 = 65536+8;
-glconsts.KEY_F9 = 65536+9;
-glconsts.KEY_F10 = 65536+10;
-glconsts.KEY_F11 = 65536+11;
-glconsts.KEY_F12 = 65536+12;
-glconsts.KEY_LEFT = 65536+100;
-glconsts.KEY_UP = 65536+101;
-glconsts.KEY_RIGHT = 65536+102;
-glconsts.KEY_DOWN = 65536+103;
-glconsts.KEY_PAGE_UP = 65536+104;
-glconsts.KEY_PAGE_DOWN = 65536+105;
-glconsts.KEY_HOME = 65536+106;
-glconsts.KEY_END = 65536+107;
-glconsts.KEY_INSERT = 65536+108;
+GL.KEY_F1 = 65536+1;
+GL.KEY_F2 = 65536+2;
+GL.KEY_F3 = 65536+3;
+GL.KEY_F4 = 65536+4;
+GL.KEY_F5 = 65536+5;
+GL.KEY_F6 = 65536+6;
+GL.KEY_F7 = 65536+7;
+GL.KEY_F8 = 65536+8;
+GL.KEY_F9 = 65536+9;
+GL.KEY_F10 = 65536+10;
+GL.KEY_F11 = 65536+11;
+GL.KEY_F12 = 65536+12;
+GL.KEY_LEFT = 65536+100;
+GL.KEY_UP = 65536+101;
+GL.KEY_RIGHT = 65536+102;
+GL.KEY_DOWN = 65536+103;
+GL.KEY_PAGE_UP = 65536+104;
+GL.KEY_PAGE_DOWN = 65536+105;
+GL.KEY_HOME = 65536+106;
+GL.KEY_END = 65536+107;
+GL.KEY_INSERT = 65536+108;

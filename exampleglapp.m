@@ -60,7 +60,6 @@ function exampleglapp(vertposns)
     glcall(glc.colormap, uint8(jet(256)' * 255));
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
-    glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
     glcall(glc.setcallback, glc.cb_keyboard, 'ex_keyboard');
     glcall(glc.setcallback, glc.cb_motion, 'ex_motion');
     glcall(glc.setcallback, glc.cb_mouse, 'ex_mouse');
@@ -293,28 +292,20 @@ function ex_keyboard(key, x, y, mods)
     glcall(glc.postredisplay);
 end
 
-function ex_passivemotion(x, y)
+function ex_motion(buttonsdown, x, y)
     global glc glex
 
-    glex.mxy = [x y];
-    glex.mxy(2) = glex.wh(2)-glex.mxy(2);
+    if (buttonsdown)
+        % texture reuploading
+        ov = (glex.im==245);
+        glex.im = glex.im+1;
+        glex.im(ov) = 0;
 
-    glcall(glc.postredisplay);
-end
-
-function ex_motion(x, y)
-    global glc glex
-
-    % texture reuploading
-    ov = (glex.im==245);
-    glex.im = glex.im+1;
-    glex.im(ov) = 0;
-
-%    if (~glex.togbtnstate)
         glcall(glc.newtexture, glex.im, glex.tex);
-%    else
-%        glcall(glc.newtexture, squeeze(single(glex.im(2,:,:))/255), glex.tex);
-%    end
+    else
+        glex.mxy = [x y];
+        glex.mxy(2) = glex.wh(2)-glex.mxy(2);        
+    end
 
     glcall(glc.postredisplay);
 end
@@ -325,14 +316,14 @@ end
 %end
 
 function ex_mouse(button, downp, x, y, mods)
-    global glex
+    global GL glex
 
-    ex_passivemotion(x, y);
+    ex_motion(0, x, y);
 
-    glex.bdown(button+1) = downp;
+    glex.bdown(log2(button)+1) = downp;
     glex.bdownxy(1:2) = glex.mxy;
 
-    if (button==0 && downp)
+    if (button==GL.LEFT_BUTTON && downp)
         glc_callbutton([80 400 120 20], glex.mxy, 'glc_listdlg(''ListString'', {''qwe'',''asd'',''QWEQWE'',''ASDASD''}, ''Name'',''SDFG'');');
 %        @uigetfile);
 %        glc_callbutton([80 430 120 20], glex.mxy, @toggle_button);

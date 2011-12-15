@@ -114,7 +114,7 @@ enum glcalls_setcallback_
 /*    CB_SPECIAL, */
     CB_MOUSE,
     CB_MOTION,
-    CB_PASSIVEMOTION,
+/*    CB_PASSIVEMOTION, */
     NUM_CALLBACKS,  /* must be last */
 };
 
@@ -126,7 +126,7 @@ const char *glcall_callback_names[] =
 /*    "cb_special", */
     "cb_mouse",
     "cb_motion",
-    "cb_passivemotion",
+/*    "cb_passivemotion", */
 };
 
 
@@ -205,6 +205,11 @@ static uint16_t glutwinidx[MAXACTIVEWINDOWS];
 static int8_t ourwinidx[MAXLIFETIMEWINDOWS];
 static char callback_funcname[MAXACTIVEWINDOWS][NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;  /* entermainloop entered? */
+
+static struct windata_
+{
+    int32_t height, buttons;
+} win[MAXACTIVEWINDOWS];
 
 static GLuint cmaptexname, proginuse;
 
@@ -403,6 +408,8 @@ static void cleanup_after_mainloop(void)
 
     curglutwinidx = 0;
     curourwinidx = -1;
+
+    memset(win, 0, sizeof(win));
 }
 
 #define MAX_CB_ARGS 5  /* REMEMBER */
@@ -468,9 +475,24 @@ static int getModifiers()
 
 static void mouse_cb(int button, int state, int x, int y)
 {
-    if (check_callback(CB_MOUSE))
+    int havecb = check_callback(CB_MOUSE);
+
+    if (curglutwinidx && curourwinidx>=0)
     {
-        int args[MAX_CB_ARGS] = {button, (state==GLUT_DOWN), x, y, 0};
+#if 0
+        static const char *btns[3] = {"left","middle","right"};
+        if (button>=0 && button<=2)
+            printf("window %d: %s button %s\n", curourwinidx, btns[button], state==GLUT_DOWN?"down":"up");
+#endif
+        if (state==GLUT_DOWN)
+            win[curourwinidx].buttons |= (1<<button);
+        else
+            win[curourwinidx].buttons &= ~(1<<button);
+    }
+
+    if (havecb)
+    {
+        int args[MAX_CB_ARGS] = {1<<button, (state==GLUT_DOWN), x, y, 0};
         args[4] = getModifiers();
         call_mfile_callback(CB_MOUSE, 5, args);
     }
@@ -480,17 +502,32 @@ static void motion_cb(int x, int y)
 {
     if (check_callback(CB_MOTION))
     {
-        int args[MAX_CB_ARGS] = {x, y};
-        call_mfile_callback(CB_MOTION, 2, args);
+        int args[MAX_CB_ARGS] = {win[curourwinidx].buttons, x, y};
+
+        if (win[curourwinidx].buttons==0)
+        {
+            printf("window %d motion_cb: win[%d].buttons==0\n", curourwinidx, curourwinidx);
+            args[0] = 1<<GLUT_LEFT_BUTTON;  /* guess, ugh */
+        }
+
+        call_mfile_callback(CB_MOTION, 3, args);
     }
 }
 
 static void passivemotion_cb(int x, int y)
 {
-    if (check_callback(CB_PASSIVEMOTION))
+    if (check_callback(CB_MOTION))
     {
-        int args[MAX_CB_ARGS] = {x, y};
-        call_mfile_callback(CB_PASSIVEMOTION, 2, args);
+        int args[MAX_CB_ARGS] = {0, x, y};
+
+        if (win[curourwinidx].buttons!=0)
+        {
+            printf("window %d passivemotion_cb: win[%d].buttons==%d\n",
+                   curourwinidx, curourwinidx, win[curourwinidx].buttons);
+            win[curourwinidx].buttons = 0;
+        }
+
+        call_mfile_callback(CB_MOTION, 3, args);
     }
 }
 
@@ -532,7 +569,12 @@ static void display_cb(void)
 
 static void reshape_cb(int w, int h)
 {
-    if (check_callback(CB_RESHAPE))
+    int havecb = check_callback(CB_RESHAPE);
+
+    if (curglutwinidx && curourwinidx>=0)
+        win[curourwinidx].height = h;
+
+    if (havecb)
     {
         int args[MAX_CB_ARGS] = {w, h};
         call_mfile_callback(CB_RESHAPE, 2, args);
@@ -663,6 +705,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glutwinidx[i] = winid;
         ourwinidx[winid] = i;
+
+        win[i].height = extent[1];
 
         /** set callbacks for the newly created window **/
         /* these two are always there */

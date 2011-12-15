@@ -122,7 +122,7 @@ function [sel,ok]=glc_listdlg(varargin)
     glcall(glc.newwindow, [200 200], glc_listdlg_s.wh, glc_listdlg_s.name);
 
     glcall(glc.setcallback, glc.cb_reshape, 'glc_listdlg_reshape');
-    glcall(glc.setcallback, glc.cb_passivemotion, 'glc_listdlg_passivemotion');
+    glcall(glc.setcallback, glc.cb_motion, 'glc_listdlg_motion');
     glcall(glc.setcallback, glc.cb_keyboard, 'glc_listdlg_keyboard');
     glcall(glc.setcallback, glc.cb_mouse, 'glc_listdlg_mouse');
     glcall(glc.setcallback, glc.cb_display, 'glc_listdlg_display');
@@ -139,19 +139,21 @@ function [sel,ok]=glc_listdlg(varargin)
 end
 
 
-function glc_listdlg_passivemotion(x, y)
+function glc_listdlg_motion(buttonsdown, x, y)
     global glc glc_listdlg_s
 
-    glc_listdlg_s.mxy = [x y];
-    glc_listdlg_s.mxy(2) = glc_listdlg_s.wh(2)-glc_listdlg_s.mxy(2);
+    if (~buttonsdown)
+        glc_listdlg_s.mxy = [x y];
+        glc_listdlg_s.mxy(2) = glc_listdlg_s.wh(2)-glc_listdlg_s.mxy(2);
 
-    glcall(glc.postredisplay);
+        glcall(glc.postredisplay);
+    end
 end
 
 function glc_listdlg_mouse(button, downp, x, y, mods)
-    global glc glc_listdlg_s
+    global GL glc glc_listdlg_s
 
-    if (button==0 && downp)
+    if (button==GL.LEFT_BUTTON && downp)
         glc_listdlg_s.clicked = [glc_listdlg_s.mxy mods];
     end
 
