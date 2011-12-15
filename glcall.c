@@ -1316,18 +1316,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (minmag_mxar)
             {
                 const int32_t *minmagptr;
+                mwSize nel;
 
-                verifyparam(minmag_mxar, "GLCALL: newtexture: OPTS.minmag", VP_VECTOR|VP_UINT32|(2<<VP_VECLEN_SHIFT));
+                verifyparam(minmag_mxar, "GLCALL: newtexture: OPTS.minmag", VP_VECTOR|VP_INT32);
+                nel = mxGetNumberOfElements(minmag_mxar);
+                if (nel != 1 && nel != 2)
+                    mexErrMsgTxt("GLCALL: newtexture: OPTS.minmag must have length 1 or 2");
                 minmagptr = mxGetData(minmag_mxar);
 
                 if ((minmagptr[0]!=GL_NEAREST && minmagptr[0]!=GL_LINEAR) ||
-                    (minmagptr[1]!=GL_NEAREST && minmagptr[1]!=GL_LINEAR))
+                    (nel > 1 && minmagptr[1]!=GL_NEAREST && minmagptr[1]!=GL_LINEAR))
                 {
                     mexErrMsgTxt("GLCALL: newtexture: OPTS.minmag elements must be either GL.NEAREST or GL.LINEAR");
                 }
 
                 minfilt = minmagptr[0];
-                magfilt = minmagptr[1];
+                magfilt = (nel==1) ? minfilt : minmagptr[1];
             }
         }
 
