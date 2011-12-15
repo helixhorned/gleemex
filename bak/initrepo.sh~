@@ -1,0 +1,32 @@
+#!/bin/bash
+
+d=../Studienarbeit/glcall_diffs
+d2=../Studienarbeit/glcall_subjects
+
+i=0
+for fn in $d/*.diff; do
+    (( i++ ))
+    if [ $i -lt 10 ]; then
+        j="0$i"
+    else
+        j="$i"
+    fi
+
+    git apply $fn
+    if [ $? -ne 0 ]; then
+        echo "$j: git apply failed"
+        break
+    fi
+
+    git add -A
+    if [ $? -ne 0 ]; then
+        echo "$j: git add -A failed"
+        break
+    fi
+
+    git commit -F $d2/$j
+    if [ $? -ne 0 ]; then
+        echo "$j: git commit failed"
+        break
+    fi
+done

@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 //#include <GL/gl.h>
 #include <GL/freeglut.h>
@@ -50,44 +51,113 @@ const char *glcall_names[] =
     "entermainloop",
 };
 
+
+////////// DATA //////////
+static uint32_t wwidth, wheight;
+
 ////////// UTIL //////////
 static char errstr[128];
 
 #define GLC_MEX_ERROR(Text, ...) do {           \
         sprintf(errstr, Text, ## __VA_ARGS__);  \
-        mexErrMsgTxt(errstr);                  \
+        mexErrMsgTxt(errstr);                   \
     } while (0)
 
-// XXX: make this more useful by making it possible to specify combinations
-//      of data type, {vertex, matrix, scalar} requirements, etc...
-void verifyparam(const mxArray *ar, const char *arname, const char *typedesc)
+enum verifyparam_flags
 {
-    switch (typedesc[0])
+    // 0: no requirement
+
+    /* Classes (data types) */
+    VP_CELL = 1,
+    VP_STRUCT,
+    VP_LOGICAL,
+    VP_CHAR,
+    VP_DOUBLE,  // 5
+    VP_SINGLE,
+    VP_INT8,
+    VP_UINT8,
+    VP_INT16,
+    VP_UINT16,  // 10
+    VP_INT32,
+    VP_UINT32,
+    VP_INT64,
+    VP_UINT64,
+    VP_RESERVED_,  // 15
+    VP_CLASS_MASK = 0x0000000f,
+
+    /* scalar/vector/matrix requirements */
+    VP_SCALAR = 0x00000100,
+    VP_VECTOR = 0x00000200,
+    VP_MATRIX = 0x00000300,
+    VP_SVM_MASK = 0x00000300,
+
+    VP_VECLEN_SHIFT = 16,
+    VP_VECLEN_MASK = 0x00ff0000,  // shift down 16 bits to get length
+};
+
+static mxClassID class_ids[] = {
+    0,
+    mxCELL_CLASS, mxSTRUCT_CLASS, mxLOGICAL_CLASS, mxCHAR_CLASS, mxDOUBLE_CLASS, mxSINGLE_CLASS,
+    mxINT8_CLASS, mxUINT8_CLASS, mxINT16_CLASS, mxUINT16_CLASS, mxINT32_CLASS, mxUINT32_CLASS,
+    mxINT64_CLASS, mxUINT64_CLASS,
+};
+static const char *class_names[] = {
+    "",
+    "cell", "struct", "logical", "char", "double", "single",
+    "int8", "uint8", "int16", "uint16", "int32", "uint32",
+    "int64", "uint64",
+};
+
+void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
+{
+    uint32_t vpclassidx = vpflags&VP_CLASS_MASK;
+
+    if (vpclassidx && class_ids[vpclassidx] != mxGetClassID(ar))
     {
-    case 's':  // string
-        if (!mxIsChar(ar))
-            GLC_MEX_ERROR("%s must be a character array", arname);
+        GLC_MEX_ERROR("%s must have class %s", arname, class_names[vpclassidx]);
+    }
+
+    switch (vpflags & VP_SVM_MASK)
+    {
+    case VP_SCALAR:
+        if (mxGetNumberOfElements(ar) != 1)
+            GLC_MEX_ERROR("%s must be scalar", arname);
         break;
-    case 'd':  // double scalar
-        if (mxGetNumberOfElements(ar) != 1 || !mxIsDouble(ar))
-            GLC_MEX_ERROR("%s must be a double scalar", arname);
-        break;
-    case 'i':  // int32 scalar
-        if (mxGetNumberOfElements(ar) != 1 || !mxIsInt32(ar))
-            GLC_MEX_ERROR("%s must be a int32 scalar", arname);
-        break;
-    case 'v':  // vector
-    case 'V':  // double vector
-        if (mxGetNumberOfDimensions(ar) != 2)
-            GLC_MEX_ERROR("%s must be a vector", arname);
-        if (typedesc[0]!='V' || !mxIsDouble(ar))
-            GLC_MEX_ERROR("%s must be of double type", arname);
-        if (typedesc[1])
+
+    case VP_VECTOR:
+    {
+        int bad = 1;
+        mwSize sz[2];
+
+        if (mxGetNumberOfDimensions(ar) == 2)
         {
-            int numelts = atoi(&typedesc[1]);
-            if (mxGetNumberOfElements(ar) != (unsigned)numelts)
-                GLC_MEX_ERROR("%s must be of length %d", arname, numelts);
+            sz[0] = mxGetM(ar);
+            sz[1] = mxGetN(ar);
+
+            if (sz[0]==1 || sz[1]==1)
+            {
+                if (vpflags&VP_VECLEN_MASK)
+                {
+                    uint32_t reqdveclen = (vpflags&VP_VECLEN_MASK)>>VP_VECLEN_SHIFT;
+
+                    if (mxGetNumberOfElements(ar) == reqdveclen)
+                        bad = 0;
+                }
+                else
+                {
+                    bad = 0;
+                }
+            }
         }
+
+        if (bad)
+            GLC_MEX_ERROR("%s must be a vector", arname);
+        break;
+    }
+
+    case VP_MATRIX:
+        if (mxGetNumberOfDimensions(ar) != 2)
+            GLC_MEX_ERROR("%s must be a matrix", arname);
         break;
     }
 }
@@ -95,7 +165,7 @@ void verifyparam(const mxArray *ar, const char *arname, const char *typedesc)
 int util_dtoi(double d, double minnum, double maxnum, const char *arname)
 {
     if (!(d >= minnum && d <= maxnum))
-        GLC_MEX_ERROR("Passed invalid %s: must be between %d and %d", arname, (int)minnum, (int)maxnum);
+        GLC_MEX_ERROR("%s must be between %d and %d", arname, (int)minnum, (int)maxnum);
     return (int)d;
 }
 
@@ -122,6 +192,9 @@ static void display(void)
 
 static void reshape(int w, int h)
 {
+    wwidth = w;
+    wheight = h;
+
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -143,7 +216,7 @@ static void reshape(int w, int h)
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-    int cmd;
+    int32_t cmd;
 
     static int inited = 0;
 
@@ -167,16 +240,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
         else
-            mexErrMsgTxt("Usage: GLCALLINFO_STRUCT = GLCALL()");
+            mexErrMsgTxt("Usage: GLCALLINFO_STRUCT = GLCALL(), query available subcommands.");
     }
 
     // nrhs > 0
 
-    verifyparam(IN_COMMAND, "COMMAND", "i");
-    cmd = *(int *)mxGetData(IN_COMMAND);
+    verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
+    cmd = *(int32_t *)mxGetData(IN_COMMAND);
 
     if (cmd != GLC_NEWWINDOW && !inited)
-        mexErrMsgTxt("Must call 'newwindow' subcommand to initialize GLUT before any other command!");
+        mexErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
 
     //////////
     switch (cmd)
@@ -189,19 +262,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         char windowname[80];
 
         if (nlhs != 1 || nrhs != 4)
-            mexErrMsgTxt("Usage: WINID = GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME)");
-        verifyparam(NEWWIN_IN_POS, "POS", "V2");
-        verifyparam(NEWWIN_IN_EXTENT, "EXTENT", "V2");
-        verifyparam(NEWWIN_IN_NAME, "WINDOWNAME", "s");
+            mexErrMsgTxt("Usage: WINID = GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME), create new window.");
+
+        verifyparam(NEWWIN_IN_POS, "POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+        verifyparam(NEWWIN_IN_EXTENT, "EXTENT", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+        verifyparam(NEWWIN_IN_NAME, "WINDOWNAME", VP_VECTOR|VP_CHAR);
 
         posptr = mxGetPr(NEWWIN_IN_POS);
         extentptr = mxGetPr(NEWWIN_IN_EXTENT);
 
-        pos[0] = util_dtoi(posptr[0], 0, 1680, "POS(1)");
-        pos[1] = util_dtoi(posptr[1], 0, 1050, "POS(2)");
+        pos[0] = util_dtoi(posptr[0], 0, 1680, "GLCALL: newwindow: POS(1)");
+        pos[1] = util_dtoi(posptr[1], 0, 1050, "GLCALL: newwindow: POS(2)");
 
-        extent[0] = util_dtoi(extentptr[0], 320, 1680, "EXTENT(1)");
-        extent[1] = util_dtoi(extentptr[1], 200, 1050, "EXTENT(2)");
+        extent[0] = util_dtoi(extentptr[0], 320, 1680, "GLCALL: newwindow: EXTENT(1)");
+        extent[1] = util_dtoi(extentptr[1], 200, 1050, "GLCALL: newwindow: EXTENT(2)");
 
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
 
@@ -235,8 +309,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_DRAW:
     {
+        // TODO: pass color array
+
         unsigned int primitivetype;
-        int numdims, numtotalverts, numverts, i;
+        mwSize i, numdims, numtotalverts, numverts;
 
         unsigned int *indices;
 
@@ -250,28 +326,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!(/*primitivetype >= GL_POINTS &&*/ primitivetype <= GL_POLYGON))
             mexErrMsgTxt("GLCALL: draw: invalid GL primitive type");
 
-        if (!mxIsDouble(DRAW_IN_VERTEXDATA))
-            mexErrMsgTxt("GLCALL: draw: VERTEXDATA must be of double type");
+        verifyparam(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_DOUBLE);
 
         if (nrhs > 3)
-        {
-            if (!mxIsUint32(DRAW_IN_INDICES))
-                mexErrMsgTxt("GLCALL: draw: VERTEXDATA must be of uint32 type");
-        }
+            verifyparam(DRAW_IN_INDICES, "GLCALL: draw: INDICES", VP_VECTOR|VP_UINT32);
 
         numdims = mxGetM(DRAW_IN_VERTEXDATA);
         numtotalverts = mxGetN(DRAW_IN_VERTEXDATA);
-
-        if (numdims==0 || numtotalverts==0)
-            return;  // draw nothing   XXX: indices array goes unchecked...
 
         if (!(numdims >=2 && numdims <= 4))
             mexErrMsgTxt("GLCALL: draw: VERTEXDATA must have between 2 and 4 rows (number of coordinates)");
 
         if (nrhs > 3)
         {
-            numverts = mxGetNumberOfElements(DRAW_IN_INDICES);  // XXX: must be vector?
+            numverts = mxGetNumberOfElements(DRAW_IN_INDICES);
             indices = mxGetData(DRAW_IN_INDICES);
+
+            if (numverts==0)
+                return;
 
             // bounds check!
             for (i=0; i<numverts; i++)
@@ -280,11 +352,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
         else
         {
+            if (numtotalverts==0)
+                return;
+
             indices = mxMalloc(numtotalverts * sizeof(indices[0]));
             for (i=0; i<numtotalverts; i++)
                 indices[i] = i;
             numverts = numtotalverts;
         }
+
+        // draw them at last!
 
         glEnableClientState(GL_VERTEX_ARRAY);
 
@@ -301,7 +378,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         static int numentered = 0;
 
         if (nlhs != 0 || nrhs != 1)
-            mexErrMsgTxt("Usage: GLCALL(glc.entermainloop)");
+            mexErrMsgTxt("Usage: GLCALL(glc.entermainloop), enter main loop.");
 
         if (numentered)
             mexErrMsgTxt("GLCALL: entermainloop: entered recursively!");
