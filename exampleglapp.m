@@ -10,6 +10,9 @@ function exampleglapp()
     glex.wh = [800 600];
     glex.posns = rand(2, 16);
 
+    t = linspace(0,2*pi, 17);
+    glex.circ16 = [0 cos(t(1:end-1))/2; 0 sin(t(1:end-1))/2];
+
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1');
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
@@ -88,7 +91,16 @@ function ex_display(qwe, asd)
     vertposns(1, :) = vertposns(1, :) + glex.xbord(2) + 40;
     vertposns(2, :) = vertposns(2, :) + glex.ybord(1);
 
-    glcall(glc.draw, GL.POINTS, vertposns, struct('colors',[0.8 0.4 0.4]));
+    indices = uint32([ones(1,16); 1:16; [2:16 2]]-1);
+    indices = indices(:);
+
+    for i=1:size(vertposns,2)
+        vpos = glex.circ16 * 21;
+        vpos(1, :) = vpos(1, :) + vertposns(1, i);
+        vpos(2, :) = vpos(2, :) + vertposns(2, i);
+        glcall(glc.draw, GL.TRIANGLES, vpos, struct(...
+            'colors',[0.9 0.9 0.9], 'indices',indices));
+    end
 end
 
 function ex_passivemotion(x, y)
