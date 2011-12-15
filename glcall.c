@@ -29,7 +29,7 @@
 #define NEWWIN_IN_POS (prhs[1])
 #define NEWWIN_IN_EXTENT (prhs[2])
 #define NEWWIN_IN_NAME (prhs[3])
-#define NEWWIN_IN_MULTISAMPLEP (prhs[4])
+#define NEWWIN_IN_OPTSTRUCT (prhs[4])
 #define NEWWIN_OUT_WINID (plhs[0])
 
 /* draw */
@@ -214,7 +214,7 @@ const char *glcall_names[] =
 
 /*//////// DATA //////////*/
 
-#define MAXACTIVEWINDOWS 16
+#define MAXACTIVEWINDOWS 32
 #define MAXLIFETIMEWINDOWS 32768
 #define MAXCBNAMELEN 63
 static int curglutwinidx, curourwinidx=-1;
@@ -686,11 +686,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int32_t i, pos[2], extent[2], winid, multisamplep=0, oglutwinidx;
+        int32_t i, pos[2], extent[2], winid, oglutwinidx;
+        int32_t multisamplep=0, subwindowp=0;
         char windowname[80];
 
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
-            mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, MULTISAMPLEP]),"
+            mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
                          " create new window.");
 
         verifyparam(NEWWIN_IN_POS, "GLCALL: newwindow: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
@@ -698,8 +699,26 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(NEWWIN_IN_NAME, "GLCALL: newwindow: WINDOWNAME", VP_VECTOR|VP_CHAR);
         if (nrhs >= 5)
         {
-            verifyparam(NEWWIN_IN_MULTISAMPLEP, "GLCALL: newwindow: MULTISAMPLEP", VP_SCALAR|VP_LOGICAL);
-            multisamplep = *(uint8_t *)mxGetData(NEWWIN_IN_MULTISAMPLEP);
+            const mxArray *tmpar;
+
+            verifyparam(NEWWIN_IN_OPTSTRUCT, "GLCALL: newwindow: OPTSTRUCT", VP_SCALAR|VP_STRUCT);
+
+            tmpar = mxGetField(NEWWIN_IN_OPTSTRUCT, 0, "multisample");
+            if (tmpar)
+            {
+                verifyparam(tmpar, "GLCALL: newwindow: OPTSTRUCT.multisample", VP_SCALAR|VP_LOGICAL);
+                multisamplep = !!*(int8_t *)mxGetData(tmpar);
+            }
+
+            tmpar = mxGetField(NEWWIN_IN_OPTSTRUCT, 0, "subwindow");
+            if (tmpar)
+            {
+                verifyparam(tmpar, "GLCALL: newwindow: OPTSTRUCT.subwindow", VP_SCALAR|VP_LOGICAL);
+                subwindowp = !!*(int8_t *)mxGetData(tmpar);
+            }
+
+//            verifyparam(NEWWIN_IN_OPTSTRUCT, "GLCALL: newwindow: MULTISAMPLEP", VP_SCALAR|VP_LOGICAL);
+//            multisamplep = *(uint8_t *)mxGetData(NEWWIN_IN_OPTSTRUCT);
         }
 
         posptr = mxGetPr(NEWWIN_IN_POS);
@@ -713,6 +732,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         extent[1] = util_dtoi(extentptr[1], 1, 4000, "GLCALL: newwindow: EXTENT(2)");
 
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
+
+        if (subwindowp && !inited)
+            mexErrMsgTxt("Must have initialized GLCALL (i.e. created a"
+                         " top-level window) before creating subwindow");
 
         /* init!*/
         if (!inited)
@@ -734,8 +757,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* else creating second+ window OR got here because of an error before having
          * entered the mainloop (when running the prog another time) */
 
-        glutInitWindowPosition(pos[0], pos[1]);
-        glutInitWindowSize(extent[0], extent[1]);
+        if (!subwindowp)
+        {
+            glutInitWindowPosition(pos[0], pos[1]);
+            glutInitWindowSize(extent[0], extent[1]);
+        }
 
         oglutwinidx = glutGetWindow();
 
@@ -763,7 +789,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (i==MAXACTIVEWINDOWS)
             GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum active window count (%d)", MAXACTIVEWINDOWS);
 
-        winid = glutCreateWindow(windowname);
+        if (subwindowp)
+            winid = glutCreateSubWindow(oglutwinidx, pos[0],pos[1], extent[0],extent[1]);
+        else
+            winid = glutCreateWindow(windowname);
+
         if (winid <= 0)
             mexErrMsgTxt("GLCALL: newwindow: failed creating window!");
 
