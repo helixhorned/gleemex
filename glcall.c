@@ -1634,6 +1634,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         switch (what)
         {
+        case GLC_GET_WINDOW_ID:
+        {
+            int32_t ourwidx, glutwidx;
+
+            verifyparam(SET_IN_VALUE, "GLC: set GL.WINDOW_ID: ID", VP_SCALAR|VP_INT32);
+            ourwidx = *(int32_t *)mxGetData(SET_IN_VALUE);
+            ourwidx--;
+
+            if ((unsigned)ourwidx >= MAXACTIVEWINDOWS || (glutwidx=glutwinidx[ourwidx])==0)
+                mexErrMsgTxt("GLC: set GL.WINDOW_ID: window index invalid or nonexistent window");
+
+            glutSetWindow(glutwidx);
+            /* glutSetWindow might still come up empty; in that case following commands
+             * will probably bring the program to its fall. */
+
+            return;
+        }
+
         case GL_POINT_SIZE:
         {
             double value_d;
