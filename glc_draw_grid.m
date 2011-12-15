@@ -1,4 +1,4 @@
-% GLC_DRAW_GRID(GRIDEXTENT_RECT, SUBDIV_XY, ...)
+% [VLINES, HLINES] = GLC_DRAW_GRID(GRIDEXTENT_RECT, SUBDIV_XY, ...)
 %
 %  Draws a 2D grid of (xsubdivs x ysubdivs) lines in the z=0 plane
 %
@@ -9,7 +9,7 @@
 %   'fenceposts' in each direction, or a scalar specifying them both
 %
 %  variable args are passed as trailing arguments to glcall(glc.draw, ...)
-function glc_draw_grid(gridextent_rect, subdiv_xy, varargin)
+function [vlines, hlines]=glc_draw_grid(gridextent_rect, subdiv_xy, varargin)
     global glc GL
 
     if (numel(subdiv_xy)==1)

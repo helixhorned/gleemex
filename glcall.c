@@ -642,7 +642,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
 
-    if ((cmd != GLC_NEWWINDOW && cmd != GLC_GETERRSTR) && !inited)
+    if (!inited && !(cmd == GLC_NEWWINDOW || cmd == GLC_GET
+#ifndef HAVE_OCTAVE
+                     || cmd == GLC_GETERRSTR
+#endif
+            ))
         mexErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
 
     /*////////*/
@@ -1569,14 +1573,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(GET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(GET_IN_WHAT);
 
+        if (!inited && what != GLC_GET_WINDOW_ID)
+            mexErrMsgTxt("GLCALL: get: Only GL.WINDOW_ID supported when not initialized");
+
         switch (what)
         {
         case GLC_GET_WINDOW_ID:
         {
-            int32_t glutwidx = glutGetWindow(), ret_ourwidx;
+            int32_t glutwidx = inited ? glutGetWindow() : 0, ret_ourwidx;
 
             if (glutwidx==0)
-                ret_ourwidx = -1;
+                ret_ourwidx = 0;
             else
                 ret_ourwidx = ourwinidx[glutwidx]+1;
 

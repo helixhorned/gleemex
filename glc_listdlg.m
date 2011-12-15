@@ -4,7 +4,12 @@
 %
 % Non-MATLAB options:
 %  'Finish_Cb': if given, must be a handle to a function @(ok, sel)(...);
-%               sel is always passed as a row vector
+%    sel is always passed as a row vector.  Called with any exit condition
+%    except close by clicking [x].
+%
+% If glc_listdlg() was called when another window was current (its 'parent
+% window'), then it will be restored to the current window when the list
+% dialog finishes normally (not by [x]).
 function [sel,ok]=glc_listdlg(varargin)
 
     global GL glc glc_listdlg_s
@@ -136,7 +141,8 @@ function [sel,ok]=glc_listdlg(varargin)
 
     s.bbox = [20 s.wh(1)-20; ...
                         20+24+20 s.wh(2)-20];
-    s.tmpwinid = 0;
+    s.tmpwinid = 0;  % only glc_listdlg_s(1).winid used
+    s.parentwinid = glcall(glc.get, GL.WINDOW_ID);  % 0 if none or uninited
 
     if (isempty(s.name))
         s.name = ' ';
@@ -401,6 +407,11 @@ function glc_listdlg_display()
 
     if (glc_listdlg_s(winid).done)
         glcall(glc.closewindow);
+
+        parentwinid = glc_listdlg_s(winid).parentwinid;
+        if (parentwinid > 0)
+            glcall(glc.set, GL.WINDOW_ID, parentwinid);  % might be already closed though
+        end
 
         finish_cb = glc_listdlg_s(winid).finish_cb;
 
