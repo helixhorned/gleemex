@@ -1,12 +1,6 @@
 function exampleglapp()
     global GL glc glex
-%{
-    QWE_0 = [];
-    QWE_1 = [];
-    QWE_2 = [];
-    QWE_3 = [];
-    QWE_4 = [];
-%}
+
     GL = getglconsts(); glc = glcall();
     glex = struct();
 
@@ -21,8 +15,9 @@ function exampleglapp()
     glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
     glcall(glc.setcallback, glc.cb_mouse, 'ex_mouse');
     glcall(glc.entermainloop);
+end
 
-%{
+
 function ex_reshape(w, h)
     global GL glc glex
 
@@ -40,7 +35,6 @@ function ex_reshape(w, h)
 %    end
 
     glcall(glc.setmatrix, GL.MODELVIEW, []);
-%disp('resh')
 end
 
 function ex_display(qwe, asd)
@@ -95,6 +89,5 @@ function ex_passivemotion(x, y)
 end
 
 function ex_mouse(button, downp, x, y)
-    passivemotion(x, y);
+    ex_passivemotion(x, y);
 end
-%}

@@ -112,20 +112,23 @@ static int numentered = 0;
 
 ////////// UTIL //////////
 static char errstr[128];
-static const char *errstrptr;
-#ifndef USE_OCTAVE
-static mxArray *exceptionar;
-#endif
 
-#define mexErrMsgTxt(msg) do { \
-    if (numentered)            \
-    {                          \
-        errstrptr = strdup(msg);                \
-        glutLeaveMainLoop();   \
-    }                          \
-    else                       \
-        mexErrMsgTxt(msg);     \
+#ifndef HAVE_OCTAVE
+static mxArray *exceptionar;
+static const char *errstrptr;
+
+# define mexErrMsgTxt(msg) do {                  \
+        if (numentered)                         \
+        {                                       \
+            if (errstrptr)                      \
+                free(errstrptr);                \
+            errstrptr = strdup(msg);            \
+            glutLeaveMainLoop();                \
+        }                                       \
+        else                                    \
+            mexErrMsgTxt(msg);                  \
     } while (0);
+#endif
 
 #define GLC_MEX_ERROR(Text, ...) do {           \
         sprintf(errstr, Text, ## __VA_ARGS__);  \
@@ -263,28 +266,6 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
 #else
     {
-#if 0
-        char tmpbuf[128];
-        char mcodebuf[512];
-
-        for (i=0; i<numargs; i++)
-        {
-            sprintf(mcodebuf, "QWE_%d = %f;\n", (double)args[i]);
-            err |= !!mexEvalString(mcodebuf);
-        }
-
-        sprintf(mcodebuf, "%s(", callback_funcname[callbackid]);
-        for (i=0; i<numargs; i++)
-        {
-            sprintf(tmpbuf, "QWE_%d%s", i, i==numargs-1 ? "" : ",");
-            strcat(mcodebuf, tmpbuf);
-        }
-        strcat(mcodebuf, ");\n");
-
-        err |= (!!mexEvalString(mcodebuf))<<1;
-#endif
-
-#if 1
         const mxArray *ex;
 
         ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
@@ -297,13 +278,13 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
             exceptionar = ex;
             mexMakeArrayPersistent(exceptionar);
         }
-#endif
     }
 
     if (err)
     {
-        char buf[80];
-        sprintf(buf, "left main loop: error in callback %s: %d", callback_funcname[callbackid], err);
+        char buf[128];
+        sprintf(buf, "left main loop: error in callback %s: %d",
+                 callback_funcname[callbackid], err);
         mexErrMsgTxt(buf);
     }
 
@@ -588,9 +569,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (numtotalverts==0)
                 return;
 
-            indices = mxMalloc(numtotalverts * sizeof(indices[0]));
-            for (i=0; i<numtotalverts; i++)
-                indices[i] = i;
             numverts = numtotalverts;
         }
 
@@ -613,10 +591,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(numdims, GL_DOUBLE, 0, mxGetPr(DRAW_IN_VERTEXDATA));
 
-        glDrawElements(primitivetype, numverts, GL_UNSIGNED_INT, indices);
-
         if (!indicesar)
-            mxFree(indices);
+            glDrawArrays(primitivetype, 0, numverts);
+        else
+            glDrawElements(primitivetype, numverts, GL_UNSIGNED_INT, indices);
     }
     return;
 
@@ -794,6 +772,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_GETERRSTR:
     {
+#ifdef HAVE_OCTAVE
+        mexErrMsgTxt("CLGALL.geterrstr only available on MATLAB");
+#else
         const char *emptystr = "<empty>";
         const char *errstr_ptr = errstr;
 
@@ -803,6 +784,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         plhs[0] = mxCreateCharMatrixFromStrings(1, errstrptr ? &errstrptr : &emptystr);
         plhs[1] = mxCreateCharMatrixFromStrings(1, &errstr_ptr);
         plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
+#endif
     }
 
     }  // end switch(cmd)
