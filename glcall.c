@@ -1386,12 +1386,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
-            glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT);
+            glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
 
-            glColor3d(0.2, 0.2, 0.2);  // XXX
+            glColor3d(0.2, 0.2, 0.2);  /* XXX */
             glDisable(GL_TEXTURE_2D);
+
             glEnable(GL_LINE_SMOOTH);
             glEnable(GL_BLEND);
+            glBlendEquation(GL_FUNC_ADD);
 
 /*            glLoadIdentity(); */
             glTranslated(pos[0], pos[1], vlen==2 ? 0.0 : pos[2]);
