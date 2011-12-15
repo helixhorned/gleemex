@@ -595,6 +595,9 @@ static void special_cb(int key, int x, int y)
 
 static void display_cb(void)
 {
+    /* TODO: make the M-file display function need to define an output arg,
+     *  checking it will determine whether to swap buffers ? */
+
     if (check_callback(CB_DISPLAY))
     {
         call_mfile_callback(CB_DISPLAY, 0, NULL);
@@ -811,7 +814,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_DRAW:
     {
-        /* TODO: pass color array */
+        /* QUESTIONS/TODO:
+         *  When passing color array with 4 components, enable blending temporarily?
+         *  When passing a texture, make the default color white?
+         *  Some easy means of specifying a rect? (using glRect)
+         *  When a lot of data will need to be drawn: Buffer Objects...  */
 
         unsigned int primitivetype, doline;
         mwSize i, numdims, numtotalverts, numverts;
@@ -1168,6 +1175,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_CLEAR:
     {
+        /* TODO: might want to clear the depth buffer with a different value */
+
         mwSize numel;
         const double *color;
 
@@ -1227,6 +1236,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_NEWTEXTURE:
     {
+        /* TODO: generalize
+         *  1, 2, 3, 4 components: LUM, LUM_ALPHA, RGB, RGBA
+         *  different base data type components (int16, ...)
+         *  1D and 3D textures
+         *  an option struct to specify deviations from these 'default convenience settings' */
+
         GLuint texname;
         const mwSize *dimsizes;  /* XXX: older versions w/o mwSize? */
         GLint tmpwidth;
@@ -1382,6 +1397,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_RENDERTEXT:
     {
+        /* TODO:
+         *  Option to specify the gap between letters
+         *  Make space and TAB have other widths than GLUT default (space is too wide,
+         *   TAB should be used as 'small space')
+         *  Option to specify color?
+         *  <forgot one> */
+
         const double *pos;
         double height;
         char *text;
