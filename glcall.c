@@ -53,6 +53,7 @@
 
 // newtexture
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
+#define NEWTEXTURE_OUT_OURTEXID (plhs[0])
 
 
 enum glcalls_setcallback_
@@ -529,7 +530,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         const mxArray *colorsar=NULL, *indicesar=NULL;
 
-        const double *colors=NULL;
+        int32_t texname = 0;
+        const double *colors=NULL, *texcoords=NULL;
         uint32_t *indices=NULL;
 
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
@@ -546,10 +548,35 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nrhs > 3)
         {
+            const mxArray *texar, *texcoordsar;
+
             verifyparam(DRAW_IN_OPTSTRUCT, "GLCALL: draw: OPTSTRUCT", VP_SCALAR|VP_STRUCT);
 
             colorsar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "colors");
             indicesar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "indices");
+            texar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "tex");
+            if (texar)
+            {
+                double texid_d;
+                int32_t texid;
+
+                verifyparam(texar, "GLCALL: draw: OPTSTRUCT.tex", VP_SCALAR|VP_DOUBLE);
+
+                texid_d = *mxGetPr(texar);
+                texid = util_dtoi(texid_d, 0, MAXTEXTURES-1, "GLCALL: draw: OPTSTRUCT.tex");
+                texname = texnames[texid];
+
+                if (texname == 0)
+                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.tex must be a valid texture ID "
+                                 "returned by GLCALL(glc.newtexture, ...)");
+
+                texcoordsar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "texcoords");
+                if (!texcoordsar)
+                    mexErrMsgTxt("GLCALL: draw: When passing OPTSTRUCT.tex, must also have OPTSTRUCT.texcoords");
+
+                verifyparam(texcoordsar, "GLCALL: draw: OPTSTRUCT.texcoords", VP_MATRIX|VP_DOUBLE);
+                // TODO!
+            }
         }
 
         numdims = mxGetM(DRAW_IN_VERTEXDATA);
@@ -823,23 +850,46 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_NEWTEXTURE:
     {
         GLuint texname;
+        const mwSize *dimsizes;  // XXX: older versions w/o mwSize?
+        const uint8_t *texdata;
+        GLint tmpwidth;
 
         if (nlhs != 1 || nrhs != 2)
             mexErrMsgTxt("Usage: GLCALL(glc.newtexture, texar), texar must be NxMx3 uint8");
 
         verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_UINT8|VP_DIMN|(3<<VP_DIMN_SHIFT));
 
-        // TODO >.....<
+        dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
+        if (dimsizes[2] != 3)
+            mexErrMsgTxt("GLCALL: newtexture: TEXAR's 3rd dim must have length 3");
+        if (dimsizes[0] <= 0 || dimsizes[1] > 16384 || dimsizes[1] <= 0 || dimsizes[1] > 16384)
+            mexErrMsgTxt("GLCALL: mextexture: TEXAR's 1st and 2nd dims must have length in [1, 16384]");
 
         if (numtextures==MAXTEXTURES)
             GLC_MEX_ERROR("GLCALL.newtexture: maximum texture count %d exceeded", MAXTEXTURES);
 
         glGenTextures(1, &texname);
-        texnames[numtextures++] = texname;
+        texnames[numtextures] = texname;
 
         glBindTexture(GL_TEXTURE_2D, texname);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        texdata = mxGetData(NEWTEXTURE_IN_TEXAR);
+        // target, level, internalFormat, width, height, border, format, type, data
+        glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGB,  dimsizes[0], dimsizes[1],
+                     0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tmpwidth);
+        if (tmpwidth==0)
+        {
+            glDeleteTextures(1, &texnames[numtextures]);
+            texnames[numtextures] = 0;
+            mexErrMsgTxt("GLCALL.newtexture: cannot accomodate texture");
+        }
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  dimsizes[0], dimsizes[1],
+                     0, GL_RGB, GL_UNSIGNED_BYTE, texdata);
+
+        NEWTEXTURE_OUT_OURTEXID = mxCreateDoubleScalar(numtextures++);
     }
     return;
 

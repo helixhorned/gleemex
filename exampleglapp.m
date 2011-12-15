@@ -1,4 +1,5 @@
-function exampleglapp()
+% vertposns: (#verts, 2 or 3) matrix
+function exampleglapp(vertposns)
     global GL glc glex
 
     GL = getglconsts(); glc = glcall();
@@ -8,7 +9,20 @@ function exampleglapp()
     glex.ybord = [40 440];
     glex.mxy = [0 0];
     glex.wh = [800 600];
-    glex.posns = rand(2, 16);
+
+    if (nargin >= 1)
+        posmin = min(vertposns);
+        posmax = max(vertposns);
+        glex.DBG_posminmax = [posmin; posmax];
+        for i=1:3
+            vertposns(:, i) = (vertposns(:, i)-posmin(i))./(posmax(i)-posmin(i));
+        end
+        glex.posns = vertposns(:, 1:2).';
+        glex.zposns = vertposns(:, 3).';
+    else
+        glex.posns = rand(2, 16);
+        glex.zposns = zeros(1, 16);
+    end
 
     t = linspace(0,2*pi, 17);
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
@@ -41,7 +55,7 @@ function ex_reshape(w, h)
     glcall(glc.setmatrix, GL.MODELVIEW, []);
 end
 
-function ex_display(qwe, asd)
+function ex_display()
     global GL glc glex
     glcall(glc.clear, [0 0 0]);
 
@@ -100,7 +114,7 @@ function ex_display(qwe, asd)
         vpos(1, :) = vpos(1, :) + vertposns(1, i);
         vpos(2, :) = vpos(2, :) + vertposns(2, i);
         glcall(glc.draw, GL.TRIANGLES, vpos, struct(...
-            'colors',[0.9 0.9 0.9], 'indices',indices));
+            'colors',[0.5 0.5 0.5] + glex.zposns(i)/2, 'indices',indices));
     end
 end
 
@@ -111,6 +125,6 @@ function ex_passivemotion(x, y)
     glcall(glc.postredisplay);
 end
 
-function ex_mouse(button, downp, x, y)
+function ex_mouse(button, downp, x, y, mods)
     ex_passivemotion(x, y);
 end
