@@ -229,7 +229,7 @@ static struct windata_
     int32_t height, buttons;
 } win[MAXACTIVEWINDOWS];
 
-static GLuint cmaptexname, proginuse;
+static GLuint cmaptexname /*, proginuse */;
 static GLfloat g_strokefontheight;
 
 /*//////// UTIL //////////*/
@@ -445,6 +445,12 @@ static void cleanup_after_mainloop(void)
     memset(callback_funcname, 0, sizeof(callback_funcname));
     memset(ourwinidx, 0xff, sizeof(ourwinidx));
     memset(glutwinidx, 0, sizeof(glutwinidx));
+
+    if (cmaptexname)
+    {
+        glDeleteTextures(1, &cmaptexname);
+        cmaptexname = 0;
+    }
 
     curglutwinidx = 0;
     curourwinidx = -1;
@@ -1910,7 +1916,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nrhs == 1)
         {
             glUseProgram(0);
-            proginuse = 0;
+            /* proginuse = 0; */
             return;
         }
 
@@ -1919,7 +1925,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         progId = *(uint32_t *)mxGetData(USEFRAGPROG_IN_PROGID);
 
         glUseProgram(progId);
-        proginuse = progId;
+        /* proginuse = progId; */
 
         cmap_uniform = glGetUniformLocation(progId, "cmap");
         if (cmap_uniform != -1)
