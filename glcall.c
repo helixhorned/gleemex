@@ -1430,7 +1430,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const int32_t *kv;
 
         static const GLenum accessible_enables[] = {
-            GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH, GL_POLYGON_SMOOTH,
+            GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH,
+            GL_LINE_STIPPLE, GL_POLYGON_SMOOTH,
         };
 
         if (nlhs != 0 || nrhs != 2)
@@ -1639,6 +1640,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(SET_IN_VALUE, "GLC: set GL.BLEND_EQUATION: EQN", VP_SCALAR|VP_INT32);
             glBlendEquation(*(int32_t *)mxGetData(SET_IN_VALUE));
             break;  /* glGetError handles invalid enum vals */
+        }
+
+        case GL_LINE_STIPPLE_PATTERN:
+        {
+            verifyparam(SET_IN_VALUE, "GLC: set GL.LINE_STIPPLE_PATTERN: PATTERN", VP_SCALAR|VP_UINT16);
+            glLineStipple(1, *(uint16_t *)mxGetData(SET_IN_VALUE));
+            break;
         }
 
         default:
