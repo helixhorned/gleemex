@@ -38,9 +38,9 @@ function [sel,ok]=glc_listdlg(varargin)
             haveliststring = true;
             liststring = val(:);
           case 'selectionmode',
-            if (isequal(val, 'single'))  % case-insens?
+            if (strcmpi(val, 'single'))  % case-insens!
                 selmode_multiple = false;
-            elseif (isequal(val, 'multiple'))
+            elseif (strcmpi(val, 'multiple'))
                 selmode_multiple = true;
             else
                 error('SelectionMode value must be one of ''single'' or ''multiple''');
@@ -344,35 +344,36 @@ function glc_listdlg_display()
         end
     end
 
-    for i=1:numlines
-        idx = i + glc_listdlg_s(winid).ofs;
-        if (idx > numvals)
-            break;
-        end
-
-        y1 = glc_listdlg_s(winid).wh(2)-20-i*lineheight;
-
-        bb = [bbox([1 3]); ...
-              y1, y1+lineheight];
-
-        % XXX: rects may occlude text :/
-        color = [];
-        if (glc_listdlg_s(winid).selected(idx))
-            if (point_in_i==i)
-                color = [0.7 0.7 0.9];
-            else
-                color = [0.6 0.6 0.9];
+    for runi=1:2
+        for i=1:numlines
+            idx = i + glc_listdlg_s(winid).ofs;
+            if (idx > numvals)
+                break;
             end
-        elseif (point_in_i==i)
-            color = [0.92 0.92 0.92];
-        end
-        if (~isempty(color))
-            glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
-%        else
-%            glcall(glc.draw, GL.QUADS+16, glc_expandrect(bb));
-        end
 
-        glcall(glc.rendertext, bb([1 2])+[12 2], lineheight-2, glc_listdlg_s(winid).liststring{idx});
+            y1 = glc_listdlg_s(winid).wh(2)-20-i*lineheight;
+
+            bb = [bbox([1 3]); ...
+                  y1, y1+lineheight];
+
+            if (runi==1)
+                color = [];
+                if (glc_listdlg_s(winid).selected(idx))
+                    if (point_in_i==i)
+                        color = [0.7 0.7 0.9];
+                    else
+                        color = [0.6 0.6 0.9];
+                    end
+                elseif (point_in_i==i)
+                    color = [0.92 0.92 0.92];
+                end
+                if (~isempty(color))
+                    glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
+                end
+            else
+                glcall(glc.rendertext, bb([1 2])+[12 2], lineheight-2, glc_listdlg_s(winid).liststring{idx});
+            end
+        end
     end
 
     glcall(glc.draw, GL.QUADS+16, glc_expandrect(bbox));
