@@ -28,6 +28,8 @@ if (isempty(tokens))
     return;
 end
 
+fnames = tokens;
+
 prompt = sprintf('Create the following files? (y/[n])\n');
 for i=1:length(tokens)
     tokens{i} = sprintf('  %s.m\n', tokens{i});
@@ -43,8 +45,12 @@ end
 
 s = input(prompt, 's');
 if (strcmp(s, 'y'))
-    for i=1:length(tokens)
-        fid = fopen(tokens{i}, 'w+');
+    for i=1:length(fnames)
+        [fid,msg] = fopen([fnames{i} '.m'], 'w+');
+        if (fid < 0)
+            warning(sprintf('%s: %s', fnames{i}, msg));
+            continue;
+        end
         fwrite(fid, sprintf('%s\n', match{i}), 'char');
         fclose(fid);
     end
