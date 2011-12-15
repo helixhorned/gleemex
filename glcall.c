@@ -640,7 +640,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int32_t i, pos[2], extent[2], winid, multisamplep=0;
+        int32_t i, pos[2], extent[2], winid, multisamplep=0, oglutwinidx;
         char windowname[80];
 
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
@@ -683,16 +683,37 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             inited = 1;
         }
-        else
-        {
-            /* creating second+ window OR got here because of an error before having
-             * entered the mainloop (when running the prog another time) */
-
-//            mexErrMsgTxt("GLCALL: newwindow: multiple windows not implemented!");
-        }
+        /* else creating second+ window OR got here because of an error before having
+         * entered the mainloop (when running the prog another time) */
 
         glutInitWindowPosition(pos[0], pos[1]);
         glutInitWindowSize(extent[0], extent[1]);
+
+        oglutwinidx = glutGetWindow();
+
+        /* look for a free ourwinidx slot and clean up window slots for windows
+         * that got destroyed by clicking [x] instead of calling glcall(glc.closewindow) */
+        for (i=0; i<MAXACTIVEWINDOWS; i++)
+        {
+            if (glutwinidx[i]==0)
+                break;
+
+            glutSetWindow(glutwinidx[i]);
+            if (glutGetWindow() != glutwinidx[i])  /* window nonexistent! */
+            {
+                ourwinidx[glutwinidx[i]] = -1;
+                glutwinidx[i] = 0;
+            }
+        }
+
+        /* Reset the old current window before the potential error. This
+         * doesn't matter normally, but users might protect this NEWWINDOW
+         * call with a try/catch, where it does. */
+        if (oglutwinidx > 0)
+            glutSetWindow(oglutwinidx);
+
+        if (i==MAXACTIVEWINDOWS)
+            GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum active window count (%d)", MAXACTIVEWINDOWS);
 
         winid = glutCreateWindow(windowname);
         if (winid <= 0)
@@ -700,12 +721,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (winid >= MAXLIFETIMEWINDOWS)
             GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum lifetime window count (%d)", MAXLIFETIMEWINDOWS);
-
-        for (i=0; i<MAXACTIVEWINDOWS; i++)
-            if (glutwinidx[i]==0)
-                break;
-        if (i==MAXACTIVEWINDOWS)
-            GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum active window count (%d)", MAXACTIVEWINDOWS);
 
         glutwinidx[i] = winid;
         ourwinidx[winid] = i;
@@ -1281,6 +1296,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     break;
 
+    /* TODO: move into 'set' */
     case GLC_SETWINDOWSIZE:
     {
         const double *wh_d;
@@ -1326,7 +1342,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize slen, i, vlen;
 
         if (nlhs != 0 || nrhs != 4)
-            mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y z], height, text)");
+            mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text)");
 
         verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE);
         vlen = mxGetNumberOfElements(RENDERTEXT_IN_POS);
