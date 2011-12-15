@@ -1,11 +1,28 @@
 % EXTRACTSECFUNCS(FILENAME): Extract secondary functions from an M-file
 %  into separate M-files.
-function [match,tokens]=extractsecfuncs(filename)
+function extractsecfuncs(filename, numspace, thedir)
 
+if (~exist('numspace', 'var'))
+    numspace = 0;
+else
+    if (ischar(numspace))
+        numspace = str2double(numspace);
+    end
+end
+
+SP = repmat(' ', 1,numspace);
+
+if (~exist('thedir', 'var'))
+    thedir = '.';
+end
+
+%%
 str = readfilestr(filename);
 
+RE = ['^' SP 'function +(?:[^=' char(10) ']*?= *)?([A-Za-z][A-Za-z0-9_]*).*?^' SP 'end' char(13) '?$'];
+
 [match, tokens] = ...
-    regexp(str, '^function +([A-Za-z][A-Za-z0-9_]*).*?^end$', ...
+    regexp(str, RE, ...
            'match','tokens', ...
            'dotall','lineanchors');
 
@@ -45,7 +62,7 @@ fnames = tokens;
 
 prompt = sprintf('Create the following files? (y/[n])\n');
 for i=1:length(tokens)
-    tokens{i} = sprintf('  %s.m\n', tokens{i});
+    tokens{i} = sprintf('  %s.m\n', fullfile(thedir, tokens{i}));
     prompt = [prompt tokens{i}];
 end
 
@@ -59,7 +76,7 @@ end
 s = input(prompt, 's');
 if (strcmp(s, 'y'))
     for i=1:length(fnames)
-        [fid,msg] = fopen([fnames{i} '.m'], 'w+');
+        [fid,msg] = fopen(fullfile(thedir, [fnames{i} '.m']), 'w+');
         if (fid < 0)
             warning(sprintf('%s: %s', fnames{i}, msg));
             continue;
