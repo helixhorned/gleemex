@@ -102,13 +102,16 @@
 #define SETUNIFORM_IN_UNIFORMID (prhs[1])
 #define SETUNIFORM_IN_VAL (prhs[2])
 
+/* closewindow */
+#define CLOSEWINDOW_IN_OURWINID (prhs[1])
+
 
 enum glcalls_setcallback_
 {
     CB_DISPLAY = 0,
     CB_RESHAPE,
     CB_KEYBOARD,
-//    CB_SPECIAL,
+/*    CB_SPECIAL, */
     CB_MOUSE,
     CB_MOTION,
     CB_PASSIVEMOTION,
@@ -120,7 +123,7 @@ const char *glcall_callback_names[] =
     "cb_display",
     "cb_reshape",
     "cb_keyboard",
-//    "cb_special",
+/*    "cb_special", */
     "cb_mouse",
     "cb_motion",
     "cb_passivemotion",
@@ -155,6 +158,7 @@ enum glcalls_
     GLC_USEFRAGPROG,
     GLC_SETUNIFORM,
     GLC_LEAVEMAINLOOP,
+    GLC_CLOSEWINDOW,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -185,14 +189,22 @@ const char *glcall_names[] =
     "usefragprog",
     "setuniform",
     "leavemainloop",
+    "closewindow",
 };
 
 
 /*//////// DATA //////////*/
 
+#define MAXACTIVEWINDOWS 16
+#define MAXLIFETIMEWINDOWS 32768
 #define MAXCBNAMELEN 63
-static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
-static int numentered = 0;
+static int curglutwinidx, curourwinidx=-1;
+/* our window index (start at 0) --> GLUT window index (start at 1) */
+static uint16_t glutwinidx[MAXACTIVEWINDOWS];
+/* the reverse mapping, MAXLIFETIMEWINDOWS is practically Inf for that purpose */
+static int8_t ourwinidx[MAXLIFETIMEWINDOWS];
+static char callback_funcname[MAXACTIVEWINDOWS][NUM_CALLBACKS][MAXCBNAMELEN+1];
+static int numentered = 0;  /* entermainloop entered? */
 
 static GLuint cmaptexname, proginuse;
 
@@ -383,13 +395,23 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
 
 /*//////// FUNCTIONS //////////*/
 
-static void clear_callback_names(void)
+static void cleanup_after_mainloop(void)
 {
     memset(callback_funcname, 0, sizeof(callback_funcname));
+    memset(ourwinidx, 0xff, sizeof(ourwinidx));
+    memset(glutwinidx, 0, sizeof(glutwinidx));
+
+    curglutwinidx = 0;
+    curourwinidx = -1;
 }
 
 #define MAX_CB_ARGS 5  /* REMEMBER */
-#define CHECK_CALLBACK(CallbackID) (callback_funcname[CallbackID][0]!='\0')
+static inline int check_callback(int CallbackID)
+{
+    return (curglutwinidx=glutGetWindow()) &&
+        (curourwinidx=ourwinidx[curglutwinidx],  /* assumed >= 0 */
+         callback_funcname[curourwinidx][CallbackID][0]!='\0');
+}
 
 static int call_mfile_callback(int callbackid, int numargs, const int *args)
 {
@@ -401,14 +423,17 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     for (i=0; i<numargs; i++)
         mxargs[i] = mxCreateDoubleScalar((double)args[i]);
 
+if (curourwinidx>0)
+    printf("called %s for our win %d\n", glcall_callback_names[callbackid], curourwinidx);
+
 #ifdef HAVE_OCTAVE
     mexSetTrapFlag(1);
-    err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
+    err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
 #else
     {
         const mxArray *ex;
 
-        ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[callbackid]);
+        ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
         err = (ex != NULL);
 
         if (err)
@@ -424,7 +449,7 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     {
         char buf[128];
         sprintf(buf, "left main loop: error in callback %s: %d",
-                 callback_funcname[callbackid], err);
+                 callback_funcname[curourwinidx][callbackid], err);
         mexErrMsgTxt(buf);
     }
 
@@ -446,7 +471,7 @@ static int getModifiers()
 
 static void mouse_cb(int button, int state, int x, int y)
 {
-    if (CHECK_CALLBACK(CB_MOUSE))
+    if (check_callback(CB_MOUSE))
     {
         int args[MAX_CB_ARGS] = {button, (state==GLUT_DOWN), x, y, 0};
         args[4] = getModifiers();
@@ -456,7 +481,7 @@ static void mouse_cb(int button, int state, int x, int y)
 
 static void motion_cb(int x, int y)
 {
-    if (CHECK_CALLBACK(CB_MOTION))
+    if (check_callback(CB_MOTION))
     {
         int args[MAX_CB_ARGS] = {x, y};
         call_mfile_callback(CB_MOTION, 2, args);
@@ -465,7 +490,7 @@ static void motion_cb(int x, int y)
 
 static void passivemotion_cb(int x, int y)
 {
-    if (CHECK_CALLBACK(CB_PASSIVEMOTION))
+    if (check_callback(CB_PASSIVEMOTION))
     {
         int args[MAX_CB_ARGS] = {x, y};
         call_mfile_callback(CB_PASSIVEMOTION, 2, args);
@@ -474,7 +499,7 @@ static void passivemotion_cb(int x, int y)
 
 static void keyboard_cb(unsigned char key, int x, int y)
 {
-    if (CHECK_CALLBACK(CB_KEYBOARD))
+    if (check_callback(CB_KEYBOARD))
     {
         int args[MAX_CB_ARGS] = {key, x, y, 0};
         args[3] = getModifiers();
@@ -484,7 +509,7 @@ static void keyboard_cb(unsigned char key, int x, int y)
 
 static void special_cb(int key, int x, int y)
 {
-    if (CHECK_CALLBACK(CB_KEYBOARD))
+    if (check_callback(CB_KEYBOARD))
     {
         int args[MAX_CB_ARGS] = {key+65536, x, y, 0};
         args[3] = getModifiers();
@@ -494,7 +519,7 @@ static void special_cb(int key, int x, int y)
 
 static void display_cb(void)
 {
-    if (CHECK_CALLBACK(CB_DISPLAY))
+    if (check_callback(CB_DISPLAY))
     {
         call_mfile_callback(CB_DISPLAY, 0, NULL);
     }
@@ -508,7 +533,7 @@ static void display_cb(void)
 
 static void reshape_cb(int w, int h)
 {
-    if (CHECK_CALLBACK(CB_RESHAPE))
+    if (check_callback(CB_RESHAPE))
     {
         int args[MAX_CB_ARGS] = {w, h};
         call_mfile_callback(CB_RESHAPE, 2, args);
@@ -569,7 +594,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int32_t pos[2], extent[2], winid, multisamplep=0;
+        int32_t i, pos[2], extent[2], winid, multisamplep=0;
         char windowname[80];
 
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
@@ -588,7 +613,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         posptr = mxGetPr(NEWWIN_IN_POS);
         extentptr = mxGetPr(NEWWIN_IN_EXTENT);
 
-        // XXX: the magic constants here are pretty bad!
+        /* XXX: the magic constants here are pretty bad! */
         pos[0] = util_dtoi(posptr[0], 0, 1680, "GLCALL: newwindow: POS(1)");
         pos[1] = util_dtoi(posptr[1], 0, 1050, "GLCALL: newwindow: POS(2)");
 
@@ -600,22 +625,59 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* init!*/
         if (!inited)
         {
-            char *argvdummy[1] = {"QWEASDproggy"};
+            char *argvdummy[1] = {"dummy_program_parameter"};
             int argcdummy = 1;
 
             glutInit(&argcdummy, argvdummy);  /* XXX */
             glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
+            /* only set initial display mode options when creating the first window
+             * (glewInit() paranoia in Windows -- necessary?) */
+            glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | multisamplep*GLUT_MULTISAMPLE | GLUT_RGBA);
+
             inited = 1;
         }
         else
-            mexErrMsgTxt("GLCALL: newwindow: multiple windows not implemented!");
+        {
+            /* creating second+ window OR got here because of an error before having
+             * entered the mainloop (when running the prog another time) */
 
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | multisamplep*GLUT_MULTISAMPLE | GLUT_RGBA);
+//            mexErrMsgTxt("GLCALL: newwindow: multiple windows not implemented!");
+        }
+
         glutInitWindowPosition(pos[0], pos[1]);
         glutInitWindowSize(extent[0], extent[1]);
 
         winid = glutCreateWindow(windowname);
+        if (winid <= 0)
+            mexErrMsgTxt("GLCALL: newwindow: failed creating window!");
+
+        if (winid >= MAXLIFETIMEWINDOWS)
+            GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum lifetime window count (%d)", MAXLIFETIMEWINDOWS);
+
+        for (i=0; i<MAXACTIVEWINDOWS; i++)
+            if (glutwinidx[i]==0)
+                break;
+        if (i==MAXACTIVEWINDOWS)
+            GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum active window count (%d)", MAXACTIVEWINDOWS);
+
+        glutwinidx[i] = winid;
+        ourwinidx[winid] = i;
+
+printf("created window glut %d, our %d, current glut=%d\n", winid, i, glutGetWindow());
+
+        /** set callbacks for the newly created window **/
+        /* these two are always there */
+        glutDisplayFunc(display_cb);
+        glutReshapeFunc(reshape_cb);
+
+        /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...) */
+        /*    is called)? Doesn't seem really necessary... */
+        glutMouseFunc(mouse_cb);
+        glutMotionFunc(motion_cb);
+        glutPassiveMotionFunc(passivemotion_cb);
+        glutKeyboardFunc(keyboard_cb);
+        glutSpecialFunc(special_cb);
 
         {
             GLenum err = glewInit();
@@ -632,7 +694,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nlhs > 0)
         {
-            NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &winid);
+            // +1 is a convenience for the Octave coder
+            NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ourwinidx[winid]+1);
         }
     }
     break;
@@ -819,29 +882,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("Usage: GLCALL(glc.entermainloop), enter main loop.");
 
         if (numentered)
-            mexErrMsgTxt("GLCALL: entermainloop: entered recursively!");
+            return;
+/*            mexErrMsgTxt("GLCALL: entermainloop: entered recursively!"); */
         numentered++;
-
-        /* these two are always there */
-        glutDisplayFunc(display_cb);
-        glutReshapeFunc(reshape_cb);
-
-        /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...) */
-        /*    is called)? Doesn't seem really necessary... */
-        glutMouseFunc(mouse_cb);
-        glutMotionFunc(motion_cb);
-        glutPassiveMotionFunc(passivemotion_cb);
-        glutKeyboardFunc(keyboard_cb);
-        glutSpecialFunc(special_cb);
 
         glutMainLoop();
 
         numentered--;
         inited = 0;
 
-        clear_callback_names();
+        cleanup_after_mainloop();
     }
-    break;
+    return;
 
     case GLC_SETMATRIX:
     {
@@ -960,11 +1012,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_SETCALLBACK:
     {
-        int32_t callbackid, i, slen;
+        int32_t callbackid, i, slen, glutwinidx;
         char tmpbuf[MAXCBNAMELEN+1], c;
 
         if (nlhs != 0 || nrhs != 3)
             mexErrMsgTxt("Usage: GLCALL(glc.setcallback, glc.cb_<callbacktype>, 'mfuncname'), pass '' to reset");
+
+        glutwinidx = glutGetWindow();
+        if (glutwinidx==0)
+            mexErrMsgTxt("GLCALL: glc.setcallback: no current window!");
 
         verifyparam(SETCALLBACK_IN_TYPE, "GLCALL: setcallback: CALLBACKTYPE", VP_SCALAR|VP_INT32);
         callbackid = *(int32_t *)mxGetData(SETCALLBACK_IN_TYPE);
@@ -986,9 +1042,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 mexErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
         }
 
-        memcpy(&callback_funcname[callbackid], tmpbuf, sizeof(tmpbuf));
+printf("set %s=%s for window glut %d, our %d\n", glcall_callback_names[callbackid],
+       tmpbuf, glutwinidx, ourwinidx[glutwinidx]);
+        memcpy(&callback_funcname[ourwinidx[glutwinidx]][callbackid], tmpbuf, sizeof(tmpbuf));
     }
-    break;
+    return;
 
     /* TODO: merge with GLCALL(glc.scissor) ... */
     case GLC_VIEWPORT:
@@ -1039,7 +1097,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glutPostRedisplay();
     }
-    break;
+    return;
 
     case GLC_GETERRSTR:
     {
@@ -1057,7 +1115,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
 #endif
     }
-    break;
+    return;
 
     case GLC_NEWTEXTURE:
     {
@@ -1251,7 +1309,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glEnable(GL_LINE_SMOOTH);
             glEnable(GL_BLEND);
 
-//            glLoadIdentity();
+/*            glLoadIdentity(); */
             glTranslated(pos[0], pos[1], vlen==2 ? 0.0 : pos[2]);
 
             glScaled(height/119.05, height/119.05, height/119.05);
@@ -1532,11 +1590,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                     if (type == accepted_types[j])
                         break;
                 if (j < 0)
-                    continue;  // not an accepted uniform type
+                    continue;  /* not an accepted uniform type */
 
                 c = name[0];
                 if (!(c>='A' && c<='Z') && !(c>='a' && c<='z'))
-                    continue;  // not a valid MATLAB variable/field name
+                    continue;  /* not a valid MATLAB variable/field name */
 
                 for (j=1; (c=name[j]); j++)
                     if (!(c>='A' && c<='Z') && !(c>='a' && c<='z') && c!='_' && !(c>='0' && c<='9'))
@@ -1551,13 +1609,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                             }
 
                             if (name[k]==']' && name[k+1]==0)
-                                name[j] = 0;  // only use the part without the [<number>] as the name
+                                name[j] = 0;  /* only use the part without the [<number>] as the name */
                         }
 
                         break;
                     }
                 if (name[j])
-                    continue;  // not a valid MATLAB variable/field name
+                    continue;  /* not a valid MATLAB variable/field name */
 
                 fieldnum = mxAddField(uniformStructAr, name);
                 mxSetFieldByNumber(uniformStructAr, 0, fieldnum, createScalar(mxINT32_CLASS, &i));
@@ -1592,7 +1650,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         cmap_uniform = glGetUniformLocation(progId, "cmap");
         if (cmap_uniform != -1)
-            glUniform1i(cmap_uniform, 1);  // texture unit 1: color map 1D texture
+            glUniform1i(cmap_uniform, 1);  /* texture unit 1: color map 1D texture */
     }
     break;
 
@@ -1650,7 +1708,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         default:
             GLC_MEX_ERROR("Uniform '%s' has unsupported type", name);
-            vptype = 0;  // compiler-happy
+            vptype = 0;  /* compiler-happy */
         }
 
         verifyparam(SETUNIFORM_IN_VAL, "GLCALL: setuniform: VAL", VP_VECTOR|vptype);
@@ -1696,11 +1754,34 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_LEAVEMAINLOOP:
     {
-        // don't leave out the opportunity to mock the user even if the effect is the same :P
+        /* don't leave out the opportunity to mock the user even if the effect is the same :P */
         if (nlhs!=0 || nrhs!=1)
             mexErrMsgTxt("Usage: GLCALL(glc.leavemainloop)");
 
         glutLeaveMainLoop();
+    }
+    return;
+
+    case GLC_CLOSEWINDOW:
+    {
+        int32_t ourwidx, glutwidx;
+
+        if (nlhs!=0 || nrhs!=2)
+            mexErrMsgTxt("Usage: GLCALL(glc.closewindow, OURWINID)");
+
+        verifyparam(CLOSEWINDOW_IN_OURWINID, "GLCALL: closewindow: OURWINID", VP_SCALAR|VP_INT32);
+        ourwidx = *(int32_t *)mxGetData(CLOSEWINDOW_IN_OURWINID);
+
+        if (ourwidx <= 0 || ourwidx > MAXACTIVEWINDOWS)
+            mexErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
+        ourwidx--;
+
+        glutwidx = glutwinidx[ourwidx];
+        if (glutwidx > 0)  /* XXX: still might be nonexistent because closed by clicking [x] */
+            glutDestroyWindow(glutwidx);
+
+        ourwinidx[glutwidx] = -1;
+        glutwinidx[ourwidx] = 0;
     }
     return;
 
