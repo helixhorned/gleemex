@@ -110,6 +110,9 @@ const char *glcall_names[] =
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
 
+static double glpointszmin;
+static double glpointszmax;
+
 ////////// UTIL //////////
 static char errstr[128];
 
@@ -234,11 +237,11 @@ static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
     }
 }
 
-static int util_dtoi(double d, double minnum, double maxnum, const char *arname)
+static int32_t util_dtoi(double d, double minnum, double maxnum, const char *arname)
 {
     if (!(d >= minnum && d <= maxnum))
         GLC_MEX_ERROR("%s must be between %d and %d", arname, (int)minnum, (int)maxnum);
-    return (int)d;
+    return (int32_t)d;
 }
 
 ////////// FUNCTIONS //////////
@@ -435,7 +438,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int pos[2], extent[2], winid;
+        int32_t pos[2], extent[2], winid;
         char windowname[80];
 
         if (nlhs > 1 || nrhs != 4)
@@ -464,6 +467,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             glutInit(&argcdummy, argvdummy);  // XXX
             glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
+
+            glGetDoublev(GL_POINT_SIZE_MIN, &glpointszmin);
+            glGetDoublev(GL_POINT_SIZE_MAX, &glpointszmax);
+printf("glpointszminmax: %f %f\n", glpointszmin, glpointszmax);
+            glEnable(GL_POINT_SMOOTH);
 
             inited = 1;
         }

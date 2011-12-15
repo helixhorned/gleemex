@@ -8,6 +8,7 @@ function exampleglapp()
     glex.ybord = [40 440];
     glex.mxy = [0 0];
     glex.wh = [800 600];
+    glex.posns = rand(2, 16);
 
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1');
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
@@ -43,21 +44,7 @@ function ex_display(qwe, asd)
 
     numchans = 16;
 
-    xx = linspace(glex.xbord(1), glex.xbord(2), numchans+1);
-    yy = linspace(glex.ybord(1), glex.ybord(2), numchans+1);
-
-    vlines = zeros(2, 2*(numchans+1));
-    vlines(1, :) = repmat(glex.xbord, 1,(numchans+1));
-    vlines(2, 1:2:end-1) = yy;
-    vlines(2, 2:2:end) = yy;
-
-    hlines = zeros(2, 2*(numchans+1));
-    hlines(2, :) = repmat(glex.ybord, 1,(numchans+1));
-    hlines(1, 1:2:end-1) = xx;
-    hlines(1, 2:2:end) = xx;
-
-    glcall(glc.draw, GL.LINES, [vlines, hlines]);
-
+    % blue rect
     mxy = glex.mxy;
     mxy(2) = glex.wh(2) - mxy(2);
 
@@ -79,6 +66,29 @@ function ex_display(qwe, asd)
 
         glcall(glc.draw, GL.QUADS, verts, struct('colors',[0.4 0.4 0.8]));
     end
+
+    % grid lines
+    xx = linspace(glex.xbord(1), glex.xbord(2), numchans+1);
+    yy = linspace(glex.ybord(1), glex.ybord(2), numchans+1);
+
+    vlines = zeros(2, 2*(numchans+1));
+    vlines(1, :) = repmat(glex.xbord, 1,(numchans+1));
+    vlines(2, 1:2:end-1) = yy;
+    vlines(2, 2:2:end) = yy;
+
+    hlines = zeros(2, 2*(numchans+1));
+    hlines(2, :) = repmat(glex.ybord, 1,(numchans+1));
+    hlines(1, 1:2:end-1) = xx;
+    hlines(1, 2:2:end) = xx;
+
+    glcall(glc.draw, GL.LINES, [vlines, hlines]);
+
+    % vertex points
+    vertposns = glex.posns * 256;
+    vertposns(1, :) = vertposns(1, :) + glex.xbord(2) + 40;
+    vertposns(2, :) = vertposns(2, :) + glex.ybord(1);
+
+    glcall(glc.draw, GL.POINTS, vertposns, struct('colors',[0.8 0.4 0.4]));
 end
 
 function ex_passivemotion(x, y)
