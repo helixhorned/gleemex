@@ -77,6 +77,12 @@ GL.SCISSOR_BIT = uint32(524288);
 GL.ALL_ATTRIB_BITS = uint32(1048575);  % 0xFFFFF
 
 
+%% GLC specific
+
+% GET tokens
+GL.WINDOW_ID = int32(-100);
+
+
 %% GLUT stuff follows
 
 % mouse buttons, 1<<X
@@ -84,10 +90,7 @@ GL.LEFT_BUTTON = 1;
 GL.MIDDLE_BUTTON = 2;
 GL.RIGHT_BUTTON = 4;
 
-
-%
 % GLUT API macro definitions -- the special key codes:
-%
 GL.KEY_F1 = 65536+1;
 GL.KEY_F2 = 65536+2;
 GL.KEY_F3 = 65536+3;

@@ -87,6 +87,10 @@
 /* push/pop */
 #define PUSH_IN_WHATAR (prhs[1])
 
+/* get */
+#define GET_IN_WHAT (prhs[1])
+#define GET_OUT_VALUE (plhs[0])
+
 /* set */
 #define SET_IN_WHAT (prhs[1])
 #define SET_IN_VALUE (prhs[2])
@@ -108,6 +112,12 @@
 
 /* closewindow */
 #define CLOSEWINDOW_IN_OURWINID (prhs[1])
+
+
+/**** GET tokens ****/
+/* Use negative values for GLC tokens since we might want to allow GL ones
+ * later. This way there will be no collisions. */
+#define GLC_GET_WINID (-100)
 
 
 enum glcalls_setcallback_
@@ -156,6 +166,7 @@ enum glcalls_
     GLC_DELTEXTURES,
     GLC_PUSH,
     GLC_POP,
+    GLC_GET,
     GLC_SET,
     GLC_COLORMAP,
     GLC_NEWFRAGPROG,
@@ -187,6 +198,7 @@ const char *glcall_names[] =
     "deltextures",
     "push",
     "pop",
+    "get",
     "set",
     "colormap",
     "newfragprog",
@@ -756,7 +768,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs > 0)
         {
             // +1 is a convenience for the Octave coder
-            NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ourwinidx[winid]+1);
+            int32_t ret_ourwidx = ourwinidx[winid]+1;
+            NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ret_ourwidx);
         }
     }
     break;
@@ -1508,6 +1521,37 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     break;
 
+    case GLC_GET:
+    {
+        int32_t what;
+
+        if (nlhs != 1 || nrhs != 2)
+            mexErrMsgTxt("Usage: VALUE = GLCALL(glc.get, WHAT)");
+
+        verifyparam(GET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
+        what = *(int32_t *)mxGetData(GET_IN_WHAT);
+
+        switch (what)
+        {
+        case GLC_GET_WINID:
+        {
+            int32_t glutwidx = glutGetWindow(), ret_ourwidx;
+
+            if (glutwidx==0)
+                ret_ourwidx = -1;
+            else
+                ret_ourwidx = ourwinidx[glutwidx]+1;
+
+            GET_OUT_VALUE = createScalar(mxINT32_CLASS, &ret_ourwidx);
+            return;
+        }
+
+        default:
+            mexErrMsgTxt("GLCALL: get: WHAT token unknown");
+        }
+    }
+    break; /* not reached */
+
     case GLC_SET:
     {
         if (nlhs != 0 || nrhs != 3)
@@ -1523,8 +1567,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             switch (what)
             {
             case GL_POINT_SIZE:
-                glPointSize((GLfloat)value_d);
+                glPointSize((GLfloat)value_d);  /* potential undefined behavoiur */
                 break;
+
+            default:
+                mexErrMsgTxt("GLCALL: set: WHAT token unknown");
             }
         }
     }
