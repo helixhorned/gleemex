@@ -9,6 +9,8 @@
 %  * the constants GL_SCISSOR_TEST and GL_DEPTH_TEST
 %  * all glPush/PopAttrib bits (most have no effect, though)
 %
+%  * the GLUT special keys (w/o freeglut ones), stripped of the GLUT_ prefix
+%
 function glconsts = getglconsts()
 
 glconsts = struct();
@@ -72,3 +74,30 @@ glconsts.LIST_BIT = uint32(131072);
 glconsts.TEXTURE_BIT = uint32(262144);
 glconsts.SCISSOR_BIT = uint32(524288);
 glconsts.ALL_ATTRIB_BITS = uint32(1048575);  % 0xFFFFF
+
+
+%% GLUT stuff follows
+%
+% GLUT API macro definitions -- the special key codes:
+%
+glconsts.KEY_F1 = 1;
+glconsts.KEY_F2 = 2;
+glconsts.KEY_F3 = 3;
+glconsts.KEY_F4 = 4;
+glconsts.KEY_F5 = 5;
+glconsts.KEY_F6 = 6;
+glconsts.KEY_F7 = 7;
+glconsts.KEY_F8 = 8;
+glconsts.KEY_F9 = 9;
+glconsts.KEY_F10 = 10;
+glconsts.KEY_F11 = 11;
+glconsts.KEY_F12 = 12;
+glconsts.KEY_LEFT = 100;
+glconsts.KEY_UP = 101;
+glconsts.KEY_RIGHT = 102;
+glconsts.KEY_DOWN = 103;
+glconsts.KEY_PAGE_UP = 104;
+glconsts.KEY_PAGE_DOWN = 105;
+glconsts.KEY_HOME = 106;
+glconsts.KEY_END = 107;
+glconsts.KEY_INSERT = 108;

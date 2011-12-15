@@ -26,6 +26,8 @@ function exampleglapp(vertposns)
     glex.randdat = randn(1,30);
 
     glex.shaderid = [];
+    glex.shaderuniforms = [];
+    glex.bounds = single([0.0 1.0]);
 
     nlotsa = 256000;
     glex.lotsofverts = single(rand(2,nlotsa))*600 + 100;
@@ -59,6 +61,8 @@ function exampleglapp(vertposns)
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
     glcall(glc.setcallback, glc.cb_passivemotion, 'ex_passivemotion');
+    glcall(glc.setcallback, glc.cb_special, 'ex_specialkeys');
+    glcall(glc.setcallback, glc.cb_motion, 'ex_motion');
     glcall(glc.setcallback, glc.cb_mouse, 'ex_mouse');
     glcall(glc.entermainloop);
 end
@@ -67,20 +71,23 @@ end
 function ex_reshape(w, h)
     global GL glc glex
 
+%            '  gray = bounds[0] + gray*(bounds[1]-bounds[0]);' 10 ...
     if (isempty(glex.shaderid))
         shadersrc = [ ...
             '#version 120' 10 ...
             'uniform sampler1D cmap;' 10 ...
             'uniform sampler2D tex;' 10 ...
+            'uniform float bounds[2] = {0.0, 1.0};' 10 ...
             'void main(void) {' 10 ...
             '  float gray;' 10 ...
             '  vec3 rgb;' 10 ...
             '  gray = texture2D(tex, gl_TexCoord[0].st).r;' 10 ...
+            '  gray = (gray - bounds[0])/(bounds[1]-bounds[0]);' 10 ...
             '  rgb = texture1D(cmap, gray).rgb;' 10 ...
             '  gl_FragColor = vec4(rgb.r, rgb.g, rgb.b, 1.0);' 10 ...
             '}' 10];
 
-        glex.shaderid = glcall(glc.newfragprog, shadersrc);
+        [glex.shaderid, glex.shaderuniforms] = glcall(glc.newfragprog, shadersrc);
     end
 
     glex.wh = [w h];
@@ -177,6 +184,7 @@ function ex_display()
 
     if (glex.togbtnstate)
         glcall(glc.usefragprog, glex.shaderid);
+        glcall(glc.setuniform, glex.shaderuniforms.bounds, glex.bounds);
     end
 
     glcall(glc.draw, GL.QUADS, verts, struct(...
@@ -211,6 +219,8 @@ function ex_display()
 %}
 
     glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
+
+    glcall(glc.rendertext, [460 510 0], 16, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
 
     glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
     glc_drawbutton([80 430 120 20], 'Toggle Btn', glex.togbtnstate, false);
@@ -247,11 +257,47 @@ function ex_display()
 %           struct('colors', glex.lotsofcolors(:, 1:64), 'indices',glex.lotsofidxs64));
 end
 
+function ex_specialkeys(key, x, y, mods)
+    global GL glc glex
+
+    dir = 0;
+    idx = 2;
+
+    if (key==GL.KEY_UP)
+        dir = 1;
+    elseif (key==GL.KEY_DOWN)
+        dir = -1;
+    end
+
+    if (mods==100)  % CTRL
+        idx = 1;
+    end
+
+    if (dir)
+        obounds = glex.bounds;
+        glex.bounds(idx) = glex.bounds(idx) + dir/10;
+        if (glex.bounds(2) < glex.bounds(1))
+            glex.bounds = obounds;
+        else
+            glex.bounds(1) = max(0, glex.bounds(1));
+            glex.bounds(2) = min(1, glex.bounds(2));
+        end
+    end
+
+    glcall(glc.postredisplay);
+end
+
 function ex_passivemotion(x, y)
     global glc glex
 
     glex.mxy = [x y];
     glex.mxy(2) = glex.wh(2)-glex.mxy(2);
+
+    glcall(glc.postredisplay);
+end
+
+function ex_motion(x, y)
+    global glc glex
 
     % texture reuploading
     ov = (glex.im==245);

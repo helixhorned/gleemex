@@ -93,9 +93,14 @@
 /* newfragprog */
 #define NEWFRAGPROG_IN_SHADERSRC (prhs[1])
 #define NEWFRAGPROG_OUT_PROGID (plhs[0])
+#define NEWFRAGPROG_OUT_UNIFORMS (plhs[1])
 
 /* usefragprog */
 #define USEFRAGPROG_IN_PROGID (prhs[1])
+
+/* setuniform */
+#define SETUNIFORM_IN_UNIFORMID (prhs[1])
+#define SETUNIFORM_IN_VAL (prhs[2])
 
 
 enum glcalls_setcallback_
@@ -148,6 +153,7 @@ enum glcalls_
     GLC_COLORMAP,
     GLC_NEWFRAGPROG,
     GLC_USEFRAGPROG,
+    GLC_SETUNIFORM,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -176,6 +182,7 @@ const char *glcall_names[] =
     "colormap",
     "newfragprog",
     "usefragprog",
+    "setuniform",
 };
 
 
@@ -524,21 +531,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             /* the user queries available glcalls */
             mxArray *glcstruct = mxCreateStructMatrix(1,1, NUM_GLCALLS, glcall_names);
-            mxArray *tmpar;
             int32_t i, fieldnum;
 
             for (i=0; i<NUM_GLCALLS; i++)
             {
-                tmpar = createScalar(mxINT32_CLASS, &i);
-                mxSetFieldByNumber(glcstruct, 0, i, tmpar);
+                mxSetFieldByNumber(glcstruct, 0, i, createScalar(mxINT32_CLASS, &i));
             }
 
             for (i=0; i<NUM_CALLBACKS; i++)
             {
-                tmpar = createScalar(mxINT32_CLASS, &i);
-
                 fieldnum = mxAddField(glcstruct, glcall_callback_names[i]);
-                mxSetFieldByNumber(glcstruct, 0, fieldnum, tmpar);
+                mxSetFieldByNumber(glcstruct, 0, fieldnum, createScalar(mxINT32_CLASS, &i));
             }
 
             OUT_GLCSTRUCT = glcstruct;
@@ -1404,8 +1407,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const char *fragshaderSrc;
         GLint status;
 
-        if (nlhs != 1 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glc.newfragprog, FRAGSHADERSRC)");
+        if ((nlhs != 1 && nlhs != 2) || nrhs != 2)
+            mexErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newfragprog, FRAGSHADERSRC)");
 
         if (!GLEW_VERSION_2_0)
             mexErrMsgTxt("GLCALL: newfragprog: OpenGL 2.0 required!");
@@ -1450,6 +1453,71 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         NEWFRAGPROG_OUT_PROGID = createScalar(mxUINT32_CLASS, &progId);
+
+        if (nlhs > 1)
+        {
+            GLint i, numActiveUniforms;
+            char name[64], c;
+            mxArray *uniformStructAr;
+            int32_t j, k, fieldnum;
+
+            GLint size;
+            GLenum type;
+
+            static const GLenum accepted_types[] = {
+                GL_FLOAT, GL_FLOAT_VEC2, GL_FLOAT_VEC3, GL_FLOAT_VEC4,
+                GL_INT, GL_INT_VEC2, GL_INT_VEC3, GL_INT_VEC4,
+                GL_BOOL, GL_BOOL_VEC2, GL_BOOL_VEC3, GL_BOOL_VEC4,
+            };
+
+            glGetProgramiv(progId, GL_ACTIVE_UNIFORMS, &numActiveUniforms);
+
+            uniformStructAr = mxCreateStructMatrix(1,1, 0,NULL);
+
+            for (i=0; i<numActiveUniforms; i++)
+            {
+                glGetActiveUniform(progId, i, sizeof(name), NULL, &size, &type, name);
+
+                if (!strncmp(name, "gl_", 3))
+                    continue;
+
+                for (j=sizeof(accepted_types)/sizeof(accepted_types[0]); j>=0; j--)
+                    if (type == accepted_types[j])
+                        break;
+                if (j < 0)
+                    continue;  // not an accepted uniform type
+
+                c = name[0];
+                if (!(c>='A' && c<='Z') && !(c>='a' && c<='z'))
+                    continue;  // not a valid MATLAB variable/field name
+
+                for (j=1; (c=name[j]); j++)
+                    if (!(c>='A' && c<='Z') && !(c>='a' && c<='z') && c!='_' && !(c>='0' && c<='9'))
+                    {
+                        if (c=='[')
+                        {
+                            k = j;
+                            for (k=j+1; name[k]; k++)
+                            {
+                                if (!(name[k]>='0' && name[k]<='9'))
+                                    break;
+                            }
+
+                            if (name[k]==']' && name[k+1]==0)
+                                name[j] = 0;  // only use the part without the [<number>] as the name
+                        }
+
+                        break;
+                    }
+                if (name[j])
+                    continue;  // not a valid MATLAB variable/field name
+
+                fieldnum = mxAddField(uniformStructAr, name);
+                mxSetFieldByNumber(uniformStructAr, 0, fieldnum, createScalar(mxINT32_CLASS, &i));
+
+                NEWFRAGPROG_OUT_UNIFORMS = uniformStructAr;
+            }
+        }
     }
     break;
 
@@ -1478,6 +1546,104 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         cmap_uniform = glGetUniformLocation(progId, "cmap");
         if (cmap_uniform != -1)
             glUniform1i(cmap_uniform, 1);  // texture unit 1: color map 1D texture
+    }
+    break;
+
+    case GLC_SETUNIFORM:
+    {
+        GLint uniformId, progId, size;
+        char name[64];
+        GLenum type;
+        int32_t sz;
+        const void *data;
+
+        int32_t vptype;
+
+        if (nlhs != 0 || nrhs != 3)
+            mexErrMsgTxt("Usage: GLCALL(glc.setuniform, UNIFORMID, VAL)");
+
+        glGetIntegerv(GL_CURRENT_PROGRAM, &progId);
+
+        if (progId==0)
+            mexErrMsgTxt("GLCALL: setuniform: a fragment program must be active!");
+
+        verifyparam(SETUNIFORM_IN_UNIFORMID, "GLCALL: setuniform: UNIFORMID", VP_SCALAR|VP_INT32);
+        uniformId = *(int32_t *)mxGetData(SETUNIFORM_IN_UNIFORMID);
+
+        glGetActiveUniform(progId, uniformId, sizeof(name), NULL, &size, &type, name);
+        if (glGetError())
+            GLC_MEX_ERROR("Error getting info for uniform #%d (program #%d)", uniformId, progId);
+
+        sz = 0;
+        data = mxGetData(SETUNIFORM_IN_VAL);
+
+        /* validation */
+        switch (type)
+        {
+        case GL_FLOAT_VEC4: sz++;
+        case GL_FLOAT_VEC3: sz++;
+        case GL_FLOAT_VEC2: sz++;
+        case GL_FLOAT: sz++;
+            vptype = VP_SINGLE;
+            break;
+
+        case GL_INT_VEC4: sz++;
+        case GL_INT_VEC3: sz++;
+        case GL_INT_VEC2: sz++;
+        case GL_INT: sz++;
+            vptype = VP_INT32;
+            break;
+
+        case GL_BOOL_VEC4: sz++;
+        case GL_BOOL_VEC3: sz++;
+        case GL_BOOL_VEC2: sz++;
+        case GL_BOOL: sz++;
+            vptype = VP_INT32;
+            break;
+
+        default:
+            GLC_MEX_ERROR("Uniform '%s' has unsupported type", name);
+            vptype = 0;  // compiler-happy
+        }
+
+        verifyparam(SETUNIFORM_IN_VAL, "GLCALL: setuniform: VAL", VP_VECTOR|vptype);
+
+        if (mxGetNumberOfElements(SETUNIFORM_IN_VAL) != (size_t)(sz*size))
+            GLC_MEX_ERROR("Must set uniform '%s' with a length-%u vector", name, (uint32_t)(sz*size));
+
+        /* setting the values if all OK */
+        switch (type)
+        {
+        case GL_FLOAT_VEC4:
+            glUniform4fv(uniformId, size, data);
+            break;
+        case GL_FLOAT_VEC3:
+            glUniform3fv(uniformId, size, data);
+            break;
+        case GL_FLOAT_VEC2:
+            glUniform2fv(uniformId, size, data);
+            break;
+        case GL_FLOAT:
+            glUniform1fv(uniformId, size, data);
+            break;
+
+        case GL_INT_VEC4:
+        case GL_BOOL_VEC4:
+            glUniform4iv(uniformId, size, data);
+            break;
+        case GL_INT_VEC3:
+        case GL_BOOL_VEC3:
+            glUniform3iv(uniformId, size, data);
+            break;
+        case GL_INT_VEC2:
+        case GL_BOOL_VEC2:
+            glUniform2iv(uniformId, size, data);
+            break;
+        case GL_INT:
+        case GL_BOOL:
+            glUniform1iv(uniformId, size, data);
+            break;
+        }
     }
     break;
 
