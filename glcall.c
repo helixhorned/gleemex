@@ -84,11 +84,18 @@
 #define PUSH_IN_WHATAR (prhs[1])
 
 /* set */
-#define SET_WHAT (prhs[1])
-#define SET_VALUE (prhs[2])
+#define SET_IN_WHAT (prhs[1])
+#define SET_IN_VALUE (prhs[2])
 
 /* colormap */
-#define COLORMAP_COLORMAP (prhs[1])
+#define COLORMAP_IN_COLORMAP (prhs[1])
+
+/* newfragprog */
+#define NEWFRAGPROG_IN_SHADERSRC (prhs[1])
+#define NEWFRAGPROG_OUT_PROGID (plhs[0])
+
+/* usefragprog */
+#define USEFRAGPROG_IN_PROGID (prhs[1])
 
 
 enum glcalls_setcallback_
@@ -139,6 +146,8 @@ enum glcalls_
     GLC_POP,
     GLC_SET,
     GLC_COLORMAP,
+    GLC_NEWFRAGPROG,
+    GLC_USEFRAGPROG,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -165,6 +174,8 @@ const char *glcall_names[] =
     "pop",
     "set",
     "colormap",
+    "newfragprog",
+    "usefragprog",
 };
 
 
@@ -174,10 +185,10 @@ const char *glcall_names[] =
 static char callback_funcname[NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;
 
-static GLuint cmaptexname = 0;
+static GLuint cmaptexname, proginuse;
 
 /*//////// UTIL //////////*/
-static char errstr[128];
+static char errstr[256];
 
 #ifndef HAVE_OCTAVE
 static const mxArray *exceptionar;
@@ -618,7 +629,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &winid);
         }
     }
-    return;
+    break;
 
     case GLC_DRAW:
     {
@@ -783,7 +794,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         else
             glDrawElements(primitivetype, numverts, indicestype, indices);
     }
-    return;
+    break;
 
     case GLC_ENTERMAINLOOP:
     {
@@ -813,7 +824,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         clear_callback_names();
     }
-    return;
+    break;
 
     case GLC_SETMATRIX:
     {
@@ -873,7 +884,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: setmatrix: invalid call, see GLCALL(glc.setmatrix) for usage.");
         }
     }
-    return;
+    break;
 
     case GLC_MULMATRIX:
     {
@@ -928,7 +939,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: mulmatrix: invalid call, see GLCALL(glc.mulmatrix) for usage.");
         }
     }
-    return;
+    break;
 
     case GLC_SETCALLBACK:
     {
@@ -960,7 +971,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         memcpy(&callback_funcname[callbackid], tmpbuf, sizeof(tmpbuf));
     }
-    return;
+    break;
 
     /* TODO: merge with GLCALL(glc.scissor) ... */
     case GLC_VIEWPORT:
@@ -982,7 +993,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glViewport(xywh[0], xywh[1], xywh[2], xywh[3]);
     }
-    return;
+    break;
 
     case GLC_CLEAR:
     {
@@ -1002,7 +1013,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glClearColor(color[0], color[1], color[2], numel==4?color[3]:0);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     }
-    return;
+    break;
 
     case GLC_POSTREDISPLAY:
     {
@@ -1011,7 +1022,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glutPostRedisplay();
     }
-    return;
+    break;
 
     case GLC_GETERRSTR:
     {
@@ -1029,7 +1040,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
 #endif
     }
-    return;
+    break;
 
     case GLC_NEWTEXTURE:
     {
@@ -1075,7 +1086,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             width = dimsizes[0];
             height = dimsizes[1];
 
-            internalFormat = GL_LUMINANCE;
+            internalFormat = GL_LUMINANCE16;
             format = GL_LUMINANCE;
             type = GL_FLOAT;
         }
@@ -1119,7 +1130,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (newtex)
             NEWTEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
     }
-    return;
+    break;
 
     case GLC_SETWINDOWSIZE:
     {
@@ -1137,7 +1148,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glutReshapeWindow(wh[0], wh[1]);
     }
-    return;
+    break;
 
     case GLC_GETWINDOWSIZE:
     {
@@ -1155,7 +1166,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         GETWINDOWSIZE_OUT_WH = whar;
     }
-    return;
+    break;
 
     case GLC_RENDERTEXT:
     {
@@ -1208,7 +1219,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         mxFree(text);
     }
-    return;
+    break;
 
     case GLC_TOGGLE:
     {
@@ -1216,7 +1227,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const int32_t *kv;
 
         static const GLenum accessible_enables[] = {
-            GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH,
+            GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH, GL_POLYGON_SMOOTH,
         };
 
         if (nlhs != 0 || nrhs != 2)
@@ -1253,7 +1264,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 glDisable(kv[2*i]);
         }
     }
-    return;
+    break;
 
     case GLC_SCISSOR:
     {
@@ -1270,7 +1281,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glScissor(xywh[0], xywh[1], xywh[2], xywh[3]);
     }
-    return;
+    break;
 
     case GLC_DELTEXTURES:
     {
@@ -1284,7 +1295,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glDeleteTextures(numtexs, (uint32_t *)mxGetData(DELTEXTURES_IN_TEXNAMES));
     }
-    return;
+    break;
 
     case GLC_PUSH:
     case GLC_POP:
@@ -1327,19 +1338,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("GLCALL: push/pop: over/underflow");
         }
     }
-    return;
+    break;
 
     case GLC_SET:
     {
         if (nlhs != 0 || nrhs != 3)
             mexErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
 
-        verifyparam(SET_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
-        verifyparam(SET_VALUE, "GLCALL: set: VALUE", VP_SCALAR|VP_DOUBLE);
+        verifyparam(SET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
+        verifyparam(SET_IN_VALUE, "GLCALL: set: VALUE", VP_SCALAR|VP_DOUBLE);
 
         {
-            int32_t what = *(int32_t *)mxGetData(SET_WHAT);
-            double value_d = *mxGetPr(SET_VALUE);
+            int32_t what = *(int32_t *)mxGetData(SET_IN_WHAT);
+            double value_d = *mxGetPr(SET_IN_VALUE);
 
             switch (what)
             {
@@ -1349,22 +1360,27 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             }
         }
     }
-    return;
+    break;
 
     case GLC_COLORMAP:
     {
         const mwSize *dimsizes;
 
+        if (!GLEW_VERSION_1_3 && !GLEW_ARB_multitexture)
+            mexErrMsgTxt("GLCALL: colormap needs OpenGL 1.3 or GL_ARB_multitexture");
+
         if (nlhs != 0 || nrhs != 2)
             mexErrMsgTxt("Usage: GLCALL(glc.colormap, COLORMAP), COLORMAP should be 3x256 uint8");
 
-        verifyparam(COLORMAP_COLORMAP, "GLCALL: colormap: COLORMAP", VP_UINT8|VP_DIMN|(2<<VP_DIMN_SHIFT));
-        dimsizes = mxGetDimensions(COLORMAP_COLORMAP);
+        verifyparam(COLORMAP_IN_COLORMAP, "GLCALL: colormap: COLORMAP", VP_UINT8|VP_DIMN|(2<<VP_DIMN_SHIFT));
+        dimsizes = mxGetDimensions(COLORMAP_IN_COLORMAP);
         if (dimsizes[0] != 3 || dimsizes[1] != 256)
             mexErrMsgTxt("GLCALL: colormap: COLORMAP must be a 3x256 matrix");
 
         if (cmaptexname==0)
             glGenTextures(1, &cmaptexname);
+
+        glActiveTexture(GL_TEXTURE1);
 
         glBindTexture(GL_TEXTURE_1D, cmaptexname);
         glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1376,9 +1392,100 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
         glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, 256,
-                     0, GL_RGB, GL_UNSIGNED_BYTE, mxGetData(COLORMAP_COLORMAP));
+                     0, GL_RGB, GL_UNSIGNED_BYTE, mxGetData(COLORMAP_IN_COLORMAP));
+
+        glActiveTexture(GL_TEXTURE0);
     }
-    return;
+    break;
+
+    case GLC_NEWFRAGPROG:
+    {
+        GLuint progId, fragshaderId;
+        const char *fragshaderSrc;
+        GLint status;
+
+        if (nlhs != 1 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.newfragprog, FRAGSHADERSRC)");
+
+        if (!GLEW_VERSION_2_0)
+            mexErrMsgTxt("GLCALL: newfragprog: OpenGL 2.0 required!");
+
+        verifyparam(NEWFRAGPROG_IN_SHADERSRC, "GLCALL: newfragprog: FRAGSHADERSRC", VP_VECTOR|VP_CHAR);
+
+        progId = glCreateProgram();
+        if (!progId)
+            mexErrMsgTxt("GLCALL: newfragprog: Error creating program object");
+
+        fragshaderId = glCreateShader(GL_FRAGMENT_SHADER);
+        if (!fragshaderId)
+            mexErrMsgTxt("GLCALL: newfragprog: Error creating fragment shader object");
+
+        fragshaderSrc = mxArrayToString(NEWFRAGPROG_IN_SHADERSRC);
+        glShaderSource(fragshaderId, 1, &fragshaderSrc, NULL);
+        mxFree((char *)fragshaderSrc);
+        fragshaderSrc = NULL;
+
+        glCompileShader(fragshaderId);
+        glGetShaderiv(fragshaderId, GL_COMPILE_STATUS, &status);
+        if (status != GL_TRUE)
+        {
+            /* shader compilation failed */
+            memcpy(errstr, "SH: ", 4);
+            glGetShaderInfoLog(fragshaderId, sizeof(errstr)-4, NULL, errstr+4);
+
+            mexErrMsgTxt(errstr);
+        }
+
+        glAttachShader(progId, fragshaderId);
+
+        glLinkProgram(progId);
+        glGetProgramiv(progId, GL_LINK_STATUS, &status);
+        if (status != GL_TRUE)
+        {
+            /* program linking failed */
+            memcpy(errstr, "PR: ", 4);
+            glGetProgramInfoLog(progId, sizeof(errstr)-4, NULL, errstr+4);
+
+            mexErrMsgTxt(errstr);
+        }
+
+        NEWFRAGPROG_OUT_PROGID = createScalar(mxUINT32_CLASS, &progId);
+    }
+    break;
+
+    case GLC_USEFRAGPROG:
+    {
+        GLuint progId;
+        GLint cmap_uniform;
+
+        if (nlhs != 0 || (nrhs != 2 && nrhs != 1))
+            mexErrMsgTxt("Usage: GLCALL(glc.usefragprog [, PROGID])");
+
+        if (nrhs == 1)
+        {
+            glUseProgram(0);
+            proginuse = 0;
+            return;
+        }
+
+        verifyparam(USEFRAGPROG_IN_PROGID, "GLCALL: usefragprog: PROGID", VP_SCALAR|VP_UINT32);
+
+        progId = *(uint32_t *)mxGetData(USEFRAGPROG_IN_PROGID);
+
+        glUseProgram(progId);
+        proginuse = progId;
+
+        cmap_uniform = glGetUniformLocation(progId, "cmap");
+        if (cmap_uniform != -1)
+            glUniform1i(cmap_uniform, 1);  // texture unit 1: color map 1D texture
+    }
+    break;
 
     }  /* end switch(cmd) */
+
+    {
+        int32_t err = glGetError();
+        if (err)
+            GLC_MEX_ERROR("glGetError returned 0x%x", err);
+    }
 }

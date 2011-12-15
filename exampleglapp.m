@@ -25,6 +25,8 @@ function exampleglapp(vertposns)
     glex.wh = [1100 800];
     glex.randdat = randn(1,30);
 
+    glex.shaderid = [];
+
     nlotsa = 256000;
     glex.lotsofverts = single(rand(2,nlotsa))*600 + 100;
     glex.lotsofverts(1, :) = glex.lotsofverts(1, :)+100;
@@ -65,6 +67,22 @@ end
 function ex_reshape(w, h)
     global GL glc glex
 
+    if (isempty(glex.shaderid))
+        shadersrc = [ ...
+            '#version 120' 10 ...
+            'uniform sampler1D cmap;' 10 ...
+            'uniform sampler2D tex;' 10 ...
+            'void main(void) {' 10 ...
+            '  float gray;' 10 ...
+            '  vec3 rgb;' 10 ...
+            '  gray = texture2D(tex, gl_TexCoord[0].st).r;' 10 ...
+            '  rgb = texture1D(cmap, gray).rgb;' 10 ...
+            '  gl_FragColor = vec4(rgb.r, rgb.g, rgb.b, 1.0);' 10 ...
+            '}' 10];
+
+        glex.shaderid = glcall(glc.newfragprog, shadersrc);
+    end
+
     glex.wh = [w h];
 
     glcall(glc.viewport, [0 0 w h]);
@@ -103,10 +121,10 @@ function ex_display()
     glcall(glc.toggle, [GL.SCISSOR_TEST 0]);
 
     % depth test
-    glcall(glc.toggle, [GL.DEPTH_TEST 1]);
+    glcall(glc.toggle, [GL.DEPTH_TEST 1, GL.POLYGON_SMOOTH 1, GL.BLEND 1]);
     glcall(glc.draw, GL.TRIANGLES, [80 190 280; 100 340 230; 0.5 0.5 0.5], struct('colors',[0.9 0.5 0.5]));
     glcall(glc.draw, GL.TRIANGLES, [180 220 260; 140 140 330; -0.5 -0.5 -0.5], struct('colors',[0.5 0.9 0.5]));
-    glcall(glc.toggle, [GL.DEPTH_TEST 0]);
+    glcall(glc.toggle, [GL.DEPTH_TEST 0, GL.POLYGON_SMOOTH 0, GL.BLEND 0]);
 
     numchans = 16;
 
@@ -157,8 +175,16 @@ function ex_display()
     verts(1, :) = verts(1, :) + glex.xbord(1);
     verts(2, :) = verts(2, :) + glex.ybord(2) + 40;
 
+    if (glex.togbtnstate)
+        glcall(glc.usefragprog, glex.shaderid);
+    end
+
     glcall(glc.draw, GL.QUADS, verts, struct(...
         'colors',[1 1 1], 'tex',glex.tex, 'texcoords',texcoords));
+
+    if (glex.togbtnstate)
+        glcall(glc.usefragprog);
+    end
 
     %% vertex points
     vertposns = round(glex.posns * 256);
@@ -199,7 +225,7 @@ function ex_display()
     glcall(glc.viewport, tmpxywh);
     glcall(glc.setmatrix, GL.PROJECTION, [0 1, 0 1, -1 1]);
     glcall(glc.setmatrix, GL.MODELVIEW, []);
-    glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
+    glcall(glc.toggle, [GL.SCISSOR_TEST 1, GL.LINE_SMOOTH 1, GL.BLEND 1]);
     glcall(glc.scissor, int32(tmpxywh));
 
     glcall(glc.clear, [0.8 0.8 0.4]);
@@ -232,11 +258,11 @@ function ex_passivemotion(x, y)
     glex.im = glex.im+1;
     glex.im(ov) = 0;
 
-    if (~glex.togbtnstate)
+%    if (~glex.togbtnstate)
         glcall(glc.newtexture, glex.im, glex.tex);
-    else
-        glcall(glc.newtexture, squeeze(single(glex.im(2,:,:))/255), glex.tex);
-    end
+%    else
+%        glcall(glc.newtexture, squeeze(single(glex.im(2,:,:))/255), glex.tex);
+%    end
 
     glcall(glc.postredisplay);
 end

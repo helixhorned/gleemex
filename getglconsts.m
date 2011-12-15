@@ -34,6 +34,9 @@ glconsts.TEXTURE = uint32(5890);  % 0x1702
 glconsts.SCISSOR_TEST = int32(3089);  % 0x0C11
 glconsts.DEPTH_TEST = int32(2929);  % 0x0B71
 
+%% Texture mapping
+%glconsts.TEXTURE_1D = int32(3552);  % 0x0DE0
+
 %% Blending
 glconsts.BLEND = int32(3042);  % 0x0BE2
 
@@ -43,6 +46,9 @@ glconsts.POINT_SIZE	= int32(2833);  % 0x0B11
 
 %% Lines
 glconsts.LINE_SMOOTH = int32(2848);  % 0x0B20
+
+%% Polygons
+glconsts.POLYGON_SMOOTH = int32(2881);  % 0x0B41
 
 %% glPush/PopAttrib bits
 glconsts.CURRENT_BIT = uint32(1);
