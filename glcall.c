@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-/*#include <GL/gl.h>*/
+#include <GL/glew.h>
 #include <GL/freeglut.h>
 
 /*////////*/
@@ -83,6 +83,10 @@
 /* push/pop */
 #define PUSH_IN_WHATAR (prhs[1])
 
+/* set */
+#define SET_WHAT (prhs[1])
+#define SET_VALUE (prhs[2])
+
 
 enum glcalls_setcallback_
 {
@@ -130,6 +134,7 @@ enum glcalls_
     GLC_DELTEXTURES,
     GLC_PUSH,
     GLC_POP,
+    GLC_SET,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -154,6 +159,7 @@ const char *glcall_names[] =
     "deltextures",
     "push",
     "pop",
+    "set",
 };
 
 
@@ -547,12 +553,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, MULTISAMPLEP]),"
                          " create new window.");
 
-        verifyparam(NEWWIN_IN_POS, "POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
-        verifyparam(NEWWIN_IN_EXTENT, "EXTENT", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
-        verifyparam(NEWWIN_IN_NAME, "WINDOWNAME", VP_VECTOR|VP_CHAR);
+        verifyparam(NEWWIN_IN_POS, "GLCALL: newwindow: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+        verifyparam(NEWWIN_IN_EXTENT, "GLCALL: newwindow: EXTENT", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+        verifyparam(NEWWIN_IN_NAME, "GLCALL: newwindow: WINDOWNAME", VP_VECTOR|VP_CHAR);
         if (nrhs >= 5)
         {
-            verifyparam(NEWWIN_IN_MULTISAMPLEP, "MULTISAMPLEP", VP_SCALAR|VP_LOGICAL);
+            verifyparam(NEWWIN_IN_MULTISAMPLEP, "GLCALL: newwindow: MULTISAMPLEP", VP_SCALAR|VP_LOGICAL);
             multisamplep = *(uint8_t *)mxGetData(NEWWIN_IN_MULTISAMPLEP);
         }
 
@@ -576,8 +582,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glutInit(&argcdummy, argvdummy);  /* XXX */
             glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
-            glEnable(GL_POINT_SMOOTH);
-
             inited = 1;
         }
         else
@@ -588,6 +592,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glutInitWindowSize(extent[0], extent[1]);
 
         winid = glutCreateWindow(windowname);
+
+        {
+            GLenum err = glewInit();
+            if (err != GLEW_OK)
+            {
+                /* glewInit failed, something is seriously wrong */
+                GLC_MEX_ERROR("GLEW init failed: %s", glewGetErrorString(err));
+            }
+        }
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
         if (nlhs > 0)
         {
@@ -1161,9 +1178,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glPushMatrix();
             glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT);
 
-            glColor3d(0.2, 0.2, 0.2);  /* XXX */
+            glColor3d(0.2, 0.2, 0.2);  // XXX
             glDisable(GL_TEXTURE_2D);
-/*            glEnable(GL_LINE_SMOOTH); */
+            glEnable(GL_LINE_SMOOTH);
+            glEnable(GL_BLEND);
 
             glLoadIdentity();
             glTranslated(pos[0], pos[1], pos[2]);
@@ -1187,8 +1205,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_TOGGLE:
     {
-        mwSize numkeys, i;
+        int32_t numkeys, i, j;
         const int32_t *kv;
+
+        static const GLenum accessible_enables[] = {
+            GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH,
+        };
 
         if (nlhs != 0 || nrhs != 2)
             mexErrMsgTxt("Usage: GLCALL(glc.toggle, [GL.<WHAT1> <state1> [, GL.<WHAT2> <state2>, ...]]))");
@@ -1203,8 +1225,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         /* validation */
         for (i=0; i<numkeys; i++)
-            if (kv[2*i] != GL_DEPTH_TEST && kv[2*i] != GL_SCISSOR_TEST)
-                mexErrMsgTxt("GLCALL: toggle: currently only supported: DEPTH_TEST and SCISSOR_TEST");
+        {
+            for (j=sizeof(accessible_enables)/sizeof(accessible_enables[0]) - 1; j>=0; j--)
+                if ((GLenum)kv[2*i] == accessible_enables[j])
+                    break;
+            if (j < 0)
+                GLC_MEX_ERROR("GLCALL: toggle: unsupported enable at position 2*%d", i);
+        }
 
         for (i=0; i<numkeys; i++)
         {
@@ -1259,7 +1286,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const uint32_t *what;
 
         if (nlhs != 0 || nrhs != 2)
-            mexErrMsgTxt("Usage: GLCALL(glcall.push, [WHAT1 WHAT2 ...]);  WHAT* can be either\n"
+            mexErrMsgTxt("Usage: GLCALL(glc.push, [WHAT1 WHAT2 ...]);  WHAT* can be either\n"
                          " GL.PROJECTION, GL.MODELVIEW, GL.TEXTURE to push the respective matrices,\n"
                          " or a bit combination of GL.*_BIT that is passed to glPushAttrib()\n"
                          "(see getglconsts.m)");
@@ -1291,6 +1318,28 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (glGetError() == (cmd==GLC_PUSH ? GL_STACK_OVERFLOW : GL_STACK_UNDERFLOW))
         {
             mexErrMsgTxt("GLCALL: push/pop: over/underflow");
+        }
+    }
+    return;
+
+    case GLC_SET:
+    {
+        if (nlhs != 0 || nrhs != 3)
+            mexErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
+
+        verifyparam(SET_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
+        verifyparam(SET_VALUE, "GLCALL: set: VALUE", VP_SCALAR|VP_DOUBLE);
+
+        {
+            int32_t what = *(int32_t *)mxGetData(SET_WHAT);
+            double value_d = *mxGetPr(SET_VALUE);
+
+            switch (what)
+            {
+            case GL_POINT_SIZE:
+                glPointSize((GLfloat)value_d);
+                break;
+            }
         }
     }
     return;

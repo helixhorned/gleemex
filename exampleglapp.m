@@ -167,6 +167,12 @@ function ex_display()
     indices = uint32([ones(1,nslices); 1:nslices; 2:nslices+1]-1);
     indices = indices(:);
 
+    glcall(glc.toggle, [GL.POINT_SMOOTH 1, GL.BLEND 1]);
+    glcall(glc.set, GL.POINT_SIZE, 18);
+    glcall(glc.draw, GL.POINTS, vertposns);
+    glcall(glc.set, GL.POINT_SIZE, 1);
+    glcall(glc.toggle, [GL.POINT_SMOOTH 0, GL.BLEND 0]);
+%{
     for i=1:size(vertposns,2)
         vpos = glex.circ17 * 21;
         vpos(1, :) = vpos(1, :) + vertposns(1, i);
@@ -174,14 +180,15 @@ function ex_display()
         glcall(glc.draw, GL.TRIANGLES, vpos, struct(...
             'colors',[0.5 0.5 0.5] + glex.zposns(i)/2, 'indices',indices));
     end
+%}
 
     glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
     glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
     glc_drawbutton([80 430 120 20], 'Toggle Btn', glex.togbtnstate, false);
 
-    % 'axes' test
-    tmpxywh = [400 500 200 180];
+    %% 'axes' test
+    tmpxywh = [450 540 200 180];
 
     %%
     glcall(glc.push, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
