@@ -108,7 +108,7 @@ enum glcalls_setcallback_
     CB_DISPLAY = 0,
     CB_RESHAPE,
     CB_KEYBOARD,
-    CB_SPECIAL,
+//    CB_SPECIAL,
     CB_MOUSE,
     CB_MOTION,
     CB_PASSIVEMOTION,
@@ -120,7 +120,7 @@ const char *glcall_callback_names[] =
     "cb_display",
     "cb_reshape",
     "cb_keyboard",
-    "cb_special",
+//    "cb_special",
     "cb_mouse",
     "cb_motion",
     "cb_passivemotion",
@@ -476,17 +476,17 @@ static void keyboard_cb(unsigned char key, int x, int y)
     {
         int args[MAX_CB_ARGS] = {key, x, y, 0};
         args[3] = getModifiers();
-        call_mfile_callback(CB_KEYBOARD, 3, args);
+        call_mfile_callback(CB_KEYBOARD, 4, args);
     }
 }
 
 static void special_cb(int key, int x, int y)
 {
-    if (CHECK_CALLBACK(CB_SPECIAL))
+    if (CHECK_CALLBACK(CB_KEYBOARD))
     {
-        int args[MAX_CB_ARGS] = {key, x, y, 0};
+        int args[MAX_CB_ARGS] = {key+65536, x, y, 0};
         args[3] = getModifiers();
-        call_mfile_callback(CB_SPECIAL, 4, args);
+        call_mfile_callback(CB_KEYBOARD, 4, args);
     }
 }
 
@@ -638,10 +638,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         /* TODO: pass color array */
 
-        unsigned int primitivetype;
+        unsigned int primitivetype, doline;
         mwSize i, numdims, numtotalverts, numverts;
 
-        int singlecolorp;
+        mwSize colorsz;
 
         const mxArray *colorsar=NULL, *indicesar=NULL;
 
@@ -656,6 +656,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!mxIsUint32(DRAW_IN_PRIMITIVETYPE))
             mexErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be of uint32 type");
         primitivetype = *(int *)mxGetData(DRAW_IN_PRIMITIVETYPE);
+        doline = primitivetype&16;
+        primitivetype &= ~16;
 
         if (!(/*primitivetype >= GL_POINTS &&*/ primitivetype <= GL_POLYGON))
             mexErrMsgTxt("GLCALL: draw: invalid GL primitive type");
@@ -706,30 +708,37 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             }
         }
 
+        if (doline)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
         if (!texname)
         {
             glDisableClientState(GL_TEXTURE_COORD_ARRAY);
             glDisable(GL_TEXTURE_2D);
         }
 
-        singlecolorp = 0;
+        colorsz = 0;
 
         if (colorsar)
         {
-            mwSize sz[2];
+            mwSize sz[2], szprod;
 
             verifyparam(colorsar, "GLCALL: draw: OPTSTRUCT.colors", VP_MATRIX|VP_DOUBLE);
 
             sz[0] = mxGetM(colorsar);
             sz[1] = mxGetN(colorsar);
+            szprod = sz[0]*sz[1];
 
-            if ((sz[0]==3 && sz[1]==1) || (sz[0]==1 && sz[1]==3))
-                singlecolorp = 1;
+            if (szprod == 3 || szprod==4)
+                colorsz = szprod;
             else
             {
-                if (sz[0] != 3 || sz[1] != numtotalverts)
-                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must either have length 3 "
-                                 " or have 3 rows and size(VERTEXDATA,2) columns");
+                if ((sz[0] != 3 && sz[1] != 4) || sz[1] != numtotalverts)
+                    mexErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must either have length 3 or 4,\n"
+                                 "              or have 3 or 4 rows and size(VERTEXDATA,2) columns");
+                colorsz = -sz[0];
             }
 
             colors = (const double *)mxGetData(colorsar);
@@ -775,18 +784,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         /* draw them at last! */
 
-        if (!colors || singlecolorp)
+        if (!colors || colorsz>0)
         {
             glDisableClientState(GL_COLOR_ARRAY);
-            if (singlecolorp)
-                glColor3d(colors[0], colors[1], colors[2]);
+            if (colorsz==3)
+                glColor3dv(colors);
+            else if (colorsz==4)
+                glColor4dv(colors);
             else
                 glColor3f(0.5f, 0.5f, 0.5f);
         }
         else
         {
             glEnableClientState(GL_COLOR_ARRAY);
-            glColorPointer(3, GL_DOUBLE, 0, colors);
+            glColorPointer(-colorsz, GL_DOUBLE, 0, colors);
         }
 
         glEnableClientState(GL_VERTEX_ARRAY);
