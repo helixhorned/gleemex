@@ -11,7 +11,12 @@ str = readfilestr(filename);
 
 [tmpdir, tmpfn] = fileparts(filename);  % tmpfn strips extension
 
-badi = zeros(1,length(tokens), 'logical');
+try
+    badi = zeros(1,length(tokens), 'logical');
+catch
+    % MATLAB can't do the above
+    badi = (zeros(1,length(tokens), 'uint8')~=0);
+end
 
 for i=1:length(tokens)
     if (strcmpi(tmpfn, tokens{i}))
@@ -21,7 +26,15 @@ end
 
 match(badi) = [];
 tokens(badi) = [];
-tokens = cell2mat(tokens);  % {}{} -> {}
+
+try
+    tokens = cell2mat(tokens);  % {}{} -> {}
+catch
+    % MATLAB: Cannot support cell arrays containing cell arrays or objects.
+    for i=1:length(tokens)
+        tokens{i} = tokens{i}{1};
+    end
+end
 
 if (isempty(tokens))
     disp('No functions extracted.');
