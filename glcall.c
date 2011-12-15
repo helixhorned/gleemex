@@ -252,6 +252,8 @@ static const char *errstrptr;
         else                                    \
             mexErrMsgTxt(msg);                  \
     } while (0);
+#else
+# define ourErrMsgTxt mexErrMsgTxt
 #endif
 
 #define GLC_MEX_ERROR(Text, ...) do {           \
