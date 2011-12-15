@@ -716,9 +716,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 verifyparam(tmpar, "GLCALL: newwindow: OPTSTRUCT.subwindow", VP_SCALAR|VP_LOGICAL);
                 subwindowp = !!*(int8_t *)mxGetData(tmpar);
             }
-
-//            verifyparam(NEWWIN_IN_OPTSTRUCT, "GLCALL: newwindow: MULTISAMPLEP", VP_SCALAR|VP_LOGICAL);
-//            multisamplep = *(uint8_t *)mxGetData(NEWWIN_IN_OPTSTRUCT);
         }
 
         posptr = mxGetPr(NEWWIN_IN_POS);
