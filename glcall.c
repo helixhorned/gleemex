@@ -64,6 +64,7 @@
 #define RENDERTEXT_IN_POS (prhs[1])
 #define RENDERTEXT_IN_HEIGHT (prhs[2])
 #define RENDERTEXT_IN_TEXT (prhs[3])
+#define RENDERTEXT_IN_XYALIGN (prhs[4])
 
 /* toggle */
 #define TOGGLE_IN_KV (prhs[1])
@@ -215,6 +216,7 @@ static struct windata_
 } win[MAXACTIVEWINDOWS];
 
 static GLuint cmaptexname, proginuse;
+static GLfloat g_strokefontheight;
 
 /*//////// UTIL //////////*/
 static char errstr[256];
@@ -679,6 +681,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             /* only set initial display mode options when creating the first window
              * (glewInit() paranoia in Windows -- necessary?) */
             glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | multisamplep*GLUT_MULTISAMPLE | GLUT_RGBA);
+
+            g_strokefontheight = glutStrokeHeight(GLUT_STROKE_ROMAN);
 
             inited = 1;
         }
@@ -1307,9 +1311,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         char *text;
 
         mwSize slen, i, vlen;
+        double xyalign[2] = { 0.0, 0.0 };
 
-        if (nlhs != 0 || nrhs != 4)
-            mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text)");
+        if (nlhs != 0 || (nrhs != 4 && nrhs != 5))
+            mexErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text [, xyalign])");
 
         verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE);
         vlen = mxGetNumberOfElements(RENDERTEXT_IN_POS);
@@ -1319,6 +1324,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         verifyparam(RENDERTEXT_IN_HEIGHT, "GLC: rendertext: HEIGHT", VP_SCALAR|VP_DOUBLE);
         height = *mxGetPr(RENDERTEXT_IN_HEIGHT);
+
+        if (nrhs > 4)
+        {
+            const double *tmpxyalign;
+
+            /* xalign: -1: align on left (default), 0: align centered, 1: align on right
+             * yalign: -1: align on bottom (default), 0: align centered, 1: align on top
+             * mapped to 0.0, 0.5 and 1.0 in the internal representation */
+            verifyparam(RENDERTEXT_IN_XYALIGN, "GLC: rendertext: XYALIGN",
+                        VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+            tmpxyalign = mxGetData(RENDERTEXT_IN_XYALIGN);
+            if (tmpxyalign[0] >= 0.0)
+                xyalign[0] = 0.5 + 0.5*(tmpxyalign[0] > 0.0);
+            if (tmpxyalign[1] >= 0.0)
+                xyalign[1] = 0.5 + 0.5*(tmpxyalign[1] > 0.0);
+        }
 
         verifyparam(RENDERTEXT_IN_TEXT, "GLC: rendertext: TEXT", VP_VECTOR|VP_CHAR);
         text = mxArrayToString(RENDERTEXT_IN_TEXT);
@@ -1341,7 +1362,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             glScaled(height/119.05, height/119.05, height/119.05);
 
+            if (xyalign[1] != 0.0)  /* y-align */
+                glTranslated(0, -xyalign[1]*119.05, 0);
+
             slen = strlen(text);
+            if (xyalign[0] != 0.0)
+            {
+                double strokeslen = (double)glutStrokeLength(GLUT_STROKE_ROMAN, (unsigned char *)text);
+
+                /* TODO: proper newline handling */
+                glTranslated(-xyalign[0]*(strokeslen + (slen-1)*(119.05/10.0)), 0, 0);
+            }
+
             for (i=0; i<slen; i++)
             {
                 glutStrokeCharacter(GLUT_STROKE_ROMAN, text[i]);
