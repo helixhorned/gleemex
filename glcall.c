@@ -44,6 +44,9 @@
 #define SETCALLBACK_IN_TYPE (prhs[1])
 #define SETCALLBACK_IN_FUNCNAME (prhs[2])
 
+// viewport
+#define VIEWPORT_IN_XYWH (prhs[1])
+
 enum glcalls_setcallback_
 {
     CB_DISPLAY = 0,
@@ -76,6 +79,7 @@ enum glcalls_
     GLC_ENTERMAINLOOP,
     GLC_SETMATRIX,
     GLC_SETCALLBACK,
+    GLC_VIEWPORT,
     NUM_GLCALLS,  // must be last
 };
 
@@ -86,6 +90,7 @@ const char *glcall_names[] =
     "entermainloop",
     "setmatrix",
     "setcallback",
+    "viewport",
 };
 
 
@@ -627,6 +632,26 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         memcpy(&callback_funcname[callbackid], tmpbuf, sizeof(tmpbuf));
+    }
+    return;
+
+    case GLC_VIEWPORT:
+    {
+        double *xywh_d;
+        int32_t xywh[4];
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glc.viewport, [x y width height])");
+
+        verifyparam(VIEWPORT_IN_XYWH, "GLCALL: viewport: XYWH", VP_VECTOR|VP_DOUBLE|(4<<VP_VECLEN_SHIFT));
+        xywh_d = mxGetPr(VIEWPORT_IN_XYWH);
+
+        xywh[0] = util_dtoi(xywh_d[0], -16384, 16384, "GLCALL: viewport: XYWH(1)");
+        xywh[1] = util_dtoi(xywh_d[1], -16384, 16384, "GLCALL: viewport: XYWH(2)");
+        xywh[2] = util_dtoi(xywh_d[2], 0, 16384, "GLCALL: viewport: XYWH(3)");
+        xywh[3] = util_dtoi(xywh_d[3], 0, 16384, "GLCALL: viewport: XYWH(4)");
+
+        glViewport(xywh[0], xywh[1], xywh[2], xywh[3]);
     }
     return;
 
