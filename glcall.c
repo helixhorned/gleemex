@@ -80,6 +80,9 @@
 /* deltextures */
 #define DELTEXTURES_IN_TEXNAMES (prhs[1])
 
+/* push/pop */
+#define PUSH_IN_WHATAR (prhs[1])
+
 
 enum glcalls_setcallback_
 {
@@ -125,6 +128,8 @@ enum glcalls_
     GLC_TOGGLE,
     GLC_SCISSOR,
     GLC_DELTEXTURES,
+    GLC_PUSH,
+    GLC_POP,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -147,6 +152,8 @@ const char *glcall_names[] =
     "toggle",
     "scissor",
     "deltextures",
+    "push",
+    "pop",
 };
 
 
@@ -1213,6 +1220,49 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         numtexs = mxGetNumberOfElements(DELTEXTURES_IN_TEXNAMES);
 
         glDeleteTextures(numtexs, (uint32_t *)mxGetData(DELTEXTURES_IN_TEXNAMES));
+    }
+    return;
+
+    case GLC_PUSH:
+    case GLC_POP:
+    {
+        mwSize i, numwhats;
+        const uint32_t *what;
+
+        if (nlhs != 0 || nrhs != 2)
+            mexErrMsgTxt("Usage: GLCALL(glcall.push, [WHAT1 WHAT2 ...]);  WHAT* can be either\n"
+                         " GL.PROJECTION, GL.MODELVIEW, GL.TEXTURE to push the respective matrices,\n"
+                         " or a bit combination of GL.*_BIT that is passed to glPushAttrib()\n"
+                         "(see getglconsts.m)");
+
+        verifyparam(PUSH_IN_WHATAR, "GLCALL: push: WHATAR", VP_VECTOR|VP_UINT32);
+        what = (uint32_t *)mxGetData(PUSH_IN_WHATAR);
+
+        numwhats = mxGetNumberOfElements(PUSH_IN_WHATAR);
+
+        for (i=0; i<numwhats; i++)
+        {
+            if (what[i]==GL_PROJECTION || what[i]==GL_MODELVIEW || what[i]==GL_TEXTURE)
+            {
+                glMatrixMode(what[i]);
+                if (cmd==GLC_PUSH)
+                    glPushMatrix();
+                else
+                    glPopMatrix();
+            }
+            else
+            {
+                if (cmd==GLC_PUSH)
+                    glPushAttrib(what[i]);
+                else
+                    glPopAttrib();
+            }
+        }
+
+        if (glGetError() == (cmd==GLC_PUSH ? GL_STACK_OVERFLOW : GL_STACK_UNDERFLOW))
+        {
+            mexErrMsgTxt("GLCALL: push/pop: over/underflow");
+        }
     }
     return;
 

@@ -64,11 +64,10 @@ function ex_reshape(w, h)
 
     glex.wh = [w h];
 
-    aspect = w/h;
-
     glcall(glc.viewport, [0 0 w h]);
     glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]+0.5);
 
+%    aspect = w/h;
 %    if (aspect >= 1)
 %        glcall(glc.setmatrix, GL.PROJECTION, [-aspect aspect, -1 1, -1 1]);
 %    else
@@ -178,6 +177,28 @@ function ex_display()
     glcall(glc.rendertext, [64 460 0], 18, 'ABrainiac0123456789!@#$%^&*()_+');
 
     glc_drawbutton([80 400 120 20], 'Test Button', glex.mxy, glex.bdown(1));
+
+    % 'axes' test
+    tmpxywh = [400 500 200 180];
+
+    %%
+    glcall(glc.push, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
+
+    % setup
+    glcall(glc.viewport, tmpxywh);
+    glcall(glc.setmatrix, GL.PROJECTION, [0 1, 0 1, -1 1]);
+    glcall(glc.setmatrix, GL.MODELVIEW, []);
+    glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
+    glcall(glc.scissor, int32(tmpxywh));
+
+    glcall(glc.clear, [0.8 0.8 0.4]);
+    glcall(glc.draw, GL.LINE_STRIP, [linspace(0,1,32); [0.5, 0.5+randn(1,30)/5, 0.5]]);
+
+    glcall(glc.pop, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
+    glcall(glc.draw, GL.LINE_LOOP, [tmpxywh(1) tmpxywh(1)+tmpxywh(3) tmpxywh(1)+tmpxywh(3) tmpxywh(1); ...
+                        tmpxywh(2) tmpxywh(2) tmpxywh(2)+tmpxywh(4) tmpxywh(2)+tmpxywh(4)], ...
+           struct('colors',[0 0 0]));
+    %%
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
