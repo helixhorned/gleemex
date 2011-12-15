@@ -239,6 +239,7 @@ static const char *errstrptr;
                 free(errstrptr);                \
             errstrptr = strdup(msg);            \
             glutLeaveMainLoop();                \
+            mexErrMsgTxt(msg);                  \
         }                                       \
         else                                    \
             mexErrMsgTxt(msg);                  \
@@ -1033,7 +1034,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize numel;
 
         static const char *usageText =
-            "Usage: GLCALL(glc.nulmatrix, GL.<MATRIX_MODE>, X), where X can be\n"
+            "Usage: GLCALL(glc.mulmatrix, GL.<MATRIX_MODE>, X), where X can be\n"
             "  * a 4x4 double matrix\n"
             "  * the empty matrix [], meaning no-op, or\n"
             "  * a length-3 vector, whose elements are passed to glTranslate, or\n"
@@ -1658,7 +1659,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glGenTextures(1, &cmaptexname);
 
         glActiveTexture(GL_TEXTURE1);
-
         glBindTexture(GL_TEXTURE_1D, cmaptexname);
         glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -2018,7 +2018,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     {
         int32_t err = glGetError();
-        if (err)
+        if (err != GL_NO_ERROR)
             GLC_MEX_ERROR("glGetError returned 0x%x", err);
     }
 }
