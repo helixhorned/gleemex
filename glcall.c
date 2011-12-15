@@ -1152,18 +1152,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize numel;
         const double *color;
 
-        if (nlhs != 0 || nrhs != 2)
+        if (nlhs != 0 || (nrhs != 1 && nrhs != 2))
             mexErrMsgTxt("Usage: GLCALL(glc.viewport, [r g b [a]]), color must have 'double' type");
 
-        verifyparam(CLEAR_IN_COLOR, "GLCALL: clear: COLOR", VP_VECTOR|VP_DOUBLE);
-        numel = mxGetNumberOfElements(CLEAR_IN_COLOR);
-        if (numel != 3 && numel != 4)
-            mexErrMsgTxt("GLCALL: clear: COLOR must have length 3 or 4");
+        if (nrhs == 1)
+        {
+            glClear(GL_DEPTH_BUFFER_BIT);
+        }
+        else
+        {
+            verifyparam(CLEAR_IN_COLOR, "GLCALL: clear: COLOR", VP_VECTOR|VP_DOUBLE);
+            numel = mxGetNumberOfElements(CLEAR_IN_COLOR);
+            if (numel != 3 && numel != 4)
+                mexErrMsgTxt("GLCALL: clear: COLOR must have length 3 or 4");
 
-        color = mxGetPr(CLEAR_IN_COLOR);
+            color = mxGetPr(CLEAR_IN_COLOR);
 
-        glClearColor(color[0], color[1], color[2], numel==4?color[3]:0);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+            glClearColor(color[0], color[1], color[2], numel==4?color[3]:0);
+            glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        }
     }
     break;
 
