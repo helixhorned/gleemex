@@ -214,9 +214,10 @@ const char *glcall_names[] =
 
 /*//////// DATA //////////*/
 
-#define MAXACTIVEWINDOWS 32
-#define MAXLIFETIMEWINDOWS 32768
-#define MAXCBNAMELEN 63
+#define MAXACTIVEWINDOWS 32  /* max glutomex windows open at the same time */
+#define MAXLIFETIMEWINDOWS 32768  /* max glutomex windows while top-level glcall is active */
+#define MAXCBNAMELEN 63  /* max strlen of callback name */
+
 static int curglutwinidx, curourwinidx=-1;
 /* our window index (start at 0) --> GLUT window index (start at 1) */
 static uint16_t glutwinidx[MAXACTIVEWINDOWS];
@@ -412,10 +413,10 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
 
     switch (cid)
     {
-    case mxLOGICAL_CLASS:
+    case mxLOGICAL_CLASS:  /* dubious... does anyone say anything about how logicals are stored? */
         *(int8_t *)mxGetData(tmpar) = !!*(int8_t *)ptr;
         break;
-    case mxCHAR_CLASS:
+    /* case mxCHAR_CLASS: */
     case mxINT8_CLASS:
     case mxUINT8_CLASS:
         *(int8_t *)mxGetData(tmpar) = *(int8_t *)ptr;
@@ -1212,7 +1213,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const double *color;
 
         if (nlhs != 0 || (nrhs != 1 && nrhs != 2))
-            ourErrMsgTxt("Usage: GLCALL(glc.viewport, [r g b [a]]), color must have 'double' type");
+            ourErrMsgTxt("Usage: GLCALL(glc.clear, [r g b [a]]), color must have 'double' type");
 
         if (nrhs == 1)
         {
@@ -1268,10 +1269,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_NEWTEXTURE:
     {
         /* TODO: generalize
-         *  1, 2, 3, 4 components: LUM, LUM_ALPHA, RGB, RGBA
-         *  different base data type components (int16, ...)
+         -  OK: 1, 2, 3, 4 components: LUM, LUM_ALPHA, RGB, RGBA
+         -  OK: different base data type components
          *  1D and 3D textures
-         *  an option struct to specify deviations from these 'default convenience settings' */
+         *  an option struct to specify deviations from these 'default convenience settings'
+         *  allow specifying different s,t wrap modes  */
 
         GLuint texname;
         const mwSize *dimsizes;  /* XXX: older versions w/o mwSize? */
@@ -1280,79 +1282,75 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t newtex = (nlhs == 1 && (nrhs == 2 || nrhs == 3));
         int32_t repltex = (nlhs == 0 && (nrhs == 3 || nrhs == 4));
         int32_t haveopts = (nlhs + nrhs == 4);
+        int32_t numdims, alignment=0; /* compiler-happy */
 
         const mxArray *minmag_mxar = NULL;
         GLint minfilt=GL_LINEAR, magfilt=GL_LINEAR;
 
-        GLint internalFormat;
         GLenum format;
-        GLenum type;
+        GLenum type=0;  /* compiler-happy */
 
         mwSize width, height;
+        mxClassID classid;
 
         if (!newtex && !repltex)
             ourErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar [, opts]), texar must be 3xNxM uint8 or NxM single\n"
                          "   or: GLCALL(glc.newtexture, texar, texname [, opts])  to replace an earlier texture");
 
-        if (mxIsUint8(NEWTEXTURE_IN_TEXAR))
-        {
-            /* RBG uint8 */
-            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_DIMN|(3<<VP_DIMN_SHIFT));
+        numdims = mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR);
 
-            dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
-            if (dimsizes[0] != 3 && dimsizes[0] != 4)
-                ourErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 3 (RGB) or 4 (RGBA)");
+        if (numdims != 2 && numdims != 3)
+            ourErrMsgTxt("GLCALL: newtexture: TEXAR must have either 2 or 3 dimensions");
+
+        /* first, get the texture width, height and format */
+        dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
+        if (numdims == 2)
+        {
+            width = dimsizes[0];
+            height = dimsizes[1];
+
+            format = GL_LUMINANCE;
+        }
+        else
+        {
+            static const GLenum formats[3] = { GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
 
             width = dimsizes[1];
             height = dimsizes[2];
 
-            if (dimsizes[0] == 3)
-            {
-                internalFormat = GL_RGB;
-                format = GL_RGB;
-            }
-            else
-            {
-                internalFormat = GL_RGBA;
-                format = GL_RGBA;
-            }
+            if (dimsizes[0] < 2 || dimsizes[0] > 4)
+                ourErrMsgTxt("GLCALL: newtexture: TEXAR's 1st dimension must have length 2, 3, or 4");
 
-            type = GL_UNSIGNED_BYTE;
+            format = formats[dimsizes[0]-2];
         }
-        else
+
+        if (width == 0 || height == 0)
+            ourErrMsgTxt("GLCALL: newtexture: TEXAR's width and height must not be 0");
+
+        /* next, determine the data type and alignment... */
+        classid = mxGetClassID(NEWTEXTURE_IN_TEXAR);
+        switch (classid)
         {
-            int32_t numdims;
-
-            /* grayscale float */
-            verifyparam(NEWTEXTURE_IN_TEXAR, "GLCALL: newtexture: TEXAR", VP_SINGLE);
-
-            numdims = mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR);
-            if (numdims != 2 && numdims != 3)
-                ourErrMsgTxt("GLCALL: newtexture: TEXAR must have 2 or 3 dimensions with 'single' type");
-
-            dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
-            if (numdims == 2)
-            {
-                width = dimsizes[0];
-                height = dimsizes[1];
-
-                internalFormat = GL_LUMINANCE16;
-                format = GL_LUMINANCE;
-            }
-            else
-            {
-                if (dimsizes[0] != 2)
-                    ourErrMsgTxt("GLCALL: newtexture: TEXAR's first dimension must have length 2 (LUMINANCE_ALPHA)");
-
-                width = dimsizes[1];
-                height = dimsizes[2];
-
-                internalFormat = GL_LUMINANCE16_ALPHA16;
-                format = GL_LUMINANCE_ALPHA;
-            }
-
-            type = GL_FLOAT;
+        case mxSINGLE_CLASS:
+            type = GL_FLOAT; alignment = 4; break;
+        case mxINT8_CLASS:
+            type = GL_BYTE; alignment = 1; break;
+        case mxUINT8_CLASS:
+            type = GL_UNSIGNED_BYTE; alignment = 1; break;
+        case mxINT16_CLASS:
+            type = GL_SHORT; alignment = 2; break;
+        case mxUINT16_CLASS:
+            type = GL_UNSIGNED_SHORT; alignment = 2; break;
+        case mxINT32_CLASS:
+            type = GL_INT; alignment = 4; break;
+        case mxUINT32_CLASS:
+            type = GL_UNSIGNED_INT; alignment = 4; break;
+        default:
+            ourErrMsgTxt("GLCALL: newtexture: TEXAR must have 'single' or [u]int{8,16,32} numeric class");
         }
+
+        /* we could tweak the internal format for more precision, but the internalFormat value
+         * passed to glTexImage2D is taken as a wish anyway... */
 
         if (haveopts)
         {
@@ -1381,11 +1379,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             }
         }
 
-        if (width <= 0 || width > 16384 || height <= 0 || height > 16384)
-            ourErrMsgTxt("GLCALL: mextexture: TEXAR's width and height must have length in [1, 16384]");
-
         if (repltex)
         {
+            /* we're replacing an existing texture */
             verifyparam(NEWTEXTURE_IN_TEXNAME, "GLCALL: newtexture: TEXNAME", VP_SCALAR|VP_UINT32);
             texname = *(uint32_t *)mxGetData(NEWTEXTURE_IN_TEXNAME);
             if (texname == 0)
@@ -1397,6 +1393,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         glBindTexture(GL_TEXTURE_2D, texname);
+
         if (newtex || minmag_mxar)  /* keep the min/mag filters if reuploading and not explicitly given */
         {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minfilt);
@@ -1407,10 +1404,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        glPixelStorei(GL_UNPACK_ALIGNMENT, type==GL_FLOAT ? 4 : 1);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, format==GL_RGB ? 1 : alignment);
 
-        /* target, level, internalFormat, width, height, border, format, type, data*/
-        glTexImage2D(GL_PROXY_TEXTURE_2D, 0, internalFormat,  width, height,
+        /* proxy check first; params:
+         * target, level, internalFormat, width, height, border, format, type, data */
+        glTexImage2D(GL_PROXY_TEXTURE_2D, 0, format,  width, height,
                      0, format, type, NULL);
         glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tmpwidth);
         if (tmpwidth==0)
@@ -1418,7 +1416,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glDeleteTextures(1, &texname);
             ourErrMsgTxt("GLCALL: newtexture: cannot accomodate texture");
         }
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,  width, height,
+        glTexImage2D(GL_TEXTURE_2D, 0, format,  width, height,
                      0, format, type, mxGetData(NEWTEXTURE_IN_TEXAR));
 
         if (newtex)
