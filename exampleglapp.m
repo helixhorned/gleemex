@@ -213,26 +213,14 @@ function ex_display()
 
     %% 'axes' test
     tmpxywh = [450 540 200 180];
-
-    %%
-    glcall(glc.push, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
-
-    % setup
-    glcall(glc.viewport, tmpxywh);
-    glcall(glc.setmatrix, GL.PROJECTION, [0 1, 0 1, -1 1]);
-    glcall(glc.setmatrix, GL.MODELVIEW, []);
-    glcall(glc.toggle, [GL.SCISSOR_TEST 1, GL.LINE_SMOOTH 1, GL.BLEND 1]);
-    glcall(glc.scissor, int32(tmpxywh));
+    glc_axes_setup(tmpxywh, [0 1, 0 1, -1 1]);  % {{{
+    glcall(glc.toggle, [GL.LINE_SMOOTH 1, GL.BLEND 1]);
 
     glcall(glc.clear, [0.8 0.8 0.4]);
     glcall(glc.draw, GL.LINE_STRIP, [linspace(0,1,32); [0.5, 0.5+glex.randdat/5, 0.5]]);
     glex.randdat = [glex.randdat(2:30) randn(1)];
 
-    glcall(glc.pop, [GL.PROJECTION GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
-    %%
-    glcall(glc.draw, GL.LINE_LOOP, [tmpxywh(1) tmpxywh(1)+tmpxywh(3) tmpxywh(1)+tmpxywh(3) tmpxywh(1); ...
-                        tmpxywh(2) tmpxywh(2) tmpxywh(2)+tmpxywh(4) tmpxywh(2)+tmpxywh(4)], ...
-           struct('colors',[0 0 0]));
+    glc_axes_finish([0 0 0]);  % }}}
     glcall(glc.rendertext, tmpxywh(1:2)+[2 tmpxywh(4)-16], 14, 'OCz');
 
     % torture test 1
