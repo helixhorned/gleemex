@@ -140,6 +140,8 @@ GL.MODS_ALL = 7;
 GL.BUTTON_LEFT = 1;
 GL.BUTTON_MIDDLE = 2;
 GL.BUTTON_RIGHT = 4;
+GL.MWHEEL_UP = 8;
+GL.MWHEEL_DOWN = 16;
 GL.BUTTONS_ALL = 7;
 
 % GLUT API macro definitions -- the special key codes:
