@@ -12,6 +12,8 @@
 %  * the GLUT special keys (w/o freeglut ones), stripped of the GLUT_ prefix
 %  * GLUT_BUTTON_{LEFT,MIDDLE,RIGHT}  (1<<X), stripped of the GLUT_ prefix
 %
+%  * a lot more (UNDOCUMENTED), see the source of this function.
+%
 function GL = getglconsts()
 
 GL = struct();

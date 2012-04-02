@@ -298,7 +298,7 @@ enum verifyparam_flags
     VP_VECLEN_MASK = 0x00ff0000,  /* shift down 16 bits to get length */
 };
 
-static mxClassID class_ids[] = {
+static const mxClassID class_ids[] = {
     0,
     mxCELL_CLASS, mxSTRUCT_CLASS, mxLOGICAL_CLASS, mxCHAR_CLASS, mxDOUBLE_CLASS, mxSINGLE_CLASS,
     mxINT8_CLASS, mxUINT8_CLASS, mxINT16_CLASS, mxUINT16_CLASS, mxINT32_CLASS, mxUINT32_CLASS,
@@ -1273,7 +1273,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
          -  OK: different base data type components
          *  1D and 3D textures
          *  an option struct to specify deviations from these 'default convenience settings'
-         *  allow specifying different s,t wrap modes  */
+         *  allow specifying different s,t wrap modes
+         *  allow specifying borders */
 
         GLuint texname;
         const mwSize *dimsizes;  /* XXX: older versions w/o mwSize? */
@@ -1350,7 +1351,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         /* we could tweak the internal format for more precision, but the internalFormat value
-         * passed to glTexImage2D is taken as a wish anyway... */
+         * passed to glTexImage2D is taken as a wish, not a request, anyway... */
 
         if (haveopts)
         {
@@ -1760,7 +1761,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(SET_IN_VALUE, "GLCALL: set GL.POINT_SIZE: SIZE", VP_SCALAR|VP_DOUBLE);
             value_d = *mxGetPr(SET_IN_VALUE);
 
-            /* potential undefined behavoiur when downcasting */
+            /* XXX: potential undefined behavoiur when downcasting */
             glPointSize((GLfloat)value_d);
             break;
         }
@@ -1772,7 +1773,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(SET_IN_VALUE, "GLCALL: set GL.LINE_WIDTH: WIDTH", VP_SCALAR|VP_DOUBLE);
             value_d = *mxGetPr(SET_IN_VALUE);
 
-            /* potential undefined behavoiur when downcasting */
+            /* XXX: potential undefined behavoiur when downcasting */
             glLineWidth((GLfloat)value_d);
             break;
         }
