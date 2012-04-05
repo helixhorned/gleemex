@@ -238,28 +238,34 @@ static GLfloat g_strokefontheight;
 static char errstr[256];
 
 #ifndef HAVE_OCTAVE
-static const mxArray *exceptionar;
-static const char *errstrptr;
+static mxArray *exceptionar;
+static char *errstrptr;
 
-# define ourErrMsgTxt(msg) do {                 \
+/* In MATLAB, we never jump out of the mex file via mexErrMsgTxt() because that
+ * leaves windows hanging around or causes crashes. */
+# define ourErrMsgTxt_(msg, retwhat) do { \
         if (numentered)                         \
         {                                       \
             if (errstrptr)                      \
                 free(errstrptr);                \
             errstrptr = strdup(msg);            \
             glutLeaveMainLoop();                \
-            mexErrMsgTxt(msg);                  \
+            /*mexErrMsgTxt(msg);*/              \
+            return (retwhat);                   \
         }                                       \
         else                                    \
-            mexErrMsgTxt(msg);                  \
+            return (retwhat);                   \
+            /*mexErrMsgTxt(msg);*/              \
     } while (0);
+# define ourErrMsgTxt(msg) ourErrMsgTxt_(msg, (void)0)
 #else
-# define ourErrMsgTxt mexErrMsgTxt
+# define ourErrMsgTxt_(msg, retwhat) mexErrMsgTxt(msg)
+# define ourErrMsgTxt(msg) mexErrMsgTxt(msg)
 #endif
 
-#define GLC_MEX_ERROR(Text, ...) do {           \
-        sprintf(errstr, Text, ## __VA_ARGS__);  \
-        ourErrMsgTxt(errstr);                   \
+#define GLC_MEX_ERROR_(retwhat, Text, ...) do { \
+        snprintf(errstr, sizeof(errstr), Text, ## __VA_ARGS__); \
+        ourErrMsgTxt_(errstr, retwhat); \
     } while (0)
 
 enum verifyparam_flags
@@ -311,9 +317,14 @@ static const char *class_names[] = {
     "int64", "uint64",
 };
 
+#define GLC_MEX_ERROR_VP_(Text, ...) GLC_MEX_ERROR_(GL_TRUE, Text, ## __VA_ARGS__)
+
 /* return value: if vpflags contains VP_FP_TYPE or VP_INDEX_TYPE, either
- *   GL_FLOAT/GL_DOUBLE, or GL_UNSIGNED_BYTE/GL_UNSIGNED_INT, respectively */
-static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
+ *   GL_FLOAT/GL_DOUBLE, or GL_UNSIGNED_BYTE/GL_UNSIGNED_INT, respectively
+ * GL_TRUE if running on MATLAB and we didn't validate (on Octave, mexErrMsgTxt is called)
+ * GL_FALSE if everything is OK else */
+/* verifyparam_ret used only from mexFunction! */
+static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vpflags)
 {
     uint32_t vpclassidx = vpflags&VP_CLASS_MASK;
 
@@ -322,7 +333,7 @@ static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflag
     {
     case VP_SCALAR:
         if (mxGetNumberOfElements(ar) != 1)
-            GLC_MEX_ERROR("%s must be scalar", arname);
+            GLC_MEX_ERROR_VP_("%s must be scalar", arname);
         break;
 
     case VP_VECTOR:
@@ -352,13 +363,13 @@ static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflag
         }
 
         if (bad)
-            GLC_MEX_ERROR("%s must be a vector", arname);
+            GLC_MEX_ERROR_VP_("%s must be a vector", arname);
         break;
     }
 
     case VP_MATRIX:
         if (mxGetNumberOfDimensions(ar) != 2)
-            GLC_MEX_ERROR("%s must be a matrix", arname);
+            GLC_MEX_ERROR_VP_("%s must be a matrix", arname);
         break;
 
     case VP_DIMN:
@@ -366,7 +377,7 @@ static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflag
         mwSize reqddim = (vpflags&VP_DIMN_MASK)>>VP_DIMN_SHIFT;
 
         if (mxGetNumberOfDimensions(ar) != reqddim)
-            GLC_MEX_ERROR("%s must have dimension %d", arname, reqddim);
+            GLC_MEX_ERROR_VP_("%s must have dimension %d", arname, reqddim);
         break;
     }
 
@@ -377,7 +388,7 @@ static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflag
     {
         if (vpclassidx < VP_FP_TYPE && class_ids[vpclassidx] != mxGetClassID(ar))
         {
-            GLC_MEX_ERROR("%s must have class %s", arname, class_names[vpclassidx]);
+            GLC_MEX_ERROR_VP_("%s must have class %s", arname, class_names[vpclassidx]);
         }
         else if (vpclassidx == VP_FP_TYPE)
         {
@@ -385,7 +396,7 @@ static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflag
                 return GL_DOUBLE;
             else if (mxIsSingle(ar))
                 return GL_FLOAT;
-            GLC_MEX_ERROR("%s must be of floating-point type", arname);
+            GLC_MEX_ERROR_VP_("%s must be of floating-point type", arname);
         }
         else if (vpclassidx == VP_INDEX_TYPE)
         {
@@ -393,17 +404,30 @@ static GLenum verifyparam(const mxArray *ar, const char *arname, uint32_t vpflag
                 return GL_UNSIGNED_INT;
             else if (mxIsUint8(ar))
                 return GL_UNSIGNED_BYTE;
-            GLC_MEX_ERROR("%s must be of index type (uint8 or uint32)", arname);
+            GLC_MEX_ERROR_VP_("%s must be of index type (uint8 or uint32)", arname);
         }
     }
 
-    return 0;
+    return GL_FALSE;
 }
+
+/* verifyparam used only from mexFunction! */
+#ifdef HAVE_OCTAVE
+static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
+{
+    verifyparam_ret(ar, arname, vpflags);
+}
+#else
+# define verifyparam(ar, arname, vpflags) do { \
+        if (verifyparam_ret(ar, arname, vpflags)==GL_TRUE) \
+            return; \
+    } while (0)
+#endif
 
 static int32_t util_dtoi(double d, double minnum, double maxnum, const char *arname)
 {
     if (!(d >= minnum && d <= maxnum))
-        GLC_MEX_ERROR("%s must be between %d and %d", arname, (int)minnum, (int)maxnum);
+        GLC_MEX_ERROR_(INT32_MIN, "%s must be between %d and %d", arname, (int)minnum, (int)maxnum);
     return (int32_t)d;
 }
 
@@ -436,11 +460,16 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
         *(int64_t *)mxGetData(tmpar) = *(int64_t *)ptr;
         break;
     default:
+#ifndef HAVE_OCTAVE
+        mxAssert(0, "INTRNAL ERROR");
+#else
         ourErrMsgTxt("INTERNAL ERROR in createScalar: invalid cid!");
+#endif
     }
 
     return tmpar;
 }
+
 
 /*//////// FUNCTIONS //////////*/
 
@@ -483,9 +512,11 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
 #ifdef HAVE_OCTAVE
     mexSetTrapFlag(1);
     err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
+    if (err)
+        glutLeaveMainLoop();
 #else
     {
-        const mxArray *ex;
+        mxArray *ex;
 
         ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
         err = (ex != NULL);
@@ -501,16 +532,13 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
 
     if (err)
     {
-        char buf[128];
-        sprintf(buf, "left main loop: error in callback %s: %d",
+        static char buf[128];
+        snprintf(buf, sizeof(buf), "left main loop: error in callback %s: %d",
                  callback_funcname[curourwinidx][callbackid], err);
 
-        ourErrMsgTxt(buf);
+        ourErrMsgTxt_(buf, err);
     }
-
 #endif
-    if (err)
-        glutLeaveMainLoop();
 
     return err;
 }
@@ -605,7 +633,8 @@ static void display_cb(void)
 
     if (check_callback(CB_DISPLAY))
     {
-        call_mfile_callback(CB_DISPLAY, 0, NULL);
+        if (call_mfile_callback(CB_DISPLAY, 0, NULL))
+            return;
     }
     else
     {
@@ -637,6 +666,15 @@ static void reshape_cb(int w, int h)
 }
 
 /*//////// MEX ENTRY POINT //////////*/
+
+#ifndef HAVE_OCTAVE
+# define RETIFERR(x) do { if (x==INT32_MIN) return; } while (0)
+#else
+# define RETIFERR(x) ((void)(0))
+#endif
+
+#define GLC_MEX_ERROR(Text, ...) GLC_MEX_ERROR_((void)0, Text, ## __VA_ARGS__)
+
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -731,6 +769,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         extent[0] = util_dtoi(extentptr[0], 1, 8000, "GLCALL: newwindow: EXTENT(1)");
         extent[1] = util_dtoi(extentptr[1], 1, 4000, "GLCALL: newwindow: EXTENT(2)");
+
+        RETIFERR(pos[0]);
+        RETIFERR(pos[1]);
+        RETIFERR(extent[0]);
+        RETIFERR(extent[1]);
 
         mxGetString(NEWWIN_IN_NAME, windowname, sizeof(windowname)-1);
 
@@ -876,8 +919,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!(/*primitivetype >= GL_POINTS &&*/ primitivetype <= GL_POLYGON))
             ourErrMsgTxt("GLCALL: draw: invalid GL primitive type");
 
-        vertdatatype = verifyparam(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_FP_TYPE);
-
+        vertdatatype = verifyparam_ret(DRAW_IN_VERTEXDATA, "GLCALL: draw: VERTEXDATA", VP_MATRIX|VP_FP_TYPE);
+#ifndef HAVE_OCTAVE
+        if (vertdatatype == GL_TRUE)
+            return;
+#endif
         numdims = mxGetM(DRAW_IN_VERTEXDATA);
         numtotalverts = mxGetN(DRAW_IN_VERTEXDATA);
 
@@ -907,7 +953,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 if (!texcoordsar)
                     ourErrMsgTxt("GLCALL: draw: When passing OPTSTRUCT.tex, must also have OPTSTRUCT.texcoords");
 
-                tcdatatype = verifyparam(texcoordsar, "GLCALL: draw: OPTSTRUCT.texcoords", VP_MATRIX|VP_FP_TYPE);
+                tcdatatype = verifyparam_ret(texcoordsar, "GLCALL: draw: OPTSTRUCT.texcoords", VP_MATRIX|VP_FP_TYPE);
+#ifndef HAVE_OCTAVE
+                if (tcdatatype == GL_TRUE)
+                    return;
+#endif
                 if (mxGetM(texcoordsar) != 2 || mxGetN(texcoordsar) != (unsigned long)numtotalverts)
                     ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.texcoords must have "
                                  "2 rows and size(VERTEXDATA,2) columns");
@@ -958,7 +1008,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (indicesar)
         {
-            indicestype = verifyparam(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_VECTOR|VP_INDEX_TYPE);
+            indicestype = verifyparam_ret(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_VECTOR|VP_INDEX_TYPE);
 
             numverts = mxGetNumberOfElements(indicesar);
             indices = mxGetData(indicesar);
@@ -1202,6 +1252,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         xywh[2] = util_dtoi(xywh_d[2], 0, 16384, "GLCALL: viewport: XYWH(3)");
         xywh[3] = util_dtoi(xywh_d[3], 0, 16384, "GLCALL: viewport: XYWH(4)");
 
+        RETIFERR(xywh[0]);
+        RETIFERR(xywh[1]);
+        RETIFERR(xywh[2]);
+        RETIFERR(xywh[3]);
+
         glViewport(xywh[0], xywh[1], xywh[2], xywh[3]);
     }
     break;
@@ -1251,17 +1306,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 #ifdef HAVE_OCTAVE
         ourErrMsgTxt("CLGALL.geterrstr only available on MATLAB");
 #else
-        const char *emptystr = "<empty>";
-        const char *errstr_ptr = errstr;
-
         if (numentered)
             ourErrMsgTxt("GLCALL.geterrstr should only be called after an error from the prompt");
 
         if (nlhs != 3 || nrhs != 1)
             return;
 
-        plhs[0] = mxCreateCharMatrixFromStrings(1, errstrptr ? &errstrptr : &emptystr);
-        plhs[1] = mxCreateCharMatrixFromStrings(1, &errstr_ptr);
+        plhs[0] = mxCreateString(errstrptr ? errstrptr : "<empty>");
+        plhs[1] = mxCreateString(errstr);
         plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
 #endif
     }
@@ -1731,6 +1783,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             newposi[0] = util_dtoi(newpos[0], 0, wh[0], "GLC: set mouse pos: POS(1)");
             newposi[1] = util_dtoi(newpos[1], 0, wh[1], "GLC: set mouse pos: POS(2)");
 
+            RETIFERR(newposi[0]);
+            RETIFERR(newposi[1]);
+
             /* TODO: what if no current window? */
             glutWarpPointer(newposi[0], newposi[1]);
 
@@ -1790,6 +1845,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             wh[0] = util_dtoi(wh_d[0], 1, 16384, "GLC: setwindowsize: WH(1)");
             wh[1] = util_dtoi(wh_d[1], 1, 16384, "GLC: setwindowsize: WH(2)");
+
+            RETIFERR(wh[0]);
+            RETIFERR(wh[1]);
 
             glutReshapeWindow(wh[0], wh[1]);
             return;
@@ -2170,6 +2228,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             y = util_dtoi(xywh_d[1], 0, winh-1, "GLCALL: readpixels: XYWH(2)");
             w = util_dtoi(xywh_d[2], 1, winw-x, "GLCALL: readpixels: XYWH(3)");
             h = util_dtoi(xywh_d[3], 1, winh-y, "GLCALL: readpixels: XYWH(4)");
+
+            RETIFERR(x);
+            RETIFERR(y);
+            RETIFERR(w);
+            RETIFERR(h);
         }
 
         thedims[1] = w;
