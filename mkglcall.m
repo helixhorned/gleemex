@@ -5,5 +5,9 @@ try
     mkoctfile -mex -W -Wall -Wextra -Werror-implicit-function-declaration -lGL -lGLU -lGLEW -lglut glcall.c
 catch
     % MATLAB
-    mex -lglew32 glcall.c
+    if (ispc)
+        mex -lglew32 glcall.c
+    else
+        mex -lGL -lGLU -lGLEW -lglut glcall.c
+    end
 end
