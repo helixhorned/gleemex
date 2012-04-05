@@ -1022,7 +1022,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         glutMainLoop();
 
-        numentered--;
+        if (numentered > 0)
+            numentered--;
         inited = 0;
 
         cleanup_after_mainloop();
