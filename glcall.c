@@ -17,6 +17,10 @@
 # define mwSize unsigned long
 #endif
 
+#if _MSC_VER
+#define snprintf _snprintf
+#endif
+
 /*////////*/
 
 /* 1 lhs, 0 rhs */
