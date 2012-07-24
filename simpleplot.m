@@ -10,6 +10,11 @@
 function simpleplot(data)
     global simpl GL glc
 
+    if (nargin < 1)
+        disp('Usage: simpleplot(data), data is DIM x N, where DIM is either 2 or 3')
+        return
+    end
+
     glc = glcall();
     GL = getglconsts();
 
@@ -68,9 +73,10 @@ function sp_setup_data(data)
     if (numdims == 2)
         simpl.data(3, :) = 0;  % pad 3rd dim with zeros
     end
+    simpl.numdims = numdims;
+
+    % some data stats
     simpl.mean = mean(simpl.data, 2);
-    simpl.data = simpl.data - repmat(simpl.mean, 1,simpl.numsamples);
-    % min and max of mean-subtracted data
     simpl.min = min(simpl.data, [], 2);
     simpl.max = max(simpl.data, [], 2);
 end
@@ -78,9 +84,9 @@ end
 function sp_setup_axes_rect()
     global simpl
 
-    % [x y x y]
-    simpl.axrect = [20 20 simpl.wh-40];
-    simpl.axrect(3:4) = max(simpl.axrect(3:4), [420 320]);  % minimum 400 x 300 axes
+    % [x y w h]
+    simpl.axxywh = [20 20 simpl.wh-40];
+    simpl.axxywh(3:4) = max(simpl.axxywh(3:4), [400 300]);  % minimum 400 x 300 axes
 end
 
 function sp_reshape(w, h)
@@ -98,16 +104,24 @@ function sp_display()
     glcall(glc.clear, 1-[0 0 0]);
 
     %% draw axes
-    axwh = simpl.axrect([3 4])-simpl.axrect([1 2]);
+    axwh = simpl.axxywh([3 4]);
     wbyhmpone = [-1 1]*axwh(1)/axwh(2);  % width-by-height minus-plus one
-    glc_axes_setup(simpl.axrect, [wbyhmpone, -1 1, 10*wbyhmpone]);  % {{{
+    glc_axes_setup(simpl.axxywh, [wbyhmpone, -1 1, 10*wbyhmpone]);  % {{{
 
-    maxmaxabs = max(max(abs(simpl.min), abs(simpl.max)));
-    scalemat = simpl.zoom.*eye(4)./double(maxmaxabs);
+    sc = double(max((simpl.max-simpl.min)/2));
+    scalemat = simpl.zoom.*eye(4)./sc;
     scalemat(4,4) = 1;
     glcall(glc.mulmatrix, GL.MODELVIEW, scalemat);
 
     glcall(glc.mulmatrix, GL.MODELVIEW, [simpl.ang, 0 1 0]);
+
+    center = double((simpl.min+simpl.max)/2);
+    glcall(glc.mulmatrix, GL.MODELVIEW, -center);
+
+    mvpr = glcall(glc.get, GL.PROJECTION_MATRIX)*glcall(glc.get, GL.MODELVIEW_MATRIX);
+    % inv(mvpr) :: clip coords -> object coords
+    assert(mvpr(4,4)==1);
+
 
     if (simpl.lineidxs(2) > simpl.lineidxs(1))
         glcall(glc.draw, GL.LINE_STRIP, simpl.data(:, simpl.lineidxs(1):simpl.lineidxs(2)), ...
@@ -116,6 +130,31 @@ function sp_display()
     glcall(glc.draw, GL.POINTS, simpl.data);
 
     glc_axes_finish([0 0 0]); % }}}
+
+    top = simpl.axxywh(2)+simpl.axxywh(4)-4;
+
+    pretty = @(vec)regexprep(num2str(vec(:)'), ' +', ', ');
+
+    glcall(glc.rendertext, [28 top-14], 14, ...
+           sprintf('means: %s | mins: %s | maxs: %s', pretty(simpl.mean), ...
+                   pretty(simpl.min), pretty(simpl.max)));
+    glcall(glc.rendertext, [28 top-14-8-14], 14, ...
+           sprintf('[%d  %d..%d  %d], zoom=%.02f', 1, simpl.lineidxs(1), simpl.lineidxs(2), ...
+                   simpl.numsamples, simpl.zoom));
+
+    [yes, fracs] = glc_pointinxywh(simpl.mxy, simpl.axxywh);
+    if (simpl.numdims == 2 && yes)
+        % FACTOROUT
+        axcenter = simpl.axxywh([1 2])+axwh/2;
+        % 2*fracs-axcenter: window coords -> normalized device coords:
+        ndc = ([2*(simpl.mxy-axcenter) 0 1]);
+        ndc(1:2) = ndc(1:2)./axwh;
+        assert(abs(ndc) <= 1);
+        mousedpos = mvpr \ ndc';
+
+        glcall(glc.rendertext, [28 top-14-2*(8+14)], 14, ...
+               sprintf('(x, y) = (%.02f, %.02f)', mousedpos(1), mousedpos(2)));
+    end
 end
 
 function cval = sp_clamp(val, themin, themax)
@@ -144,7 +183,7 @@ function sp_motion(buttonsdown, x, y)
     % invert y
     simpl.mxy = [x simpl.wh(2)-y];
 
-    if (buttonsdown==GL.BUTTON_LEFT)
+    if (simpl.numdims==3 && buttonsdown==GL.BUTTON_LEFT)
         if (simpl.omx == -1)
             simpl.omx = simpl.mxy(1);
         else
@@ -177,7 +216,7 @@ function sp_mouse(button, downp, x, y, mods)
         simpl.omx = -1;
     end
 
-    simpl.zoom = min(max(1, simpl.zoom), 1000);
+    simpl.zoom = sp_clamp(simpl.zoom, 0.1, 1000);
 
     glcall(glc.postredisplay);
 end
