@@ -259,15 +259,30 @@ function glc_listdlg_keyboard(asc, x, y, mods)
       case 27,  % escape
         glc_listdlg_s(winid).done = 2;
 
+      % up/down: move "background" or selection (with CTRL)
       case GL.KEY_UP,
-        if (glc_listdlg_s(winid).ofs > 0)
-            glc_listdlg_s(winid).ofs = glc_listdlg_s(winid).ofs-1;
+        uppermost = [];
+        offset = glc_listdlg_s(winid).ofs;
+        didmove = false;
+        if (mods==GL.MOD_CTRL)
+            % move selection one up
+            uppermost = find(glc_listdlg_s(winid).selected);
+            if (numel(uppermost)==1 && uppermost > 1 && offset<uppermost)
+                uppermost = uppermost-1;
+                glc_listdlg_s(winid).selected(:) = false;
+                glc_listdlg_s(winid).selected(uppermost) = true;
+                didmove = true;
+            end
         end
+        if (~didmove && offset > 0 || uppermost==offset)
+            glc_listdlg_s(winid).ofs = offset-1;
+        end
+
       case GL.KEY_PAGE_UP,
         glc_listdlg_s(winid).ofs = max(0, glc_listdlg_s(winid).ofs-10);
 
       case GL.KEY_DOWN,
-        glc_listdlg_s(winid).downreq = 1;
+        glc_listdlg_s(winid).downreq = 1 - 2*(mods==GL.MOD_CTRL);
       case GL.KEY_PAGE_DOWN,
         glc_listdlg_s(winid).downreq = 10;
 
@@ -322,10 +337,31 @@ function glc_listdlg_display()
 
     if (glc_listdlg_s(winid).downreq)
         j = glc_listdlg_s(winid).downreq;
-        while (j > 0 && numlines+glc_listdlg_s(winid).ofs < numvals)
-            glc_listdlg_s(winid).ofs = glc_listdlg_s(winid).ofs+1;
+        moveselp = false;
+        if (j < 0)
+            moveselp = true;
+            j = -j;
+        end
+
+        offset = glc_listdlg_s(winid).ofs;
+
+        lowermost = [];
+        didmove = false;
+        if (moveselp)
+            lowermost = find(glc_listdlg_s(winid).selected);
+            if (numel(lowermost)==1 && lowermost < numvals && lowermost <= numlines+offset)
+                lowermost = lowermost+1;
+                glc_listdlg_s(winid).selected(:) = false;
+                glc_listdlg_s(winid).selected(lowermost) = true;
+                didmove = true;
+            end
+        end
+
+        while (j > 0 && numlines+offset < numvals && (~didmove || lowermost > offset+1))
+            offset = offset+1;
             j = j-1;
         end
+        glc_listdlg_s(winid).ofs = offset;
 
         glc_listdlg_s(winid).downreq = false;
     end
