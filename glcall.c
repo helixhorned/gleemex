@@ -59,6 +59,9 @@
 /* clear */
 #define CLEAR_IN_COLOR (prhs[1])
 
+/* postredisplay */
+#define POSTREDISPLAY_IN_NOWP (prhs[1])
+
 /* newtexture */
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
 #define NEWTEXTURE_IN_TEXNAME (prhs[2])
@@ -1296,12 +1299,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_POSTREDISPLAY:
     {
-        if (nlhs != 0 || nrhs != 1)
-            ourErrMsgTxt("Usage: GLCALL(glc.postredisplay)");
+        int32_t now_p = 0;
+
+        if (nlhs != 0 || (nrhs != 1 && nrhs != 2))
+            ourErrMsgTxt("Usage: GLCALL(glc.postredisplay [, NOW_P])");
 
         if (glutGetWindow() == 0)
             ourErrMsgTxt("GLCALL: postredisplay: called with no current window!");
-        glutPostRedisplay();
+
+        if (nrhs==2)
+        {
+            verifyparam(POSTREDISPLAY_IN_NOWP, "GLCALL: postredisplay: NOW_P",
+                        VP_SCALAR|VP_LOGICAL);
+            now_p = !!*(int8_t *)mxGetData(POSTREDISPLAY_IN_NOWP);
+        }
+
+        if (now_p)
+            glutSwapBuffers();
+        else
+            glutPostRedisplay();
     }
     return;
 
