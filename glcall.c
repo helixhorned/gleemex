@@ -236,6 +236,7 @@ static int numentered = 0;  /* entermainloop entered? */
 static struct windata_
 {
     int32_t height, buttons;
+    mxArray *menus;  /* persistent */
 } win[MAXACTIVEWINDOWS];
 
 static GLuint cmaptexname /*, proginuse */;
@@ -334,6 +335,12 @@ static const char *class_names[] = {
 static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vpflags)
 {
     uint32_t vpclassidx = vpflags&VP_CLASS_MASK;
+
+    if (!ar)
+    {
+        /* mainly for checking existence of struct fields */
+        GLC_MEX_ERROR_VP_("%s must exist", arname);
+    }
 
     /* check dimensionality requirements first */
     switch (vpflags & VP_SVM_MASK)
@@ -702,6 +709,11 @@ static void reshape_cb(int w, int h)
 
 #define GLC_MEX_ERROR(Text, ...) GLC_MEX_ERROR_((void)0, Text, ## __VA_ARGS__)
 
+static void temp_menu_callback(int cbval)
+{
+    (void)cbval;
+    /* noop for now */
+}
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -759,6 +771,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int32_t multisamplep=0, subwindowp=0;
         char windowname[80];
 
+        mxArray *menus = NULL;
+
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
             ourErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
                          " create new window.");
@@ -768,7 +782,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(NEWWIN_IN_NAME, "GLCALL: newwindow: WINDOWNAME", VP_VECTOR|VP_CHAR);
         if (nrhs >= 5)
         {
-            const mxArray *tmpar;
+            mxArray *tmpar;
 
             verifyparam(NEWWIN_IN_OPTSTRUCT, "GLCALL: newwindow: OPTSTRUCT", VP_SCALAR|VP_STRUCT);
 
@@ -784,6 +798,44 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             {
                 verifyparam(tmpar, "GLCALL: newwindow: OPTSTRUCT.subwindow", VP_SCALAR|VP_LOGICAL);
                 subwindowp = !!*(int8_t *)mxGetData(tmpar);
+            }
+
+            /* Menu creation */
+            tmpar = mxGetField(NEWWIN_IN_OPTSTRUCT, 0, "menus");
+            if (tmpar)
+            {
+                const mxArray *menus_field;
+                int32_t numentries;
+
+                /* TODO: vector... */
+                verifyparam(tmpar, "GLCALL: newwindow: OPTSTRUCT.menus", VP_SCALAR|VP_STRUCT);
+
+                menus_field = mxGetField(tmpar, 0, "cbfunc");
+                verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.cbfunc", VP_VECTOR|VP_CHAR);
+
+                menus_field = mxGetField(tmpar, 0, "entries");
+                verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries", VP_VECTOR|VP_STRUCT);
+
+                numentries = mxGetNumberOfElements(menus_field);
+                if (numentries >= 1)
+                {
+                    const mxArray *entries = menus_field, *entries_field;
+
+                    for (i=0; i<numentries; i++)
+                    {
+                        entries_field = mxGetField(entries, i, "label");
+                        verifyparam(entries_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries(i).label",
+                                    VP_VECTOR|VP_CHAR);
+
+                        /* TODO: recursion (menu cascading)... */
+                        entries_field = mxGetField(entries, i, "cbval");
+                        verifyparam(entries_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries(i).cbval",
+                                    VP_SCALAR|VP_INT32);
+                    }
+
+                    /* Everything is OK, we can use that menu */
+                    menus = tmpar;
+                }
             }
         }
 
@@ -875,6 +927,49 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         ourwinidx[winid] = i;
 
         win[i].height = extent[1];
+
+        if (menus)
+        {
+            mxArray *entries;
+            int32_t k, numentries;
+            int gMenu;
+
+            /* Save off the 'menus' struct passed from above.
+             * XXX: is this problematic with aliasing, i.e. if the user passes the same
+             * 'menus' mxArray to two different windows? */
+            if (win[i].menus)
+                mxDestroyArray(win[i].menus);
+            win[i].menus = menus;
+            mexMakeArrayPersistent(menus);
+
+            /* XXX: currently, neither the mxArrays nor the GLUT menus are
+             * freed anywhere. */
+
+            gMenu = glutCreateMenu(temp_menu_callback);
+            if (gMenu <= 0)
+                ourErrMsgTxt("GLCALL: newwindow: couldn't create menu");
+
+            entries = mxGetField(menus, 0, "entries");
+
+            numentries = mxGetNumberOfElements(entries);
+            for (k=0; k<numentries; k++)
+            {
+                mxArray *labelar = mxGetField(entries, k, "label");
+                mxArray *cbvalar = mxGetField(entries, k, "cbval");
+
+                char *label = mxArrayToString(labelar);
+                int32_t cbval = *(int32_t *)mxGetData(cbvalar);
+
+                if (!label)
+                    ourErrMsgTxt("GLCALL: newwindow: Out of memory in menu creation!");
+
+                glutAddMenuEntry(label, cbval);
+                mxFree(label);
+            }
+
+            /* TEMP */
+            glutAttachMenu(GLUT_MIDDLE_BUTTON);
+        }
 
         /** set callbacks for the newly created window **/
         /* these two are always there */
