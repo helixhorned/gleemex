@@ -431,6 +431,26 @@ static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
     } while (0)
 #endif
 
+static int32_t verify_callback_name(const mxArray *strmxAr, int32_t slen,
+                                    char *tmpbuf)
+{
+    int32_t i;
+
+    /* tmpbuf must have sizeof >= MAXCBNAMELEN+1 */
+
+    mxGetString(strmxAr, tmpbuf, MAXCBNAMELEN+1);
+    for (i=0; i<slen; i++)
+    {
+        char c = tmpbuf[i];
+
+        if ((i==0 && (c=='_' || (c>='0' && c<='9'))) ||
+            (c!='_' && !(c>='0' && c<='9') && !(c>='a' && 'c'<='z') && !(c>='A' && c<='Z')))
+            return 1;
+    }
+
+    return 0;
+}
+
 static int32_t util_dtoi(double d, double minnum, double maxnum, const char *arname)
 {
     if (!(d >= minnum && d <= maxnum))
@@ -799,7 +819,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             /* only set initial display mode options when creating the first window
              * (glewInit() paranoia in Windows -- necessary?) */
-            glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | multisamplep*GLUT_MULTISAMPLE | GLUT_RGBA);
+            glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | (multisamplep*GLUT_MULTISAMPLE) | GLUT_RGBA);
 
             g_strokefontheight = glutStrokeHeight(GLUT_STROKE_ROMAN);
 
@@ -887,7 +907,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nlhs > 0)
         {
-            /* +1 is a convenience for the Octave coder */
+            /* +1 is a convenience for the Octave/MATLAB coder */
             int32_t ret_ourwidx = ourwinidx[winid]+1;
             NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ret_ourwidx);
         }
@@ -1207,8 +1227,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_SETCALLBACK:
     {
-        int32_t callbackid, i, slen, glutwidx;
-        char tmpbuf[MAXCBNAMELEN+1], c;
+        int32_t callbackid, slen, glutwidx;
+        char tmpbuf[MAXCBNAMELEN+1];
 
         if (nlhs != 0 || nrhs != 3)
             ourErrMsgTxt("Usage: GLCALL(glc.setcallback, glc.cb_<callbacktype>, 'mfuncname'), pass '' to reset");
@@ -1223,19 +1243,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourErrMsgTxt("GLCALL: setcallback: CALLBACKTYPE must be a valid callback ID");
 
         verifyparam(SETCALLBACK_IN_FUNCNAME, "GLCALL: setcallback: FUNCNAME", VP_VECTOR|VP_CHAR);
+        /* XXX: the string might be multibyte in MATLAB */
         slen = mxGetNumberOfElements(SETCALLBACK_IN_FUNCNAME);
         if (slen > MAXCBNAMELEN)
             GLC_MEX_ERROR("GLCALL: setcallback: FUNCNAME must not exceed %d chars", MAXCBNAMELEN);
 
-        mxGetString(SETCALLBACK_IN_FUNCNAME, tmpbuf, sizeof(tmpbuf));
-        for (i=0; i<slen; i++)
-        {
-            c = tmpbuf[i];
-
-            if ((i==0 && (c=='_' || (c>='0' && c<='9'))) ||
-                    (c!='_' && !(c>='0' && c<='9') && !(c>='a' && 'c'<='z') && !(c>='A' && c<='Z')))
-                ourErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
-        }
+        if (verify_callback_name(SETCALLBACK_IN_FUNCNAME, slen, tmpbuf))
+            ourErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid "
+                         "MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
 
         memcpy(&callback_funcname[ourwinidx[glutwidx]][callbackid], tmpbuf, sizeof(tmpbuf));
     }
