@@ -5,7 +5,15 @@ function exampleglapp(vertposns)
     GL = getglconsts(); glc = glcall();
     glex = struct();
 
-    im = imread('../connectivity_visualization/brain_area.jpg');
+    try
+        OCTAVE_VERSION;
+        im = uint8(100*randn(256,256,3));
+    catch
+        % reading this particular JPG crashes Octave at exit when run under gdb
+        % as of 2012-09-23.
+        im = imread('../connectivity_visualization/brain_area.jpg');
+    end
+
     if (mod(size(im,1),2)==1)
         im(end+1, :, :) = im(end, :, :);
     end
@@ -66,6 +74,7 @@ function exampleglapp(vertposns)
     glcall(glc.setcallback, glc.cb_keyboard, 'ex_keyboard');
     glcall(glc.setcallback, glc.cb_motion, 'ex_motion');
     glcall(glc.setcallback, glc.cb_mouse, 'ex_mouse');
+
     glcall(glc.entermainloop);
 end
 
@@ -237,6 +246,11 @@ end
 
 function ex_keyboard(key, x, y, mods)
     global GL glc glex
+
+    if (key=='q')
+        glcall(glc.leavemainloop);
+        return
+    end
 
     dir = 0;
     idx = 2;
