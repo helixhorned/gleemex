@@ -772,6 +772,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         mxArray *menus = NULL;
 
+        mxAssert(sizeof(mxLogical)==1, "INTERNAL ERROR");
+
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
             ourErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
                          " create new window.");
