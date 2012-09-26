@@ -327,6 +327,12 @@ static const char *class_names[] = {
 
 #define GLC_MEX_ERROR_VP_(Text, ...) GLC_MEX_ERROR_(GL_TRUE, Text, ## __VA_ARGS__)
 
+static int arIsVector(const mxArray *ar)
+{
+    return (mxGetNumberOfDimensions(ar) == 2 &&
+            (mxGetN(ar)==1 || mxGetM(ar)==1));
+}
+
 /* return value: if vpflags contains VP_FP_TYPE or VP_INDEX_TYPE, either
  *   GL_FLOAT/GL_DOUBLE, or GL_UNSIGNED_BYTE/GL_UNSIGNED_INT, respectively
  * GL_TRUE if running on MATLAB and we didn't validate (on Octave, mexErrMsgTxt is called)
@@ -353,26 +359,19 @@ static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vp
     case VP_VECTOR:
     {
         int bad = 1;
-        mwSize sz[2];
 
-        if (mxGetNumberOfDimensions(ar) == 2)
+        if (arIsVector(ar))
         {
-            sz[0] = mxGetM(ar);
-            sz[1] = mxGetN(ar);
-
-            if (sz[0]==1 || sz[1]==1)
+            if (vpflags&VP_VECLEN_MASK)
             {
-                if (vpflags&VP_VECLEN_MASK)
-                {
-                    uint32_t reqdveclen = (vpflags&VP_VECLEN_MASK)>>VP_VECLEN_SHIFT;
+                uint32_t reqdveclen = (vpflags&VP_VECLEN_MASK)>>VP_VECLEN_SHIFT;
 
-                    if (mxGetNumberOfElements(ar) == reqdveclen)
-                        bad = 0;
-                }
-                else
-                {
+                if (mxGetNumberOfElements(ar) == reqdveclen)
                     bad = 0;
-                }
+            }
+            else
+            {
+                bad = 0;
             }
         }
 
