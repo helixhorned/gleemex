@@ -59,9 +59,13 @@ function exampleglapp(vertposns)
     t = linspace(0,2*pi, 17);
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
-    submenu = struct('cbfunc','', 'entries',{{'Sub1','Sub2'}});
+    % menu test
+    subsubmenu = struct('label','Very deep', 'cbfunc','UNUSED2', ...
+                        'entries',{{'Hello', 'world'}});
+    submenu = struct('label','SubX ------> ', 'cbfunc','UNUSED', ...
+                     'entries',{{'Sub1 qweeee', subsubmenu, 'Sub2 blaaaaaarg'}});
     menus = struct('cbfunc','CURRENTLY_IGNORED');
-    menus.entries = { 'Qwe', 'Asd', 'Gee' };
+    menus.entries = { 'Qwe Lupus', 'Asd Gallus', submenu, 'Gee Sus' };
 
     % init!
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', ...

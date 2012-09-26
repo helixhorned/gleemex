@@ -329,6 +329,9 @@ static const char *class_names[] = {
 
 static int arIsVector(const mxArray *ar)
 {
+    /* XXX: It can be argued whether a 0x0 array is a vector or not.
+     * Since we check for strings by seeing whether it's a "vector of chars",
+     * this is practically relevant... */
     return (mxGetNumberOfDimensions(ar) == 2 &&
             (mxGetN(ar)==1 || mxGetM(ar)==1));
 }
@@ -337,7 +340,7 @@ static int arIsVector(const mxArray *ar)
  *   GL_FLOAT/GL_DOUBLE, or GL_UNSIGNED_BYTE/GL_UNSIGNED_INT, respectively
  * GL_TRUE if running on MATLAB and we didn't validate (on Octave, mexErrMsgTxt is called)
  * GL_FALSE if everything is OK else */
-/* verifyparam_ret used only from mexFunction! */
+/* verifyparam_ret used only from mexFunction! XXX: not any more. */
 static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vpflags)
 {
     uint32_t vpclassidx = vpflags&VP_CLASS_MASK;
@@ -698,8 +701,6 @@ static void reshape_cb(int w, int h)
     }
 }
 
-/*//////// MEX ENTRY POINT //////////*/
-
 #ifndef HAVE_OCTAVE
 # define RETIFERR(x) do { if (x==INT32_MIN) return; } while (0)
 #else
@@ -708,12 +709,147 @@ static void reshape_cb(int w, int h)
 
 #define GLC_MEX_ERROR(Text, ...) GLC_MEX_ERROR_((void)0, Text, ## __VA_ARGS__)
 
+/********** MENUS **********/
 static void temp_menu_callback(int cbval)
 {
     (void)cbval;
     /* noop for now */
 }
 
+static int createmenu_begin(const mxArray *cbfunc)
+{
+    (void)cbfunc;
+    return glutCreateMenu(temp_menu_callback);
+}
+
+static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k)
+{
+    char *label;
+
+    if (leafp)
+    {
+        label = mxArrayToString(labelar);
+    }
+    else
+    {
+        /* existence verified in SUBMENU_LABEL */
+        const mxArray *sublabelar = mxGetField(labelar, 0, "label");
+        label = mxArrayToString(sublabelar);
+    }
+
+    if (!label)
+        GLC_MEX_ERROR_(GL_TRUE, "Out of memory in menu creation!");
+
+    if (leafp)
+    {
+        glutAddMenuEntry(label, k);
+    }
+    else
+    {
+        /* Submenu creation. Here, the children have been handled.
+         * Current menu is the child, k is the parent. */
+
+        int childmenu = glutGetMenu();
+        glutSetMenu(k);
+        glutAddSubMenu(label, childmenu);
+    }
+
+    mxFree(label);
+
+    return GL_FALSE;
+}
+
+/* XXX: currently redundant, but provided for symmetry. */
+static void createmenu_end(int uppermenu)
+{
+    glutSetMenu(uppermenu);
+}
+
+/* menu struct walker */
+static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
+                               int (begin_func(const mxArray *cbfunc)),
+                               GLenum (perentry_func(const mxArray *labelar, int32_t leafp, int32_t k)),
+                               void (finish_func(int uppermenu)),
+                               int32_t check_sublabel)
+{
+    const mxArray *cbfunc, *entries;
+
+    if (verifyparam_ret(menuar, "menu", VP_SCALAR|VP_STRUCT))
+        return GL_TRUE;
+
+    if (check_sublabel)
+    {
+        /* SUBMENU_LABEL */
+        const mxArray *sublabel = mxGetField(menuar, 0, "label");
+
+        /* er, shoehorn the label of the submenu into the submenu's struct... */
+        if (verifyparam_ret(sublabel, "menu.entries(i).label, for entries(i) a submenu,",
+                            VP_VECTOR|VP_CHAR))
+            return GL_TRUE;
+    }
+
+    cbfunc = mxGetField(menuar, 0, "cbfunc");
+    if (verifyparam_ret(cbfunc, "menu.cbfunc", VP_VECTOR|VP_CHAR))
+        return GL_TRUE;
+
+    entries = mxGetField(menuar, 0, "entries");
+    if (verifyparam_ret(entries, "menu.entries", VP_VECTOR|VP_CELL))
+        return GL_TRUE;
+
+    {
+        const int32_t numentries = mxGetNumberOfElements(entries);
+        int32_t i, newmenu=0;
+
+        if (numentries==0)
+            GLC_MEX_ERROR_(GL_TRUE, "menu.entries must not be empty");
+
+        mxAssert((begin_func==NULL) == (finish_func==NULL), "INTERNAL ERROR");
+
+        if (begin_func)
+        {
+            newmenu = begin_func(cbfunc);
+
+            if (newmenu <= 0)
+                GLC_MEX_ERROR_(GL_TRUE, "couldn't create menu (begin_func returned <=0)");
+        }
+
+        for (i=0; i<numentries; i++)
+        {
+            const mxArray *label_or_submenu = mxGetCell(entries, i);
+            int leafp;
+
+            if (mxIsStruct(label_or_submenu))
+            {
+                /* recurse! */
+                if (walk_menu_struct(label_or_submenu, numleaves, begin_func,
+                                     perentry_func, finish_func, 1))
+                    return GL_TRUE;
+
+                leafp = 0;
+            }
+            else
+            {
+                if (verifyparam_ret(label_or_submenu, "menu.entries(i)", VP_VECTOR|VP_CHAR))
+                    return GL_TRUE;
+
+                leafp = 1;
+                (*numleaves)++;
+            }
+
+            if (perentry_func)
+                perentry_func(label_or_submenu, leafp, leafp ? *numleaves : newmenu);
+        }
+
+        if (finish_func)
+            finish_func(newmenu);
+    }
+
+    /* Everything is OK, we can use that menu */
+    return GL_FALSE;
+}
+
+
+/******************** THE MAIN MEX FUNCTION ********************/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     int32_t cmd;
@@ -805,35 +941,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             tmpar = mxGetField(NEWWIN_IN_OPTSTRUCT, 0, "menus");
             if (tmpar)
             {
-                const mxArray *menus_field;
-                int32_t numentries;
+                int32_t numleaves=0;
 
-                /* TODO: vector... */
-                verifyparam(tmpar, "GLCALL: newwindow: OPTSTRUCT.menus", VP_SCALAR|VP_STRUCT);
+                if (walk_menu_struct(tmpar, &numleaves, NULL, NULL, NULL, 0))
+                    return;
 
-                menus_field = mxGetField(tmpar, 0, "cbfunc");
-                verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.cbfunc", VP_VECTOR|VP_CHAR);
-
-                menus_field = mxGetField(tmpar, 0, "entries");
-                verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries", VP_VECTOR|VP_CELL);
-
-                numentries = mxGetNumberOfElements(menus_field);
-                if (numentries >= 1)
-                {
-                    const mxArray *entries = menus_field;
-
-                    for (i=0; i<numentries; i++)
-                    {
-                        const mxArray *label = mxGetCell(entries, i);
-                        verifyparam(label, "GLCALL: newwindow: OPTSTRUCT.menus.entries(i)",
-                                    VP_VECTOR|VP_CHAR);
-
-                        /* TODO: recursion (menu cascading)... */
-                    }
-
-                    /* Everything is OK, we can use that menu */
-                    menus = tmpar;
-                }
+                /* Everything is OK, we can use that menu */
+                menus = tmpar;
             }
         }
 
@@ -928,9 +1042,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (menus)
         {
-            mxArray *entries;
-            int32_t k, numentries;
-            int gMenu;
+            int32_t numleaves=0;
 
             /* Save off the 'menus' struct passed from above.
              * XXX: is this problematic with aliasing, i.e. if the user passes the same
@@ -943,24 +1055,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             /* XXX: currently, neither the mxArrays nor the GLUT menus are
              * freed anywhere. */
 
-            gMenu = glutCreateMenu(temp_menu_callback);
-            if (gMenu <= 0)
-                ourErrMsgTxt("GLCALL: newwindow: couldn't create menu");
-
-            entries = mxGetField(menus, 0, "entries");
-
-            numentries = mxGetNumberOfElements(entries);
-            for (k=0; k<numentries; k++)
-            {
-                mxArray *labelar = mxGetCell(entries, k);
-                char *label = mxArrayToString(labelar);
-
-                if (!label)
-                    ourErrMsgTxt("GLCALL: newwindow: Out of memory in menu creation!");
-
-                glutAddMenuEntry(label, k);
-                mxFree(label);
-            }
+            if (walk_menu_struct(menus, &numleaves, &createmenu_begin,
+                                 &createmenu_perentry, &createmenu_end, 0))
+                return;
 
             /* TEMP */
             glutAttachMenu(GLUT_MIDDLE_BUTTON);
