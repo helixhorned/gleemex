@@ -814,23 +814,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.cbfunc", VP_VECTOR|VP_CHAR);
 
                 menus_field = mxGetField(tmpar, 0, "entries");
-                verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries", VP_VECTOR|VP_STRUCT);
+                verifyparam(menus_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries", VP_VECTOR|VP_CELL);
 
                 numentries = mxGetNumberOfElements(menus_field);
                 if (numentries >= 1)
                 {
-                    const mxArray *entries = menus_field, *entries_field;
+                    const mxArray *entries = menus_field;
 
                     for (i=0; i<numentries; i++)
                     {
-                        entries_field = mxGetField(entries, i, "label");
-                        verifyparam(entries_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries(i).label",
+                        const mxArray *label = mxGetCell(entries, i);
+                        verifyparam(label, "GLCALL: newwindow: OPTSTRUCT.menus.entries(i)",
                                     VP_VECTOR|VP_CHAR);
 
                         /* TODO: recursion (menu cascading)... */
-                        entries_field = mxGetField(entries, i, "cbval");
-                        verifyparam(entries_field, "GLCALL: newwindow: OPTSTRUCT.menus.entries(i).cbval",
-                                    VP_SCALAR|VP_INT32);
                     }
 
                     /* Everything is OK, we can use that menu */
@@ -954,16 +951,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             numentries = mxGetNumberOfElements(entries);
             for (k=0; k<numentries; k++)
             {
-                mxArray *labelar = mxGetField(entries, k, "label");
-                mxArray *cbvalar = mxGetField(entries, k, "cbval");
-
+                mxArray *labelar = mxGetCell(entries, k);
                 char *label = mxArrayToString(labelar);
-                int32_t cbval = *(int32_t *)mxGetData(cbvalar);
 
                 if (!label)
                     ourErrMsgTxt("GLCALL: newwindow: Out of memory in menu creation!");
 
-                glutAddMenuEntry(label, cbval);
+                glutAddMenuEntry(label, k);
                 mxFree(label);
             }
 

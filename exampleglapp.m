@@ -59,8 +59,9 @@ function exampleglapp(vertposns)
     t = linspace(0,2*pi, 17);
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
-    entries = struct('label',{'Qwe', 'Asd', 'Foobar'}, 'cbval',{int32(1),int32(2),int32(3)});
-    menus = struct('cbfunc','CURRENTLY_IGNORED', 'entries',entries);
+    submenu = struct('cbfunc','', 'entries',{{'Sub1','Sub2'}});
+    menus = struct('cbfunc','CURRENTLY_IGNORED');
+    menus.entries = { 'Qwe', 'Asd', 'Gee' };
 
     % init!
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', ...
