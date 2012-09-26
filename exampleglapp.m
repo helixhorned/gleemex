@@ -60,11 +60,11 @@ function exampleglapp(vertposns)
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
     % menu test
-    subsubmenu = struct('label','Very deep', 'cbfunc','UNUSED2', ...
+    subsubmenu = struct('label','Very deep', 'cbfunc','ex_menucb', ...
                         'entries',{{'Hello', 'world'}});
-    submenu = struct('label','SubX ------> ', 'cbfunc','UNUSED', ...
+    submenu = struct('label','SubX ------> ', 'cbfunc','ex_menucb', ...
                      'entries',{{'Sub1 qweeee', subsubmenu, 'Sub2 blaaaaaarg'}});
-    menus = struct('cbfunc','CURRENTLY_IGNORED');
+    menus = struct('cbfunc','ex_menucb');
     menus.entries = { 'Qwe Lupus', 'Asd Gallus', submenu, 'Gee Sus' };
 
     % init!
@@ -83,6 +83,10 @@ function exampleglapp(vertposns)
     glcall(glc.entermainloop);
 end
 
+
+function ex_menucb(label)
+    fprintf('Clicked menu entry %s.\n', label);
+end
 
 function ex_reshape(w, h)
     global GL glc glex

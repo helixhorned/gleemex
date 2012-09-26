@@ -473,7 +473,7 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
 
     switch (cid)
     {
-    case mxLOGICAL_CLASS:  /* dubious... does anyone say anything about how logicals are stored? */
+    case mxLOGICAL_CLASS:  /* see mxAssert() about sizeof(mxLogical) */
         *(int8_t *)mxGetData(tmpar) = !!*(int8_t *)ptr;
         break;
     /* case mxCHAR_CLASS: */
@@ -527,6 +527,7 @@ static void cleanup_after_mainloop(void)
     memset(win, 0, sizeof(win));
 }
 
+/* GLUT->MATLAB callback functionality */
 #define MAX_CB_ARGS 5  /* REMEMBER */
 static int check_callback(int CallbackID)
 {
@@ -535,26 +536,20 @@ static int check_callback(int CallbackID)
          callback_funcname[curourwinidx][CallbackID][0]!='\0');
 }
 
-static int call_mfile_callback(int callbackid, int numargs, const int *args)
+static int do_callback(int numargs, mxArray **mxargs, const char *cbfuncname)
 {
-    int err, i;
-    mxArray *mxargs[MAX_CB_ARGS];
-
-    mxAssert(numargs <= MAX_CB_ARGS, "numargs > MAX_CB_ARGS, update MAX_CB_ARGS macro!");
-
-    for (i=0; i<numargs; i++)
-        mxargs[i] = mxCreateDoubleScalar((double)args[i]);
+    int err;
 
 #ifdef HAVE_OCTAVE
     mexSetTrapFlag(1);
-    err = mexCallMATLAB(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
+    err = mexCallMATLAB(0,NULL, numargs,mxargs, cbfuncname);
     if (err)
         glutLeaveMainLoop();
 #else
     {
         mxArray *ex;
 
-        ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, callback_funcname[curourwinidx][callbackid]);
+        ex = mexCallMATLABWithTrap(0,NULL, numargs,mxargs, cbfuncname);
         err = (ex != NULL);
 
         if (err)
@@ -570,7 +565,7 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     {
         static char buf[128];
         snprintf(buf, sizeof(buf), "left main loop: error in callback %s: %d",
-                 callback_funcname[curourwinidx][callbackid], err);
+                 cbfuncname, err);
 
         ourErrMsgTxt_(buf, err);
     }
@@ -579,6 +574,20 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     return err;
 }
 
+static int call_mfile_callback(int callbackid, int numargs, const int *args)
+{
+    int i;
+    mxArray *mxargs[MAX_CB_ARGS];
+
+    mxAssert(numargs <= MAX_CB_ARGS, "numargs > MAX_CB_ARGS, update MAX_CB_ARGS macro!");
+
+    for (i=0; i<numargs; i++)
+        mxargs[i] = mxCreateDoubleScalar((double)args[i]);
+
+    return do_callback(numargs, mxargs, callback_funcname[curourwinidx][callbackid]);
+}
+
+/* callbacks for specific events */
 static int getModifiers()
 {
     return glutGetModifiers();
@@ -710,16 +719,68 @@ static void reshape_cb(int w, int h)
 #define GLC_MEX_ERROR(Text, ...) GLC_MEX_ERROR_((void)0, Text, ## __VA_ARGS__)
 
 /********** MENUS **********/
-static void temp_menu_callback(int cbval)
+static GLenum walk_menu_struct(const mxArray *, int32_t *,
+                               int (const mxArray *),
+                               GLenum (const mxArray *, int32_t, int32_t),
+                               void (int),
+                               int32_t);
+
+/* calling back from GLUT to the M-function */
+static const mxArray *tmp_cbfname_ar, *menulabelar;
+static char menucbfname[MAXCBNAMELEN+1];
+
+static int callmenu_begin(const mxArray *cbfunc)
 {
-    (void)cbval;
-    /* noop for now */
+    tmp_cbfname_ar = cbfunc;
+    return 1;
 }
 
+static GLenum callmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k)
+{
+    if (leafp && k==0)
+    {
+        /* found matching menu entry */
+        mxGetString(tmp_cbfname_ar, menucbfname, sizeof(menucbfname));
+        menulabelar = labelar;  /* label comes from a persistent variable */
+    }
+
+    return GL_FALSE;
+}
+
+static void menu_callback(int cbval)
+{
+    int32_t glutwidx = glutGetWindow();
+
+    if (glutwidx > 0)
+    {
+        const mxArray *menu;
+        int32_t ourwidx = ourwinidx[glutwidx];
+
+        mxAssert(ourwidx >= 0, "menu callback: ourwinidx[glutwidx] < 0!");
+
+        menu = win[ourwidx].menus;
+        mxAssert(menu, "menu callback: win[ourwidx].menus == NULL!");
+
+        cbval = -cbval;
+        menulabelar = NULL;
+
+        if (walk_menu_struct(menu, &cbval, &callmenu_begin,
+                             &callmenu_perentry, NULL, 0))
+            return;
+
+        if (menulabelar)
+        {
+            /* call the menu callback with the menu label as arg */
+            do_callback(1, (mxArray **)&menulabelar, menucbfname);
+        }
+    }
+}
+
+/* menu creation */
 static int createmenu_begin(const mxArray *cbfunc)
 {
     (void)cbfunc;
-    return glutCreateMenu(temp_menu_callback);
+    return glutCreateMenu(menu_callback);
 }
 
 static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k)
@@ -759,11 +820,6 @@ static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t
     return GL_FALSE;
 }
 
-/* XXX: currently redundant, but provided for symmetry. */
-static void createmenu_end(int uppermenu)
-{
-    glutSetMenu(uppermenu);
-}
 
 /* menu struct walker */
 static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
@@ -802,8 +858,6 @@ static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
 
         if (numentries==0)
             GLC_MEX_ERROR_(GL_TRUE, "menu.entries must not be empty");
-
-        mxAssert((begin_func==NULL) == (finish_func==NULL), "INTERNAL ERROR");
 
         if (begin_func)
         {
@@ -1049,14 +1103,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
              * 'menus' mxArray to two different windows? */
             if (win[i].menus)
                 mxDestroyArray(win[i].menus);
-            win[i].menus = menus;
-            mexMakeArrayPersistent(menus);
+
+            /* We must not make the arg mxArray persistent (e.g. on Octave: crash) */
+            win[i].menus = mxDuplicateArray(menus);
+            mexMakeArrayPersistent(win[i].menus);
 
             /* XXX: currently, neither the mxArrays nor the GLUT menus are
-             * freed anywhere. */
+             * freed anywhere. (For the mxArrays: except above) */
 
             if (walk_menu_struct(menus, &numleaves, &createmenu_begin,
-                                 &createmenu_perentry, &createmenu_end, 0))
+                                 &createmenu_perentry, NULL, 0))
                 return;
 
             /* TEMP */
