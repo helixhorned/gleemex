@@ -719,11 +719,86 @@ static void reshape_cb(int w, int h)
 #define GLC_MEX_ERROR(Text, ...) GLC_MEX_ERROR_((void)0, Text, ## __VA_ARGS__)
 
 /********** MENUS **********/
-static GLenum walk_menu_struct(const mxArray *, int32_t *,
-                               int (const mxArray *),
-                               GLenum (const mxArray *, int32_t, int32_t),
-                               void (int),
-                               int32_t);
+/* menu struct walker */
+static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
+                               int (begin_func(const mxArray *cbfunc)),
+                               GLenum (perentry_func(const mxArray *labelar, int32_t leafp, int32_t k)),
+                               void (finish_func(int uppermenu)),
+                               int32_t check_sublabel)
+{
+    const mxArray *cbfunc, *entries;
+
+    if (verifyparam_ret(menuar, "menu", VP_SCALAR|VP_STRUCT))
+        return GL_TRUE;
+
+    if (check_sublabel)
+    {
+        /* SUBMENU_LABEL */
+        const mxArray *sublabel = mxGetField(menuar, 0, "label");
+
+        /* er, shoehorn the label of the submenu into the submenu's struct... */
+        if (verifyparam_ret(sublabel, "menu.entries(i).label, for entries(i) a submenu,",
+                            VP_VECTOR|VP_CHAR))
+            return GL_TRUE;
+    }
+
+    cbfunc = mxGetField(menuar, 0, "cbfunc");
+    if (verifyparam_ret(cbfunc, "menu.cbfunc", VP_VECTOR|VP_CHAR))
+        return GL_TRUE;
+
+    entries = mxGetField(menuar, 0, "entries");
+    if (verifyparam_ret(entries, "menu.entries", VP_VECTOR|VP_CELL))
+        return GL_TRUE;
+
+    {
+        const int32_t numentries = mxGetNumberOfElements(entries);
+        int32_t i, newmenu=0;
+
+        if (numentries==0)
+            GLC_MEX_ERROR_(GL_TRUE, "menu.entries must not be empty");
+
+        if (begin_func)
+        {
+            newmenu = begin_func(cbfunc);
+
+            if (newmenu <= 0)
+                GLC_MEX_ERROR_(GL_TRUE, "couldn't create menu (begin_func returned <=0)");
+        }
+
+        for (i=0; i<numentries; i++)
+        {
+            const mxArray *label_or_submenu = mxGetCell(entries, i);
+            int leafp;
+
+            if (mxIsStruct(label_or_submenu))
+            {
+                /* recurse! */
+                if (walk_menu_struct(label_or_submenu, numleaves, begin_func,
+                                     perentry_func, finish_func, 1))
+                    return GL_TRUE;
+
+                leafp = 0;
+            }
+            else
+            {
+                if (verifyparam_ret(label_or_submenu, "menu.entries(i)", VP_VECTOR|VP_CHAR))
+                    return GL_TRUE;
+
+                leafp = 1;
+                (*numleaves)++;
+            }
+
+            if (perentry_func)
+                perentry_func(label_or_submenu, leafp, leafp ? *numleaves : newmenu);
+        }
+
+        if (finish_func)
+            finish_func(newmenu);
+    }
+
+    /* Everything is OK, we can use that menu */
+    return GL_FALSE;
+}
 
 /* calling back from GLUT to the M-function */
 static const mxArray *tmp_cbfname_ar, *menulabelar;
@@ -817,88 +892,6 @@ static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t
 
     mxFree(label);
 
-    return GL_FALSE;
-}
-
-
-/* menu struct walker */
-static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
-                               int (begin_func(const mxArray *cbfunc)),
-                               GLenum (perentry_func(const mxArray *labelar, int32_t leafp, int32_t k)),
-                               void (finish_func(int uppermenu)),
-                               int32_t check_sublabel)
-{
-    const mxArray *cbfunc, *entries;
-
-    if (verifyparam_ret(menuar, "menu", VP_SCALAR|VP_STRUCT))
-        return GL_TRUE;
-
-    if (check_sublabel)
-    {
-        /* SUBMENU_LABEL */
-        const mxArray *sublabel = mxGetField(menuar, 0, "label");
-
-        /* er, shoehorn the label of the submenu into the submenu's struct... */
-        if (verifyparam_ret(sublabel, "menu.entries(i).label, for entries(i) a submenu,",
-                            VP_VECTOR|VP_CHAR))
-            return GL_TRUE;
-    }
-
-    cbfunc = mxGetField(menuar, 0, "cbfunc");
-    if (verifyparam_ret(cbfunc, "menu.cbfunc", VP_VECTOR|VP_CHAR))
-        return GL_TRUE;
-
-    entries = mxGetField(menuar, 0, "entries");
-    if (verifyparam_ret(entries, "menu.entries", VP_VECTOR|VP_CELL))
-        return GL_TRUE;
-
-    {
-        const int32_t numentries = mxGetNumberOfElements(entries);
-        int32_t i, newmenu=0;
-
-        if (numentries==0)
-            GLC_MEX_ERROR_(GL_TRUE, "menu.entries must not be empty");
-
-        if (begin_func)
-        {
-            newmenu = begin_func(cbfunc);
-
-            if (newmenu <= 0)
-                GLC_MEX_ERROR_(GL_TRUE, "couldn't create menu (begin_func returned <=0)");
-        }
-
-        for (i=0; i<numentries; i++)
-        {
-            const mxArray *label_or_submenu = mxGetCell(entries, i);
-            int leafp;
-
-            if (mxIsStruct(label_or_submenu))
-            {
-                /* recurse! */
-                if (walk_menu_struct(label_or_submenu, numleaves, begin_func,
-                                     perentry_func, finish_func, 1))
-                    return GL_TRUE;
-
-                leafp = 0;
-            }
-            else
-            {
-                if (verifyparam_ret(label_or_submenu, "menu.entries(i)", VP_VECTOR|VP_CHAR))
-                    return GL_TRUE;
-
-                leafp = 1;
-                (*numleaves)++;
-            }
-
-            if (perentry_func)
-                perentry_func(label_or_submenu, leafp, leafp ? *numleaves : newmenu);
-        }
-
-        if (finish_func)
-            finish_func(newmenu);
-    }
-
-    /* Everything is OK, we can use that menu */
     return GL_FALSE;
 }
 
