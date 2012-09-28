@@ -60,9 +60,9 @@ function exampleglapp(vertposns)
     glex.circ17 = [0 cos(t(1:end))/2; 0 sin(t(1:end))/2];
 
     % menu test
-    subsubmenu = struct('label','Very deep', 'cbfunc','ex_menucb', ...
+    subsubmenu = struct('label','Very deep', 'cbfunc','ex_menucb3', ...
                         'entries',{{'Hello', 'world'}});
-    submenu = struct('label','SubX ------> ', 'cbfunc','ex_menucb', ...
+    submenu = struct('label','SubX ------> ', ...
                      'entries',{{'Sub1 qweeee', subsubmenu, 'Sub2 blaaaaaarg'}});
     menus = struct('cbfunc','ex_menucb');
     menus.entries = { 'Qwe Lupus', 'Asd Gallus', submenu, 'Gee Sus' };
@@ -85,7 +85,13 @@ end
 
 
 function ex_menucb(label)
+    % for root menu and submenu
     fprintf('Clicked menu entry %s.\n', label);
+end
+
+function ex_menucb3(label)
+    % for subsubmenu
+    fprintf('3: Clicked menu entry %s.\n', label);
 end
 
 function ex_reshape(w, h)

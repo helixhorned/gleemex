@@ -721,17 +721,18 @@ static void reshape_cb(int w, int h)
 /********** MENUS **********/
 /* menu struct walker */
 static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
-                               int (begin_func(const mxArray *cbfunc)),
-                               GLenum (perentry_func(const mxArray *labelar, int32_t leafp, int32_t k)),
-                               void (finish_func(int uppermenu)),
-                               int32_t check_sublabel)
+                               int (begin_func(const mxArray *cbf)),
+                               GLenum (perentry_func(const mxArray *labelar, int32_t leafp,
+                                                     int32_t k, const mxArray *cbf)),
+                               int32_t nesting_depth,
+                               const mxArray *cbfunc)
 {
-    const mxArray *cbfunc, *entries;
+    const mxArray *entries;
 
     if (verifyparam_ret(menuar, "menu", VP_SCALAR|VP_STRUCT))
         return GL_TRUE;
 
-    if (check_sublabel)
+    if (nesting_depth > 0)
     {
         /* SUBMENU_LABEL */
         const mxArray *sublabel = mxGetField(menuar, 0, "label");
@@ -742,9 +743,21 @@ static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
             return GL_TRUE;
     }
 
-    cbfunc = mxGetField(menuar, 0, "cbfunc");
-    if (verifyparam_ret(cbfunc, "menu.cbfunc", VP_VECTOR|VP_CHAR))
-        return GL_TRUE;
+    {
+        const mxArray *tmpcbfunc = mxGetField(menuar, 0, "cbfunc");
+
+        /* the menu root must have a 'cbfunc' field, the children may have one */
+        if (nesting_depth == 0 || tmpcbfunc!=NULL)
+        {
+            if (verifyparam_ret(tmpcbfunc, "menu.cbfunc", VP_VECTOR|VP_CHAR))
+                return GL_TRUE;
+
+            /* This walk_menu_struct() arg will hold the callback function name
+             * at the deepest possible level, and always be non-NULL because of
+             * the requirement that the root menu must have a 'cbfunc' field. */
+            cbfunc = tmpcbfunc;
+        }
+    }
 
     entries = mxGetField(menuar, 0, "entries");
     if (verifyparam_ret(entries, "menu.entries", VP_VECTOR|VP_CELL))
@@ -774,7 +787,7 @@ static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
             {
                 /* recurse! */
                 if (walk_menu_struct(label_or_submenu, numleaves, begin_func,
-                                     perentry_func, finish_func, 1))
+                                     perentry_func, nesting_depth+1, cbfunc))
                     return GL_TRUE;
 
                 leafp = 0;
@@ -789,11 +802,8 @@ static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
             }
 
             if (perentry_func)
-                perentry_func(label_or_submenu, leafp, leafp ? *numleaves : newmenu);
+                perentry_func(label_or_submenu, leafp, leafp ? *numleaves : newmenu, cbfunc);
         }
-
-        if (finish_func)
-            finish_func(newmenu);
     }
 
     /* Everything is OK, we can use that menu */
@@ -801,22 +811,19 @@ static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
 }
 
 /* calling back from GLUT to the M-function */
-static const mxArray *tmp_cbfname_ar, *menulabelar;
+static const mxArray *menulabelar;
 static char menucbfname[MAXCBNAMELEN+1];
 
-static int callmenu_begin(const mxArray *cbfunc)
+static GLenum callmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k, const mxArray *cbfunc)
 {
-    tmp_cbfname_ar = cbfunc;
-    return 1;
-}
-
-static GLenum callmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k)
-{
-    if (leafp && k==0)
+    if (leafp)
     {
-        /* found matching menu entry */
-        mxGetString(tmp_cbfname_ar, menucbfname, sizeof(menucbfname));
-        menulabelar = labelar;  /* label comes from a persistent variable */
+        if (k == 0)
+        {
+            /* found matching menu entry */
+            mxGetString(cbfunc, menucbfname, sizeof(menucbfname));
+            menulabelar = labelar;  /* label comes from a persistent variable */
+        }
     }
 
     return GL_FALSE;
@@ -839,8 +846,7 @@ static void menu_callback(int cbval)
         cbval = -cbval;
         menulabelar = NULL;
 
-        if (walk_menu_struct(menu, &cbval, &callmenu_begin,
-                             &callmenu_perentry, NULL, 0))
+        if (walk_menu_struct(menu, &cbval, NULL, &callmenu_perentry, 0, NULL))
             return;
 
         if (menulabelar)
@@ -858,9 +864,10 @@ static int createmenu_begin(const mxArray *cbfunc)
     return glutCreateMenu(menu_callback);
 }
 
-static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k)
+static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k, const mxArray *cbfunc)
 {
     char *label;
+    (void)cbfunc;
 
     if (leafp)
     {
@@ -990,7 +997,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             {
                 int32_t numleaves=0;
 
-                if (walk_menu_struct(tmpar, &numleaves, NULL, NULL, NULL, 0))
+                if (walk_menu_struct(tmpar, &numleaves, NULL, NULL, 0, NULL))
                     return;
 
                 /* Everything is OK, we can use that menu */
@@ -1105,7 +1112,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
              * freed anywhere. (For the mxArrays: except above) */
 
             if (walk_menu_struct(menus, &numleaves, &createmenu_begin,
-                                 &createmenu_perentry, NULL, 0))
+                                 &createmenu_perentry, 0, NULL))
                 return;
 
             /* TEMP */
