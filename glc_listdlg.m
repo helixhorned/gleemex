@@ -94,7 +94,7 @@ function [sel,ok]=glc_listdlg(varargin)
             %% non-standard
           case 'finish_cb',
             assert((isvector(val) && ischar(val)) || isa(val, 'function_handle'), ...
-                   'Finish_Cb must be wither a srting or a function handle @f(ok, sel)');
+                   'Finish_Cb must be either a string or a function handle @f(ok, sel)');
             finish_cb = val;
           case 'subwindow',
             assert(isscalar(val) && islogical(val));
