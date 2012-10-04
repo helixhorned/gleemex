@@ -85,10 +85,10 @@ function [sel,ok]=glc_listdlg(varargin)
                 promptstring = val;
             end
           case 'okstring',
-            assert(isvector(val) && ischar(val), 'OKString value must be a char vector');
+            assert(ischar(val) && (isvector(val) || isempty(val)), 'OKString value must be a string');
             okstr = val;
           case 'cancelstring',
-            assert(isvector(val) && ischar(val), 'CancelString value must be a char vector');
+            assert(ischar(val) && (isvector(val) || isempty(val)), 'CancelString value must be a string');
             cancelstr = val;
 
             %% non-standard
@@ -252,12 +252,16 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         end
 
       case 13,  % enter
-        if (any(glc_listdlg_s(winid).selected))
-            glc_listdlg_s(winid).done = 1;
+        if (~isempty(glc_listdlg_s(winid).okstr))
+            if (any(glc_listdlg_s(winid).selected))
+                glc_listdlg_s(winid).done = 1;
+            end
         end
 
       case 27,  % escape
-        glc_listdlg_s(winid).done = 2;
+        if (~isempty(glc_listdlg_s(winid).cancelstr))
+            glc_listdlg_s(winid).done = 2;
+        end
 
       % up/down: move "background" or selection (with CTRL)
       case GL.KEY_UP,
@@ -317,15 +321,26 @@ function glc_listdlg_display()
 
     numvals = numel(glc_listdlg_s(winid).liststring);
 
-    glc_drawbutton([20 20; 60 24].', glc_listdlg_s(winid).okstr, glc_listdlg_s(winid).mxy, false);
-    glc_drawbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).cancelstr, glc_listdlg_s(winid).mxy, false);
+    haveokstr = ~isempty(glc_listdlg_s(winid).okstr);
+    havecancelstr = ~isempty(glc_listdlg_s(winid).cancelstr);
+
+    if (haveokstr)
+        glc_drawbutton([20 20; 60 24].', glc_listdlg_s(winid).okstr, glc_listdlg_s(winid).mxy, false);
+    end
+    if (havecancelstr)
+        glc_drawbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).cancelstr, glc_listdlg_s(winid).mxy, false);
+    end
 
     if (~isempty(glc_listdlg_s(winid).clicked))
         glc_listdlg_s(1).tmpwinid = winid;
-        glc_callbutton([20 20; 60 24].', glc_listdlg_s(winid).mxy, ...
-                       'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=1;');
-        glc_callbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).mxy, ...
-                       'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=2;');
+        if (haveokstr)
+            glc_callbutton([20 20; 60 24].', glc_listdlg_s(winid).mxy, ...
+                           'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=1;');
+        end
+        if (havecancelstr)
+            glc_callbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).mxy, ...
+                           'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=2;');
+        end
     end
 
     bbox = glc_listdlg_s(winid).bbox;
