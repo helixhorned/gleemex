@@ -6,7 +6,7 @@
 %  CMAPTEXNAME - the color map 2D texture name (ID)
 %  NUMTICKS - the number of tick marks, divided between min and max
 %             bound. Default: 7
-%  TEXTHEIGHT - the text height passed to glc.rendertext.  Default: 10
+%  TEXTHEIGHT - the text height passed to glc.text.  Default: 10
 function glc_draw_colorbar(rect, bounds, label, cmaptexname, numticks, textheight)
     global glc GL
 
@@ -31,7 +31,7 @@ function glc_draw_colorbar(rect, bounds, label, cmaptexname, numticks, textheigh
         frac = (i/(numticks-1));
         y = rect(2) + frac*(rect(4)-rect(2)); % - textheight/2;
 
-        glcall(glc.rendertext, [rect(3)+8, y], textheight, ...
+        glcall(glc.text, [rect(3)+8, y], textheight, ...
                sprintf('%.02f', bounds(1)+frac*(bounds(2)-bounds(1))), [-1 0]);
     end
 end

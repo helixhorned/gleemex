@@ -225,14 +225,14 @@ function ex_display()
     end
 %}
 
-    glcall(glc.rendertext, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+', [-1 -1], struct('colors',[0 0 1]));
+    glcall(glc.text, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+', [-1 -1], struct('colors',[0 0 1]));
 
     for ang=0:30:180
         glcall(glc.push, GL.MODELVIEW);
         %    glcall(glc.mulmatrix, GL.MODELVIEW, [90, 0 0 1]);
         glcall(glc.mulmatrix, GL.MODELVIEW, [560 310 0]);  % translate text origin (lower left) to screen coords
         glcall(glc.mulmatrix, GL.MODELVIEW, [ang, 0 0 1]);  % rotate wrt origin
-        glcall(glc.rendertext, [20 0], 8+8*ang/180, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
+        glcall(glc.text, [20 0], 8+8*ang/180, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
         glcall(glc.pop, GL.MODELVIEW);
     end
 
@@ -249,8 +249,8 @@ function ex_display()
     glex.randdat = [glex.randdat(2:30) randn(1)];
 
     glc_axes_finish([0 0 0]);  % }}}
-    glcall(glc.rendertext, tmpxywh(1:2)+[2 tmpxywh(4)-16], 14, 'OCz', [-1 -1], struct('xgap',1));
-    glcall(glc.rendertext, tmpxywh(1:2)+[2 tmpxywh(4)-32], 14, 'A monospaced text', ...
+    glcall(glc.text, tmpxywh(1:2)+[2 tmpxywh(4)-16], 14, 'OCz', [-1 -1], struct('xgap',1));
+    glcall(glc.text, tmpxywh(1:2)+[2 tmpxywh(4)-32], 14, 'A monospaced text', ...
            [-1 -1], struct('mono',true, 'xgap',0));
 
     % torture test 1

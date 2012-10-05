@@ -68,12 +68,12 @@
 #define NEWTEXTURE_IN_OPTS (prhs[3-nlhs])
 #define NEWTEXTURE_OUT_TEXNAME (plhs[0])
 
-/* rendertext */
-#define RENDERTEXT_IN_POS (prhs[1])
-#define RENDERTEXT_IN_HEIGHT (prhs[2])
-#define RENDERTEXT_IN_TEXT (prhs[3])
-#define RENDERTEXT_IN_XYALIGN (prhs[4])
-#define RENDERTEXT_IN_OPTS (prhs[5])
+/* text */
+#define TEXT_IN_POS (prhs[1])
+#define TEXT_IN_HEIGHT (prhs[2])
+#define TEXT_IN_TEXT (prhs[3])
+#define TEXT_IN_XYALIGN (prhs[4])
+#define TEXT_IN_OPTS (prhs[5])
 
 /* toggle */
 #define TOGGLE_IN_KV (prhs[1])
@@ -169,7 +169,7 @@ enum glcalls_
     GLC_POSTREDISPLAY,
     GLC_GETERRSTR,
     GLC_NEWTEXTURE,
-    GLC_RENDERTEXT,
+    GLC_TEXT,
     GLC_TOGGLE,
     GLC_SCISSOR,
     GLC_DELTEXTURES,
@@ -201,7 +201,7 @@ const char *glcall_names[] =
     "postredisplay",
     "geterrstr",
     "newtexture",
-    "rendertext",
+    "text",
     "toggle",
     "scissor",
     "deltextures",
@@ -1770,7 +1770,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 #define SPCWIDTH (104.762)  /* The width of the space and all characters for the monospaced font. */
 #define FONTHEIGHT (119.05)
 
-    case GLC_RENDERTEXT:
+    case GLC_TEXT:
     {
         /* TODO:
          *  Make space and TAB have other widths than GLUT default (space is too wide,
@@ -1790,17 +1790,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         void *font = GLUT_STROKE_ROMAN;
 
         if (nlhs != 0 || !(nrhs >= 4 && nrhs <= 6))
-            ourErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text [, xyalign [, opts]])");
+            ourErrMsgTxt("Usage: GLCALL(glc.text, [x y [z]], height, text [, xyalign [, opts]])");
 
-        verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE);
+        verifyparam(TEXT_IN_POS, "GLC: text: POS", VP_VECTOR|VP_DOUBLE);
         /* Not using VP_VECLEN_SHIFT above because we need vector length later. */
-        vlen = mxGetNumberOfElements(RENDERTEXT_IN_POS);
+        vlen = mxGetNumberOfElements(TEXT_IN_POS);
         if (vlen != 2 && vlen != 3)
-            ourErrMsgTxt("GLC: rendertext: POS must have length 2 or 3");
-        pos = mxGetPr(RENDERTEXT_IN_POS);
+            ourErrMsgTxt("GLC: text: POS must have length 2 or 3");
+        pos = mxGetPr(TEXT_IN_POS);
 
-        verifyparam(RENDERTEXT_IN_HEIGHT, "GLC: rendertext: HEIGHT", VP_SCALAR|VP_DOUBLE);
-        height = *mxGetPr(RENDERTEXT_IN_HEIGHT);
+        verifyparam(TEXT_IN_HEIGHT, "GLC: text: HEIGHT", VP_SCALAR|VP_DOUBLE);
+        height = *mxGetPr(TEXT_IN_HEIGHT);
 
         if (nrhs >= 5)
         {
@@ -1809,9 +1809,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             /* xalign: -1: align on left (default), 0: align centered, 1: align on right
              * yalign: -1: align on bottom (default), 0: align centered, 1: align on top
              * mapped to 0.0, 0.5 and 1.0 in the internal representation */
-            verifyparam(RENDERTEXT_IN_XYALIGN, "GLC: rendertext: XYALIGN",
+            verifyparam(TEXT_IN_XYALIGN, "GLC: text: XYALIGN",
                         VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
-            tmpxyalign = mxGetData(RENDERTEXT_IN_XYALIGN);
+            tmpxyalign = mxGetData(TEXT_IN_XYALIGN);
             if (tmpxyalign[0] >= 0.0)
                 xyalign[0] = 0.5 + 0.5*(tmpxyalign[0] > 0.0);
             if (tmpxyalign[1] >= 0.0)
@@ -1822,36 +1822,36 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             mxArray *tmpar;
 
-            verifyparam(RENDERTEXT_IN_OPTS, "GLC: rendertext: OPTS", VP_SCALAR|VP_STRUCT);
+            verifyparam(TEXT_IN_OPTS, "GLC: text: OPTS", VP_SCALAR|VP_STRUCT);
 
-            tmpar = mxGetField(RENDERTEXT_IN_OPTS, 0, "colors");
+            tmpar = mxGetField(TEXT_IN_OPTS, 0, "colors");
             if (tmpar)
             {
-                verifyparam(tmpar, "GLC: rendertext: OPTS.colors", VP_VECTOR|VP_DOUBLE|(3<<VP_VECLEN_SHIFT));
+                verifyparam(tmpar, "GLC: text: OPTS.colors", VP_VECTOR|VP_DOUBLE|(3<<VP_VECLEN_SHIFT));
                 memcpy(color, mxGetData(tmpar), 3*sizeof(double));
             }
 
-            tmpar = mxGetField(RENDERTEXT_IN_OPTS, 0, "xgap");
+            tmpar = mxGetField(TEXT_IN_OPTS, 0, "xgap");
             if (tmpar)
             {
-                verifyparam(tmpar, "GLC: rendertext: OPTS.colors", VP_SCALAR|VP_DOUBLE);
+                verifyparam(tmpar, "GLC: text: OPTS.colors", VP_SCALAR|VP_DOUBLE);
                 xspacing = *(double *)mxGetData(tmpar) * SPCWIDTH;
             }
 
-            tmpar = mxGetField(RENDERTEXT_IN_OPTS, 0, "mono");
+            tmpar = mxGetField(TEXT_IN_OPTS, 0, "mono");
             if (tmpar)
             {
-                verifyparam(tmpar, "GLC: rendertext: OPTS.colors", VP_SCALAR|VP_LOGICAL);
+                verifyparam(tmpar, "GLC: text: OPTS.colors", VP_SCALAR|VP_LOGICAL);
                 if (*(int8_t *)mxGetData(tmpar))
                     font = GLUT_STROKE_MONO_ROMAN;
             }
         }
 
-        verifyparam(RENDERTEXT_IN_TEXT, "GLC: rendertext: TEXT", VP_VECTOR|VP_CHAR);
-        text = mxArrayToString(RENDERTEXT_IN_TEXT);
+        verifyparam(TEXT_IN_TEXT, "GLC: text: TEXT", VP_VECTOR|VP_CHAR);
+        text = mxArrayToString(TEXT_IN_TEXT);
 
         if (!text)
-            ourErrMsgTxt("GLCALL: rendertext: Out of memory!");
+            ourErrMsgTxt("GLCALL: text: Out of memory!");
 
         {
             glMatrixMode(GL_MODELVIEW);

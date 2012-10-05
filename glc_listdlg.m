@@ -451,7 +451,7 @@ function glc_listdlg_display()
                     glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
                 end
             else
-                glcall(glc.rendertext, bb([1 2])+[12 2], lineheight-2, glc_listdlg_s(winid).liststring{idx});
+                glcall(glc.text, bb([1 2])+[12 2], lineheight-2, glc_listdlg_s(winid).liststring{idx});
             end
         end
     end
