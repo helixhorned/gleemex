@@ -136,7 +136,7 @@ function [sel,ok]=glc_listdlg(varargin)
 
     s.finish_cb = finish_cb;
 
-    s.selected = logical(zeros(size(liststring),'uint8'));
+    s.selected = false(size(liststring));
     s.selected(initialval) = true;
 
     s.done = 0;  % 1:OK, 2:Cancel
@@ -381,83 +381,65 @@ function glc_listdlg_display()
         glc_listdlg_s(winid).downreq = false;
     end
 
-    point_in_i = 0;
+    %% Per-line mouse handling.
+    offset = glc_listdlg_s(winid).ofs;
+    xrange = bbox([1 3]);
+    yorigin = glc_listdlg_s(winid).wh(2)-20;
 
-    for i=1:numlines
-        idx = i + glc_listdlg_s(winid).ofs;
-        if (idx > numvals)
-            break;
-        end
+    point_in_i = glc_textlines_pointinrect(numlines, xrange, yorigin, lineheight, ...
+                                           glc_listdlg_s(winid).mxy);
+    idx = 0;
+    if (point_in_i >= 1 && point_in_i+offset <= numvals)
+        idx = point_in_i+offset;
 
-        y1 = glc_listdlg_s(winid).wh(2)-20-i*lineheight;
-
-        bb = [bbox([1 3]); ...
-              y1, y1+lineheight];
-
-        % mouse click
-        point_in_rect_p = glc_pointinrect(glc_listdlg_s(winid).mxy, bb);
-
-        if (point_in_rect_p)
-            point_in_i = i;
-
-            if (~isempty(glc_listdlg_s(winid).clicked))
-                if (glc_listdlg_s(winid).selmode_multiple)
-                    if (glc_listdlg_s(winid).clicked(3)==GL.MOD_SHIFT)
-                        if (glc_listdlg_s(winid).lastclickidx > 0)
-                            bounds = sort([idx glc_listdlg_s(winid).lastclickidx]);
-                            glc_listdlg_s(winid).selected(bounds(1):bounds(2)) = true;
-                        end
-                    elseif (glc_listdlg_s(winid).clicked(3)==GL.MOD_CTRL)
-                        glc_listdlg_s(winid).selected(idx) = ~glc_listdlg_s(winid).selected(idx);
-                    else
-                        glc_listdlg_s(winid).selected(:) = false;
-                        glc_listdlg_s(winid).selected(idx) = true;
+        if (~isempty(glc_listdlg_s(winid).clicked))
+            if (glc_listdlg_s(winid).selmode_multiple)
+                if (glc_listdlg_s(winid).clicked(3)==GL.MOD_SHIFT)
+                    if (glc_listdlg_s(winid).lastclickidx > 0)
+                        bounds = sort([idx glc_listdlg_s(winid).lastclickidx]);
+                        glc_listdlg_s(winid).selected(bounds(1):bounds(2)) = true;
                     end
+                elseif (glc_listdlg_s(winid).clicked(3)==GL.MOD_CTRL)
+                    glc_listdlg_s(winid).selected(idx) = ~glc_listdlg_s(winid).selected(idx);
                 else
                     glc_listdlg_s(winid).selected(:) = false;
                     glc_listdlg_s(winid).selected(idx) = true;
                 end
-
-                glc_listdlg_s(winid).clicked = [];
-                glc_listdlg_s(winid).lastclickidx = idx;
-            end
-        end
-    end
-
-    for runi=1:2
-        for i=1:numlines
-            idx = i + glc_listdlg_s(winid).ofs;
-            if (idx > numvals)
-                break;
-            end
-
-            y1 = glc_listdlg_s(winid).wh(2)-20-i*lineheight;
-
-            bb = [bbox([1 3]); ...
-                  y1, y1+lineheight];
-
-            if (runi==1)
-                color = [];
-                if (glc_listdlg_s(winid).selected(idx))
-                    if (point_in_i==i)
-                        color = [0.7 0.7 0.9];
-                    else
-                        color = [0.6 0.6 0.9];
-                    end
-                elseif (point_in_i==i)
-                    color = [0.92 0.92 0.92];
-                end
-                if (~isempty(color))
-                    glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
-                end
             else
-                glcall(glc.text, bb([1 2])+[12 2], lineheight-2, glc_listdlg_s(winid).liststring{idx});
+                glc_listdlg_s(winid).selected(:) = false;
+                glc_listdlg_s(winid).selected(idx) = true;
             end
+
+            glc_listdlg_s(winid).clicked = [];
+            glc_listdlg_s(winid).lastclickidx = idx;
         end
     end
 
+    % Prepare arguments to glc_textlines()...
+    selected = glc_listdlg_s(winid).selected;
+
+    point_in_idx = idx;
+
+    colors = ones(numvals, 3);
+    colors(selected, [1 2]) = .6;  % RGB .6 .6 .9 for selected lines
+    colors(selected, 3) = .9;
+    if (point_in_idx > 0)
+        if (selected(point_in_idx))
+            colors(point_in_idx, :) = [.7 .7 .9];
+        else
+            colors(point_in_idx, :) = 0.92;
+        end
+    end
+
+    glc_textlines(glc_listdlg_s(winid).liststring, numlines, ...
+                  bbox([1 3]), yorigin, ...
+                  struct('lineheight',lineheight, 'colors',colors, ...
+                         'offset',offset));
+
+    % Draw the bounding box
     glcall(glc.draw, GL.QUADS+16, glc_expandrect(bbox));
 
+    % Draw the "continuation triangles"
     centerx = (bbox(3)+bbox(1))/2;
     if (glc_listdlg_s(winid).ofs > 0)
         glcall(glc.draw, GL.TRIANGLES, ...
