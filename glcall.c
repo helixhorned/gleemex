@@ -361,16 +361,19 @@ static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vp
 
     case VP_VECTOR:
     {
-        int bad = 1;
+        int bad = 1, wronglength=0;
+        uint32_t reqdveclen;
 
         if (arIsVector(ar))
         {
             if (vpflags&VP_VECLEN_MASK)
             {
-                uint32_t reqdveclen = (vpflags&VP_VECLEN_MASK)>>VP_VECLEN_SHIFT;
+                reqdveclen = (vpflags&VP_VECLEN_MASK)>>VP_VECLEN_SHIFT;
 
                 if (mxGetNumberOfElements(ar) == reqdveclen)
                     bad = 0;
+                else
+                    wronglength = 1;
             }
             else
             {
@@ -379,7 +382,13 @@ static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vp
         }
 
         if (bad)
-            GLC_MEX_ERROR_VP_("%s must be a vector", arname);
+        {
+            if (wronglength)
+                GLC_MEX_ERROR_VP_("%s must be a length-%u vector", arname, reqdveclen);
+            else
+                GLC_MEX_ERROR_VP_("%s must be a vector", arname);
+        }
+
         break;
     }
 
