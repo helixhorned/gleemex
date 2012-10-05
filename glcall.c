@@ -73,6 +73,7 @@
 #define RENDERTEXT_IN_HEIGHT (prhs[2])
 #define RENDERTEXT_IN_TEXT (prhs[3])
 #define RENDERTEXT_IN_XYALIGN (prhs[4])
+#define RENDERTEXT_IN_OPTS (prhs[5])
 
 /* toggle */
 #define TOGGLE_IN_KV (prhs[1])
@@ -1765,13 +1766,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     break;
 
+/* FreeGLUT's Roman font characteristics */
+#define SPCWIDTH (104.762)  /* The width of the space and all characters for the monospaced font. */
+#define FONTHEIGHT (119.05)
+
     case GLC_RENDERTEXT:
     {
         /* TODO:
-         *  Option to specify the gap between letters
          *  Make space and TAB have other widths than GLUT default (space is too wide,
          *   TAB should be used as 'small space')
-         *  Option to specify color?
          *  <forgot one> */
 
         const double *pos;
@@ -1779,12 +1782,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         char *text;
 
         mwSize slen, i, vlen;
-        double xyalign[2] = { 0.0, 0.0 };
+        double xyalign[2] = { 0.0, 0.0 };  /* corresponds to passed [-1 -1] */
+        double color[3] = { 0.2, 0.2, 0.2 };
 
-        if (nlhs != 0 || (nrhs != 4 && nrhs != 5))
-            ourErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text [, xyalign])");
+        /* This value is was determined to look good by trial/error. */
+        double xspacing = (FONTHEIGHT/10.0);
+        void *font = GLUT_STROKE_ROMAN;
+
+        if (nlhs != 0 || !(nrhs >= 4 && nrhs <= 6))
+            ourErrMsgTxt("Usage: GLCALL(glc.rendertext, [x y [z]], height, text [, xyalign [, opts]])");
 
         verifyparam(RENDERTEXT_IN_POS, "GLC: rendertext: POS", VP_VECTOR|VP_DOUBLE);
+        /* Not using VP_VECLEN_SHIFT above because we need vector length later. */
         vlen = mxGetNumberOfElements(RENDERTEXT_IN_POS);
         if (vlen != 2 && vlen != 3)
             ourErrMsgTxt("GLC: rendertext: POS must have length 2 or 3");
@@ -1793,7 +1802,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(RENDERTEXT_IN_HEIGHT, "GLC: rendertext: HEIGHT", VP_SCALAR|VP_DOUBLE);
         height = *mxGetPr(RENDERTEXT_IN_HEIGHT);
 
-        if (nrhs > 4)
+        if (nrhs >= 5)
         {
             const double *tmpxyalign;
 
@@ -1809,6 +1818,35 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 xyalign[1] = 0.5 + 0.5*(tmpxyalign[1] > 0.0);
         }
 
+        if (nrhs >= 6)
+        {
+            mxArray *tmpar;
+
+            verifyparam(RENDERTEXT_IN_OPTS, "GLC: rendertext: OPTS", VP_SCALAR|VP_STRUCT);
+
+            tmpar = mxGetField(RENDERTEXT_IN_OPTS, 0, "colors");
+            if (tmpar)
+            {
+                verifyparam(tmpar, "GLC: rendertext: OPTS.colors", VP_VECTOR|VP_DOUBLE|(3<<VP_VECLEN_SHIFT));
+                memcpy(color, mxGetData(tmpar), 3*sizeof(double));
+            }
+
+            tmpar = mxGetField(RENDERTEXT_IN_OPTS, 0, "xgap");
+            if (tmpar)
+            {
+                verifyparam(tmpar, "GLC: rendertext: OPTS.colors", VP_SCALAR|VP_DOUBLE);
+                xspacing = *(double *)mxGetData(tmpar) * SPCWIDTH;
+            }
+
+            tmpar = mxGetField(RENDERTEXT_IN_OPTS, 0, "mono");
+            if (tmpar)
+            {
+                verifyparam(tmpar, "GLC: rendertext: OPTS.colors", VP_SCALAR|VP_LOGICAL);
+                if (*(int8_t *)mxGetData(tmpar))
+                    font = GLUT_STROKE_MONO_ROMAN;
+            }
+        }
+
         verifyparam(RENDERTEXT_IN_TEXT, "GLC: rendertext: TEXT", VP_VECTOR|VP_CHAR);
         text = mxArrayToString(RENDERTEXT_IN_TEXT);
 
@@ -1820,34 +1858,36 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glPushMatrix();
             glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
 
-            glColor3d(0.2, 0.2, 0.2);  /* XXX */
+            glColor3d(color[0], color[1], color[2]);
             glDisable(GL_TEXTURE_2D);
 
             glEnable(GL_LINE_SMOOTH);
             glEnable(GL_BLEND);
             glBlendEquation(GL_FUNC_ADD);
 
-/*            glLoadIdentity(); */
             glTranslated(pos[0], pos[1], vlen==2 ? 0.0 : pos[2]);
 
-            glScaled(height/119.05, height/119.05, height/119.05);
+            glScaled(height/FONTHEIGHT, height/FONTHEIGHT, height/FONTHEIGHT);
 
             if (xyalign[1] != 0.0)  /* y-align */
-                glTranslated(0, -xyalign[1]*119.05, 0);
+                glTranslated(0, -xyalign[1]*FONTHEIGHT, 0);
 
             slen = strlen(text);
             if (xyalign[0] != 0.0)
             {
-                double strokeslen = (double)glutStrokeLength(GLUT_STROKE_ROMAN, (unsigned char *)text);
+                /* XXX: if the string contains a newline, this will be wrong. */
+                double strokeslen = (double)glutStrokeLength(font, (unsigned char *)text);
 
                 /* TODO: proper newline handling */
-                glTranslated(-xyalign[0]*(strokeslen + (slen-1)*(119.05/10.0)), 0, 0);
+                glTranslated(-xyalign[0]*(strokeslen + (slen-1)*xspacing), 0, 0);
             }
 
             for (i=0; i<slen; i++)
             {
-                glutStrokeCharacter(GLUT_STROKE_ROMAN, text[i]);
-                glTranslated(119.05/10.0, 0, 0);  /* a bit of spacing... */
+                glutStrokeCharacter(font, text[i]);
+                /* Add a bit of spacing, since by default, GLUT's stroke test
+                 * looks too cramped... */
+                glTranslated(xspacing, 0, 0);
             }
 
             glPopMatrix();
