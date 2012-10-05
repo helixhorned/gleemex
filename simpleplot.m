@@ -174,7 +174,7 @@ function sp_keyboard(key, x, y, mods)
         simpl.lineidxs(1) = sp_clamp(simpl.lineidxs(1), 1,simpl.lineidxs(2));
     end
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function sp_motion(buttonsdown, x, y)
@@ -198,7 +198,7 @@ function sp_motion(buttonsdown, x, y)
         simple.omx = -1;
     end
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function sp_mouse(button, downp, x, y, mods)
@@ -218,5 +218,5 @@ function sp_mouse(button, downp, x, y, mods)
 
     simpl.zoom = sp_clamp(simpl.zoom, 0.1, 1000);
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end

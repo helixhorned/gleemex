@@ -293,7 +293,7 @@ function ex_keyboard(key, x, y, mods)
         end
     end
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function ex_motion(buttonsdown, x, y)
@@ -311,7 +311,7 @@ function ex_motion(buttonsdown, x, y)
         glex.mxy(2) = glex.wh(2)-glex.mxy(2);
     end
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 %function toggle_button()

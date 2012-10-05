@@ -59,8 +59,8 @@
 /* clear */
 #define CLEAR_IN_COLOR (prhs[1])
 
-/* postredisplay */
-#define POSTREDISPLAY_IN_NOWP (prhs[1])
+/* redisplay */
+#define REDISPLAY_IN_NOWP (prhs[1])
 
 /* newtexture */
 #define NEWTEXTURE_IN_TEXAR (prhs[1])
@@ -166,7 +166,7 @@ enum glcalls_
     GLC_SETCALLBACK,
     GLC_VIEWPORT,
     GLC_CLEAR,
-    GLC_POSTREDISPLAY,
+    GLC_REDISPLAY,
     GLC_GETERRSTR,
     GLC_NEWTEXTURE,
     GLC_TEXT,
@@ -198,7 +198,7 @@ const char *glcall_names[] =
     "setcallback",
     "viewport",
     "clear",
-    "postredisplay",
+    "redisplay",
     "geterrstr",
     "newtexture",
     "text",
@@ -1565,21 +1565,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     break;
 
-    case GLC_POSTREDISPLAY:
+    case GLC_REDISPLAY:
     {
         int32_t now_p = 0;
 
         if (nlhs != 0 || (nrhs != 1 && nrhs != 2))
-            ourErrMsgTxt("Usage: GLCALL(glc.postredisplay [, NOW_P])");
+            ourErrMsgTxt("Usage: GLCALL(glc.redisplay [, NOW_P])");
 
         if (glutGetWindow() == 0)
-            ourErrMsgTxt("GLCALL: postredisplay: called with no current window!");
+            ourErrMsgTxt("GLCALL: redisplay: called with no current window!");
 
         if (nrhs==2)
         {
-            verifyparam(POSTREDISPLAY_IN_NOWP, "GLCALL: postredisplay: NOW_P",
+            verifyparam(REDISPLAY_IN_NOWP, "GLCALL: redisplay: NOW_P",
                         VP_SCALAR|VP_LOGICAL);
-            now_p = !!*(int8_t *)mxGetData(POSTREDISPLAY_IN_NOWP);
+            now_p = !!*(int8_t *)mxGetData(REDISPLAY_IN_NOWP);
         }
 
         if (now_p)
@@ -1885,7 +1885,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             for (i=0; i<slen; i++)
             {
                 glutStrokeCharacter(font, text[i]);
-                /* Add a bit of spacing, since by default, GLUT's stroke test
+                /* Add a bit of spacing, since by default, GLUT's stroke text
                  * looks too cramped... */
                 glTranslated(xspacing, 0, 0);
             }

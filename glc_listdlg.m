@@ -220,7 +220,7 @@ function glc_listdlg_motion(buttonsdown, x, y)
         glc_listdlg_s(winid).mxy = [x y];
         glc_listdlg_s(winid).mxy(2) = glc_listdlg_s(winid).wh(2)-glc_listdlg_s(winid).mxy(2);
 
-        glcall(glc.postredisplay);
+        glcall(glc.redisplay);
     end
 end
 
@@ -233,7 +233,7 @@ function glc_listdlg_mouse(button, downp, x, y, mods)
         glc_listdlg_s(winid).clicked = [glc_listdlg_s(winid).mxy mods];
     end
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function glc_listdlg_keyboard(asc, x, y, mods)
@@ -292,7 +292,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
     end
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function glc_listdlg_reshape(w, h)
@@ -309,7 +309,7 @@ function glc_listdlg_reshape(w, h)
     glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]+0.5);
     glcall(glc.setmatrix, GL.MODELVIEW, []);
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function glc_listdlg_display()
