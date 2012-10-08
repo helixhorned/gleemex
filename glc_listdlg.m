@@ -247,6 +247,15 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
     w = glcall(glc.get, GL.WINDOW_ID);
 
+    eidx = glc_ld(w).editing;
+    if (eidx > 0)
+        if (asc >= 32 && asc <= 126)
+            glc_ld(w).liststring{eidx}(end+1) = asc;
+        elseif (asc==8)  % backspace
+            glc_ld(w).liststring{eidx}(max(1,end):end) = [];
+        end
+    end
+
     switch asc,
       case 1,  % Ctrl+a
         if (glc_ld(w).selmode_multiple)
