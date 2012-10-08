@@ -74,6 +74,7 @@
 #define TEXT_IN_TEXT (prhs[3])
 #define TEXT_IN_XYALIGN (prhs[4])
 #define TEXT_IN_OPTS (prhs[5])
+#define TEXT_OUT_LENGTH (plhs[0])
 
 /* toggle */
 #define TOGGLE_IN_KV (prhs[1])
@@ -1175,14 +1176,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
          *  Some easy means of specifying a rect? (using glRect)
          *  When a lot of data will need to be drawn: Buffer Objects...  */
 
-        unsigned int primitivetype, doline;
+        uint32_t primitivetype, doline;
         mwSize i, numdims, numtotalverts, numverts;
 
         mwSize colorsz;
-
         const mxArray *colorsar=NULL, *indicesar=NULL;
-
         const double *colors=NULL;
+
         const void *indices=NULL;  /* uint8_t or uint32_t */
         GLuint texname = 0;
         GLenum vertdatatype, indicestype=0 /* compiler-happy */;
@@ -1190,9 +1190,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
             ourErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, OPTSTRUCT])");
 
-        if (!mxIsUint32(DRAW_IN_PRIMITIVETYPE))
-            ourErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be of uint32 type");
-        primitivetype = *(int *)mxGetData(DRAW_IN_PRIMITIVETYPE);
+        if (!mxIsUint32(DRAW_IN_PRIMITIVETYPE) || mxGetNumberOfElements(DRAW_IN_PRIMITIVETYPE)!=1)
+            ourErrMsgTxt("GLCALL: draw: PRIMITIVE_TYPE must be a uint32 scalar");
+        primitivetype = *(uint32_t *)mxGetData(DRAW_IN_PRIMITIVETYPE);
+
+        /* XXX: This seems like an ugly hack. */
         doline = primitivetype&16;
         primitivetype &= ~16;
 
@@ -1781,7 +1783,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         double height;
         char *text;
 
-        mwSize slen, i, vlen;
+        mwSize i, vlen;
         double xyalign[2] = { 0.0, 0.0 };  /* corresponds to passed [-1 -1] */
         double color[3] = { 0.2, 0.2, 0.2 };
 
@@ -1789,8 +1791,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         double xspacing = (FONTHEIGHT/10.0);
         void *font = GLUT_STROKE_ROMAN;
 
-        if (nlhs != 0 || !(nrhs >= 4 && nrhs <= 6))
-            ourErrMsgTxt("Usage: GLCALL(glc.text, [x y [z]], height, text [, xyalign [, opts]])");
+        if (nlhs > 1 || !(nrhs >= 4 && nrhs <= 6))
+            ourErrMsgTxt("Usage: [textlen] = GLCALL(glc.text, [x y [z]], height, text [, xyalign [, opts]])");
 
         verifyparam(TEXT_IN_POS, "GLC: text: POS", VP_VECTOR|VP_DOUBLE);
         /* Not using VP_VECLEN_SHIFT above because we need vector length later. */
@@ -1854,6 +1856,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourErrMsgTxt("GLCALL: text: Out of memory!");
 
         {
+            mwSize slen = strlen(text);
+            double strokeslen, textlen=0.0;  /* compiler-happy */
+
+            if (xyalign[0] != 0.0 || nlhs >= 1)
+            {
+                /* XXX: if the string contains a newline, this will be wrong. */
+                strokeslen = (double)glutStrokeLength(font, (unsigned char *)text);
+                textlen = (strokeslen + (slen-1)*xspacing);
+
+                if (nlhs >= 1)
+                {
+                    TEXT_OUT_LENGTH = mxCreateDoubleScalar(textlen*(height/FONTHEIGHT));
+                    mxFree(text);
+                    return;  /* don't draw text if length requested */
+                }
+            }
+
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
             glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
@@ -1872,14 +1891,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (xyalign[1] != 0.0)  /* y-align */
                 glTranslated(0, -xyalign[1]*FONTHEIGHT, 0);
 
-            slen = strlen(text);
             if (xyalign[0] != 0.0)
             {
-                /* XXX: if the string contains a newline, this will be wrong. */
-                double strokeslen = (double)glutStrokeLength(font, (unsigned char *)text);
-
-                /* TODO: proper newline handling */
-                glTranslated(-xyalign[0]*(strokeslen + (slen-1)*xspacing), 0, 0);
+                /* TODO: proper newline handling (see above) */
+                glTranslated(-xyalign[0]*textlen, 0, 0);
             }
 
             for (i=0; i<slen; i++)

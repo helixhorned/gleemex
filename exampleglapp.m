@@ -173,8 +173,7 @@ function ex_display()
         ij = min(numchans-1, floor((mxy-glex.adjbbox([1 2]))./xydif));
 
         verts = glex.adjbbox(1:2) + xydif.*ij;
-        verts = [verts, verts+xydif];
-        glcall(glc.draw, GL.QUADS, glc_expandrect(verts), struct('colors',[0.4 0.4 0.8]));
+        glc_drawrect(verts, verts+xydif, struct('colors',[0.4 0.4 0.8]));
     end
 
     %% grid lines
@@ -249,8 +248,15 @@ function ex_display()
     glex.randdat = [glex.randdat(2:30) randn(1)];
 
     glc_axes_finish([0 0 0]);  % }}}
-    glcall(glc.text, tmpxywh(1:2)+[2 tmpxywh(4)-16], 14, 'OCz', [-1 -1], struct('xgap',1));
-    glcall(glc.text, tmpxywh(1:2)+[2 tmpxywh(4)-32], 14, 'A monospaced text', ...
+
+    ocz_xy = tmpxywh(1:2)+[2 tmpxywh(4)-16];
+    tmpargs = { ocz_xy, 14, 'OCz', [-1 -1], struct('xgap',1) };
+
+    len = glcall(glc.text, tmpargs{:});  % get length of text
+    glc_drawrect(ocz_xy+[-1 -2], ocz_xy+[len+2 14+2], struct('colors',[.6 .6 .6]));
+    glcall(glc.text, tmpargs{:})  % draw text
+
+    glcall(glc.text, ocz_xy-[0 16], 14, 'A monospaced text', ...
            [-1 -1], struct('mono',true, 'xgap',0));
 
     % torture test 1
