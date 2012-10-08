@@ -3,7 +3,7 @@ function glc_test_subwindows()
     global glc GL
 
     glc = glcall();
-    GL = getglconsts();
+    GL = glconstants();
 
     glcall(glc.newwindow, [20 20], [800 600], 'top-level');
 

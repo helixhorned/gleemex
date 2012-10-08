@@ -2,7 +2,7 @@
 function exampleglapp(vertposns)
     global GL glc glex
 
-    GL = getglconsts(); glc = glcall();
+    GL = glconstants(); glc = glcall();
     glex = struct();
 
     try

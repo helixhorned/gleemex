@@ -1,4 +1,4 @@
-% GL = GETGLCONSTS()
+% GL = GLCONSTANTS()
 %  Returns certain OpenGL constants (stripped of the GL_ prefix) in the struct
 %  GL so they can be used like e.g. "GL.POINTS" for functions that expect them.
 %
@@ -14,7 +14,7 @@
 %
 %  * a lot more (UNDOCUMENTED), see the source of this function.
 %
-function GL = getglconsts()
+function GL = glconstants()
 
 GL = struct();
 

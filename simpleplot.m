@@ -16,7 +16,7 @@ function simpleplot(data)
     end
 
     glc = glcall();
-    GL = getglconsts();
+    GL = glconstants();
 
 
     simpl = struct();

@@ -14,7 +14,7 @@ function [sel,ok]=glc_listdlg(varargin)
 
     global GL glc glc_ld
 
-    GL = getglconsts();
+    GL = glconstants();
     glc = glcall();
 
     if (mod(nargin,2)~=0)
