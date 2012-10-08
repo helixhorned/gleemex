@@ -131,6 +131,7 @@ function [sel,ok]=glc_listdlg(varargin)
     s = struct();
     s.liststring = liststring;
     s.selmode_multiple = selmode_multiple;
+    s.editstring = {'','',''};  % { const, head, tail }; temp, only while editing
     s.selmode_edit = selmode_edit;
     s.listsize = listsize;
     s.initialval = initialval;
@@ -249,10 +250,20 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
     eidx = glc_ld(w).editing;
     if (eidx > 0)
+        [c,l,r] = deal(glc_ld(w).editstring{:});
+
         if (asc >= 32 && asc <= 126)
-            glc_ld(w).liststring{eidx}(end+1) = asc;
+            glc_ld(w).editstring{2}(end+1) = asc;
         elseif (asc==8)  % backspace
-            glc_ld(w).liststring{eidx}(max(1,end):end) = [];
+            glc_ld(w).editstring{2}(max(1,end):end) = [];
+        elseif (asc == GL.KEY_LEFT)
+            if (~isempty(l))
+                glc_ld(w).editstring = { c, l(1:end-1), [l(end) r] };
+            end
+        elseif (asc == GL.KEY_RIGHT)
+            if (~isempty(r))
+                glc_ld(w).editstring = { c, [l r(1)], r(2:end) };
+            end
         end
     end
 
@@ -268,7 +279,18 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
       case 13,  % enter
         if (glc_ld(w).selmode_edit)
-            glc_ld(w).editing = find(glc_ld(w).selected);
+            if (eidx == 0)
+                eidx = find(glc_ld(w).selected);
+                glc_ld(w).editing = eidx;
+                str = glc_ld(w).liststring{eidx};
+                colon = strfind(str, ': ');
+                if (~isempty(colon))
+                    colon = colon(1);
+                    glc_ld(w).editstring = { str(1:colon+1), str(colon+2:end), '' };
+                else
+                    glc_ld(w).editstring = { '', str, '' };
+                end
+            end
         elseif (~isempty(glc_ld(w).okstr))
             if (any(glc_ld(w).selected))
                 glc_ld(w).done = 1;
@@ -277,7 +299,10 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
       case 27,  % escape
         if (glc_ld(w).selmode_edit)
-            glc_ld(w).editing = 0;
+            if (eidx > 0)
+                glc_ld(w).liststring{eidx} = [glc_ld(w).editstring{:}];
+                glc_ld(w).editing = 0;
+            end
         elseif (~isempty(glc_ld(w).cancelstr))
             glc_ld(w).done = 2;
         end
@@ -470,8 +495,11 @@ function glc_listdlg_display()
                 tmpargs = { textorigin, lineheight-2, liststring{idx} };
 
                 if (glc_ld(w).editing == idx)
+                    tmpargs{3} = [glc_ld(w).editstring{1:2}];
                     textlen = glcall(glc.text, tmpargs{:});
-                    glcall(glc.text, textorigin+[textlen 0], lineheight-2, '|');
+                    glcall(glc.text, textorigin+[textlen 0], lineheight-2, '|', ...
+                           [-1 -1], struct('colors',[0 0 0]));
+                    tmpargs{3} = [glc_ld(w).editstring{:}];
                 end
                 glcall(glc.text, tmpargs{:});
             end
