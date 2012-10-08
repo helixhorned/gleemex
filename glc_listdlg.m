@@ -25,6 +25,7 @@ function [sel,ok]=glc_listdlg(varargin)
 
     liststring = {};
     selmode_multiple = true;
+    selmode_edit = false;  % whether to use this list dialog as a GUI of sorts
     listsize = [160 300];
     initialval = 1;
     name = '';
@@ -57,6 +58,9 @@ function [sel,ok]=glc_listdlg(varargin)
                 selmode_multiple = false;
             elseif (strcmpi(val, 'multiple'))
                 selmode_multiple = true;
+            elseif (strcmpi(val, 'edit'))  % non-MATLAB
+                selmode_edit = true;
+                selmode_multiple = false;
             else
                 error('SelectionMode value must be one of ''single'' or ''multiple''');
             end
@@ -127,6 +131,7 @@ function [sel,ok]=glc_listdlg(varargin)
     s = struct();
     s.liststring = liststring;
     s.selmode_multiple = selmode_multiple;
+    s.selmode_edit = selmode_edit;
     s.listsize = listsize;
     s.initialval = initialval;
     s.name = name;
@@ -139,6 +144,7 @@ function [sel,ok]=glc_listdlg(varargin)
     s.selected = false(size(liststring));
     s.selected(initialval) = true;
 
+    s.editing = 0;  % > 0: list index of entry to edit
     s.done = 0;  % 1:OK, 2:Cancel
     s.ofs = 0;
     s.downreq = 0;  % set to 1 if pressed 'down' key, 10 if 'pgdn'
@@ -261,7 +267,9 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         end
 
       case 27,  % escape
-        if (~isempty(glc_listdlg_s(winid).cancelstr))
+        if (glc_listdlg_s(winid).selmode_edit)
+            glc_listdlg_s(winid).editing = 0;
+        elseif (~isempty(glc_listdlg_s(winid).cancelstr))
             glc_listdlg_s(winid).done = 2;
         end
 
@@ -444,9 +452,18 @@ function glc_listdlg_display()
                     color = [0.92 0.92 0.92];
                 end
 
+                % Draw background.
                 glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
             else
-                glcall(glc.text, bb([1 2])+[xmargin 2], lineheight-2, liststring{idx});
+                % Draw text: must distinguish editing and plain cases.
+                textorigin =  bb([1 2])+[xmargin 2];
+                tmpargs = { textorigin, lineheight-2, liststring{idx} };
+
+                if (glc_listdlg_s(winid).editing == idx)
+                    textlen = glcall(glc.text, tmpargs{:});
+                    glcall(glc.text, textorigin+[textlen 0], lineheight-2, '|');
+                end
+                glcall(glc.text, tmpargs{:});
             end
         end
     end
