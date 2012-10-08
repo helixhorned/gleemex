@@ -252,7 +252,9 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         end
 
       case 13,  % enter
-        if (~isempty(glc_listdlg_s(winid).okstr))
+        if (glc_listdlg_s(winid).selmode_edit)
+            glc_listdlg_s(winid).editing = find(glc_listdlg_s(winid).selected);
+        elseif (~isempty(glc_listdlg_s(winid).okstr))
             if (any(glc_listdlg_s(winid).selected))
                 glc_listdlg_s(winid).done = 1;
             end
@@ -415,28 +417,41 @@ function glc_listdlg_display()
         end
     end
 
-    % Prepare arguments to glc_textlines()...
-    selected = glc_listdlg_s(winid).selected;
+    xmargin = 12;
+    liststring = glc_listdlg_s(winid).liststring;
 
-    point_in_idx = idx;
+    for runi=1:2
+        for i=1:numlines
+            idx = i + offset;
+            if (idx > numvals)
+                break;
+            end
 
-    colors = ones(numvals, 3);
-    colors(selected, [1 2]) = .6;  % RGB .6 .6 .9 for selected lines
-    colors(selected, 3) = .9;
-    if (point_in_idx > 0)
-        if (selected(point_in_idx))
-            colors(point_in_idx, :) = [.7 .7 .9];
-        else
-            colors(point_in_idx, :) = 0.92;
+            y1 = yorigin - i*lineheight;
+
+            bb = [xrange; ...
+                  y1, y1+lineheight];
+
+            if (runi==1)
+                color = [1 1 1];
+                if (glc_listdlg_s(winid).selected(idx))
+                    if (point_in_i==i)
+                        color = [0.7 0.7 0.9];
+                    else
+                        color = [0.6 0.6 0.9];
+                    end
+                elseif (point_in_i==i)
+                    color = [0.92 0.92 0.92];
+                end
+
+                glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
+            else
+                glcall(glc.text, bb([1 2])+[xmargin 2], lineheight-2, liststring{idx});
+            end
         end
     end
 
-    glc_textlines(glc_listdlg_s(winid).liststring, numlines, ...
-                  bbox([1 3]), yorigin, ...
-                  struct('lineheight',lineheight, 'colors',colors, ...
-                         'offset',offset));
-
-    % Draw the bounding box
+    %% Draw the bounding box
     glcall(glc.draw, GL.QUADS+16, glc_expandrect(bbox));
 
     % Draw the "continuation triangles"
