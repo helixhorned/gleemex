@@ -131,6 +131,7 @@ function [sel,ok]=glc_listdlg(varargin)
     s = struct();
     s.liststring = liststring;
     s.selmode_multiple = selmode_multiple;
+    s.oldstring = '';
     s.editstring = {'','',''};  % { const, head, tail }; temp, only while editing
     s.selmode_edit = selmode_edit;
     s.listsize = listsize;
@@ -280,9 +281,11 @@ function glc_listdlg_keyboard(asc, x, y, mods)
       case 13,  % enter
         if (glc_ld(w).selmode_edit)
             if (eidx == 0)
+                % starting to type
                 eidx = find(glc_ld(w).selected);
                 glc_ld(w).editing = eidx;
                 str = glc_ld(w).liststring{eidx};
+                glc_ld(w).oldstring = str;
                 colon = strfind(str, ': ');
                 if (~isempty(colon))
                     colon = colon(1);
@@ -290,6 +293,11 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                 else
                     glc_ld(w).editstring = { '', str, '' };
                 end
+            else
+                % finished typing
+                glc_ld(w).liststring{eidx} = [glc_ld(w).editstring{:}];
+                glc_ld(w).oldstring = '';
+                glc_ld(w).editing = 0;
             end
         elseif (~isempty(glc_ld(w).okstr))
             if (any(glc_ld(w).selected))
@@ -300,7 +308,9 @@ function glc_listdlg_keyboard(asc, x, y, mods)
       case 27,  % escape
         if (glc_ld(w).selmode_edit)
             if (eidx > 0)
-                glc_ld(w).liststring{eidx} = [glc_ld(w).editstring{:}];
+                % canceling typing
+                glc_ld(w).liststring{eidx} = glc_ld(w).oldstring;
+                glc_ld(w).oldstring = '';
                 glc_ld(w).editing = 0;
             end
         elseif (~isempty(glc_ld(w).cancelstr))
