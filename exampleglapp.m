@@ -224,7 +224,7 @@ function ex_display()
     end
 %}
 
-    glcall(glc.text, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+', [-1 -1], struct('colors',[0 0 1]));
+    glcall(glc.text, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+', struct('colors',[0 0 1]));
 
     for ang=0:30:180
         glcall(glc.push, GL.MODELVIEW);
@@ -250,14 +250,14 @@ function ex_display()
     glc_axes_finish([0 0 0]);  % }}}
 
     ocz_xy = tmpxywh(1:2)+[2 tmpxywh(4)-16];
-    tmpargs = { ocz_xy, 14, 'OCz', [-1 -1], struct('xgap',1) };
+    tmpargs = { ocz_xy, 14, 'OCz', struct('xgap',1) };
 
     len = glcall(glc.text, tmpargs{:});  % get length of text
     glc_drawrect(ocz_xy+[-1 -2], ocz_xy+[len+2 14+2], struct('colors',[.6 .6 .6]));
     glcall(glc.text, tmpargs{:})  % draw text
 
     glcall(glc.text, ocz_xy-[0 16], 14, 'A monospaced text', ...
-           [-1 -1], struct('mono',true, 'xgap',0));
+           struct('mono',true, 'xgap',0));
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));

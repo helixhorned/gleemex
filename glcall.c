@@ -1791,6 +1791,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         double xspacing = (FONTHEIGHT/10.0);
         void *font = GLUT_STROKE_ROMAN;
 
+        const mxArray *xyalignAr=NULL, *optsAr=NULL;
+
         if (nlhs > 1 || !(nrhs >= 4 && nrhs <= 6))
             ourErrMsgTxt("Usage: [textlen] = GLCALL(glc.text, [x y [z]], height, text [, xyalign [, opts]])");
 
@@ -1806,41 +1808,61 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (nrhs >= 5)
         {
+            /* Either
+             *  glcall(glc.text, pos, height, str, XYALIGN), 
+             *  glcall(glc.text, pos, height, str, OPTS), or 
+             *  glcall(glc.text, pos, height, str, XYALIGN, OPTS). */
+            if (nrhs==5)
+            {
+                if (mxIsStruct(TEXT_IN_XYALIGN))
+                    optsAr = TEXT_IN_XYALIGN;
+                else
+                    xyalignAr = TEXT_IN_XYALIGN;
+            }
+            else
+            {
+                xyalignAr = TEXT_IN_XYALIGN;
+                optsAr = TEXT_IN_OPTS;
+            }
+        }
+
+        if (xyalignAr)
+        {
             const double *tmpxyalign;
 
             /* xalign: -1: align on left (default), 0: align centered, 1: align on right
              * yalign: -1: align on bottom (default), 0: align centered, 1: align on top
              * mapped to 0.0, 0.5 and 1.0 in the internal representation */
-            verifyparam(TEXT_IN_XYALIGN, "GLC: text: XYALIGN",
+            verifyparam(xyalignAr, "GLC: text: XYALIGN",
                         VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
-            tmpxyalign = mxGetData(TEXT_IN_XYALIGN);
+            tmpxyalign = mxGetData(xyalignAr);
             if (tmpxyalign[0] >= 0.0)
                 xyalign[0] = 0.5 + 0.5*(tmpxyalign[0] > 0.0);
             if (tmpxyalign[1] >= 0.0)
                 xyalign[1] = 0.5 + 0.5*(tmpxyalign[1] > 0.0);
         }
 
-        if (nrhs >= 6)
+        if (optsAr)
         {
             mxArray *tmpar;
 
-            verifyparam(TEXT_IN_OPTS, "GLC: text: OPTS", VP_SCALAR|VP_STRUCT);
+            verifyparam(optsAr, "GLC: text: OPTS", VP_SCALAR|VP_STRUCT);
 
-            tmpar = mxGetField(TEXT_IN_OPTS, 0, "colors");
+            tmpar = mxGetField(optsAr, 0, "colors");
             if (tmpar)
             {
                 verifyparam(tmpar, "GLC: text: OPTS.colors", VP_VECTOR|VP_DOUBLE|(3<<VP_VECLEN_SHIFT));
                 memcpy(color, mxGetData(tmpar), 3*sizeof(double));
             }
 
-            tmpar = mxGetField(TEXT_IN_OPTS, 0, "xgap");
+            tmpar = mxGetField(optsAr, 0, "xgap");
             if (tmpar)
             {
                 verifyparam(tmpar, "GLC: text: OPTS.colors", VP_SCALAR|VP_DOUBLE);
                 xspacing = *(double *)mxGetData(tmpar) * SPCWIDTH;
             }
 
-            tmpar = mxGetField(TEXT_IN_OPTS, 0, "mono");
+            tmpar = mxGetField(optsAr, 0, "mono");
             if (tmpar)
             {
                 verifyparam(tmpar, "GLC: text: OPTS.colors", VP_SCALAR|VP_LOGICAL);

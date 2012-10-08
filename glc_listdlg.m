@@ -498,7 +498,7 @@ function glc_listdlg_display()
                     tmpargs{3} = [glc_ld(w).editstring{1:2}];
                     textlen = glcall(glc.text, tmpargs{:});
                     glcall(glc.text, textorigin+[textlen 0], lineheight-2, '|', ...
-                           [-1 -1], struct('colors',[0 0 0]));
+                           struct('colors',[0 0 0]));
                     tmpargs{3} = [glc_ld(w).editstring{:}];
                 end
                 glcall(glc.text, tmpargs{:});
