@@ -12,7 +12,7 @@
 % dialog finishes normally (not by [x]).
 function [sel,ok]=glc_listdlg(varargin)
 
-    global GL glc glc_listdlg_s
+    global GL glc glc_ld
 
     GL = getglconsts();
     glc = glcall();
@@ -157,28 +157,28 @@ function [sel,ok]=glc_listdlg(varargin)
 
     s.bbox = [20 s.wh(1)-20; ...
                         20+24+20 s.wh(2)-20];
-    s.tmpwinid = 0;  % only glc_listdlg_s(1).winid used
+    s.tmpwinid = 0;  % only glc_ld(1).tmpwinid is used (see TMPWINID below)
     s.parentwinid = glcall(glc.get, GL.WINDOW_ID);  % 0 if none or uninited
 
     if (isempty(s.name))
         s.name = ' ';
     end
 
-    if (~isstruct(glc_listdlg_s))
+    if (~isstruct(glc_ld))
         % init woes: in MATLAB, we can't do either
         %  - S(n) = S2, where S and S2 are structs with different fields
         %  - S(n) = S2, where S is [] (globals on init)
         % WARNING: this means that it's a bad idea to assign to nonexistent
-        %  fields of glc_listdlg_s in callbacks, in other words they should be
+        %  fields of glc_ld in callbacks, in other words they should be
         %  'declared' above first
-        glc_listdlg_s = glc_listdlg_dummyize_struct(s);
+        glc_ld = glc_listdlg_dummyize_struct(s);
     end
 
     winid = glcall(glc.newwindow, listpos, s.wh, s.name, ...
                    struct('subwindow',subwindowp));
 
     % should be before setting the callbacks
-    glc_listdlg_s(winid) = s;
+    glc_ld(winid) = s;
 
     glcall(glc.setcallback, glc.cb_reshape, 'glc_listdlg_reshape');
     glcall(glc.setcallback, glc.cb_motion, 'glc_listdlg_motion');
@@ -197,10 +197,10 @@ function [sel,ok]=glc_listdlg(varargin)
 end
 
 function [ok,sel]=glc_listdlg_get_ok_sel(winid)
-    global glc_listdlg_s
+    global glc_ld
 
-    ok = (glc_listdlg_s(winid).done==1);
-    sel = find(glc_listdlg_s(winid).selected);
+    ok = (glc_ld(winid).done==1);
+    sel = find(glc_ld(winid).selected);
     if (ok)
         sel = sel(:)';
     else
@@ -218,166 +218,167 @@ function s=glc_listdlg_dummyize_struct(s)
 end
 
 function glc_listdlg_motion(buttonsdown, x, y)
-    global GL glc glc_listdlg_s
+    global GL glc glc_ld
 
     winid = glcall(glc.get, GL.WINDOW_ID);
 
     if (~buttonsdown)
-        glc_listdlg_s(winid).mxy = [x y];
-        glc_listdlg_s(winid).mxy(2) = glc_listdlg_s(winid).wh(2)-glc_listdlg_s(winid).mxy(2);
+        glc_ld(winid).mxy = [x y];
+        glc_ld(winid).mxy(2) = glc_ld(winid).wh(2)-glc_ld(winid).mxy(2);
 
         glcall(glc.redisplay);
     end
 end
 
 function glc_listdlg_mouse(button, downp, x, y, mods)
-    global GL glc glc_listdlg_s
+    global GL glc glc_ld
 
     winid = glcall(glc.get, GL.WINDOW_ID);
 
     if (button==GL.BUTTON_LEFT && downp)
-        glc_listdlg_s(winid).clicked = [glc_listdlg_s(winid).mxy mods];
+        glc_ld(winid).clicked = [glc_ld(winid).mxy mods];
     end
 
     glcall(glc.redisplay);
 end
 
 function glc_listdlg_keyboard(asc, x, y, mods)
-    global GL glc glc_listdlg_s
+    global GL glc glc_ld
 
-    winid = glcall(glc.get, GL.WINDOW_ID);
+    w = glcall(glc.get, GL.WINDOW_ID);
 
     switch asc,
       case 1,  % Ctrl+a
-        if (glc_listdlg_s(winid).selmode_multiple)
-            if (all(glc_listdlg_s(winid).selected))
-                glc_listdlg_s(winid).selected(:) = false;
+        if (glc_ld(w).selmode_multiple)
+            if (all(glc_ld(w).selected))
+                glc_ld(w).selected(:) = false;
             else
-                glc_listdlg_s(winid).selected(:) = true;
+                glc_ld(w).selected(:) = true;
             end
         end
 
       case 13,  % enter
-        if (glc_listdlg_s(winid).selmode_edit)
-            glc_listdlg_s(winid).editing = find(glc_listdlg_s(winid).selected);
-        elseif (~isempty(glc_listdlg_s(winid).okstr))
-            if (any(glc_listdlg_s(winid).selected))
-                glc_listdlg_s(winid).done = 1;
+        if (glc_ld(w).selmode_edit)
+            glc_ld(w).editing = find(glc_ld(w).selected);
+        elseif (~isempty(glc_ld(w).okstr))
+            if (any(glc_ld(w).selected))
+                glc_ld(w).done = 1;
             end
         end
 
       case 27,  % escape
-        if (glc_listdlg_s(winid).selmode_edit)
-            glc_listdlg_s(winid).editing = 0;
-        elseif (~isempty(glc_listdlg_s(winid).cancelstr))
-            glc_listdlg_s(winid).done = 2;
+        if (glc_ld(w).selmode_edit)
+            glc_ld(w).editing = 0;
+        elseif (~isempty(glc_ld(w).cancelstr))
+            glc_ld(w).done = 2;
         end
 
       % up/down: move "background" or selection (with CTRL)
       case GL.KEY_UP,
         uppermost = [];
-        offset = glc_listdlg_s(winid).ofs;
+        offset = glc_ld(w).ofs;
         didmove = false;
         if (mods==GL.MOD_CTRL)
             % move selection one up
-            uppermost = find(glc_listdlg_s(winid).selected);
+            uppermost = find(glc_ld(w).selected);
             if (numel(uppermost)==1 && uppermost > 1 && offset<uppermost)
                 uppermost = uppermost-1;
-                glc_listdlg_s(winid).selected(:) = false;
-                glc_listdlg_s(winid).selected(uppermost) = true;
+                glc_ld(w).selected(:) = false;
+                glc_ld(w).selected(uppermost) = true;
                 didmove = true;
             end
         end
         if (~didmove && offset > 0 || uppermost==offset)
-            glc_listdlg_s(winid).ofs = offset-1;
+            glc_ld(w).ofs = offset-1;
         end
 
       case GL.KEY_PAGE_UP,
-        glc_listdlg_s(winid).ofs = max(0, glc_listdlg_s(winid).ofs-10);
+        glc_ld(w).ofs = max(0, glc_ld(w).ofs-10);
 
       case GL.KEY_DOWN,
-        glc_listdlg_s(winid).downreq = 1 - 2*(mods==GL.MOD_CTRL);
+        glc_ld(w).downreq = 1 - 2*(mods==GL.MOD_CTRL);
       case GL.KEY_PAGE_DOWN,
-        glc_listdlg_s(winid).downreq = 10;
+        glc_ld(w).downreq = 10;
 
     end
 
     glcall(glc.redisplay);
 end
 
-function glc_listdlg_reshape(w, h)
-    global GL glc glc_listdlg_s
+function glc_listdlg_reshape(width, height)
+    global GL glc glc_ld
 
-    winid = glcall(glc.get, GL.WINDOW_ID);
+    w = glcall(glc.get, GL.WINDOW_ID);
 
-    glc_listdlg_s(winid).wh = [w h];
+    glc_ld(w).wh = [width height];
 
-    glc_listdlg_s(winid).bbox = [20 glc_listdlg_s(winid).wh(1)-20; ...
-                        20+24+30 glc_listdlg_s(winid).wh(2)-20];
+    glc_ld(w).bbox = [20 glc_ld(w).wh(1)-20; ...
+                        20+24+30 glc_ld(w).wh(2)-20];
 
-    glcall(glc.viewport, [0 0 w h]);
-    glcall(glc.setmatrix, GL.PROJECTION, [0 w, 0 h, -1 1]+0.5);
+    glcall(glc.viewport, [0 0 width height]);
+    glcall(glc.setmatrix, GL.PROJECTION, [0 width, 0 height, -1 1]+0.5);
     glcall(glc.setmatrix, GL.MODELVIEW, []);
 
     glcall(glc.redisplay);
 end
 
 function glc_listdlg_display()
-    global GL glc glc_listdlg_s
+    global GL glc glc_ld
 
-    winid = glcall(glc.get, GL.WINDOW_ID);
+    w = glcall(glc.get, GL.WINDOW_ID);
 
     glcall(glc.clear, [1 1 1]);
 
-    numvals = numel(glc_listdlg_s(winid).liststring);
+    numvals = numel(glc_ld(w).liststring);
 
-    haveokstr = ~isempty(glc_listdlg_s(winid).okstr);
-    havecancelstr = ~isempty(glc_listdlg_s(winid).cancelstr);
+    haveokstr = ~isempty(glc_ld(w).okstr);
+    havecancelstr = ~isempty(glc_ld(w).cancelstr);
 
     if (haveokstr)
-        glc_drawbutton([20 20; 60 24].', glc_listdlg_s(winid).okstr, glc_listdlg_s(winid).mxy, false);
+        glc_drawbutton([20 20; 60 24].', glc_ld(w).okstr, glc_ld(w).mxy, false);
     end
     if (havecancelstr)
-        glc_drawbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).cancelstr, glc_listdlg_s(winid).mxy, false);
+        glc_drawbutton([20+60+20 20; 100 24].', glc_ld(w).cancelstr, glc_ld(w).mxy, false);
     end
 
-    if (~isempty(glc_listdlg_s(winid).clicked))
-        glc_listdlg_s(1).tmpwinid = winid;
+    if (~isempty(glc_ld(w).clicked))
+        % TMPWINID
+        glc_ld(1).tmpwinid = w;
         if (haveokstr)
-            glc_callbutton([20 20; 60 24].', glc_listdlg_s(winid).mxy, ...
-                           'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=1;');
+            glc_callbutton([20 20; 60 24].', glc_ld(w).mxy, ...
+                           'global glc_ld; glc_ld(glc_ld(1).tmpwinid).done=1;');
         end
         if (havecancelstr)
-            glc_callbutton([20+60+20 20; 100 24].', glc_listdlg_s(winid).mxy, ...
-                           'global glc_listdlg_s; glc_listdlg_s(glc_listdlg_s(1).tmpwinid).done=2;');
+            glc_callbutton([20+60+20 20; 100 24].', glc_ld(w).mxy, ...
+                           'global glc_ld; glc_ld(glc_ld(1).tmpwinid).done=2;');
         end
     end
 
-    bbox = glc_listdlg_s(winid).bbox;
+    bbox = glc_ld(w).bbox;
 
     dy = bbox(4)-bbox(2);
     lineheight = 16;
 
     numlines = floor(max(0, dy/lineheight));
 
-    if (glc_listdlg_s(winid).downreq)
-        j = glc_listdlg_s(winid).downreq;
+    if (glc_ld(w).downreq)
+        j = glc_ld(w).downreq;
         moveselp = false;
         if (j < 0)
             moveselp = true;
             j = -j;
         end
 
-        offset = glc_listdlg_s(winid).ofs;
+        offset = glc_ld(w).ofs;
 
         lowermost = [];
         didmove = false;
         if (moveselp)
-            lowermost = find(glc_listdlg_s(winid).selected);
+            lowermost = find(glc_ld(w).selected);
             if (numel(lowermost)==1 && lowermost < numvals && lowermost <= numlines+offset)
                 lowermost = lowermost+1;
-                glc_listdlg_s(winid).selected(:) = false;
-                glc_listdlg_s(winid).selected(lowermost) = true;
+                glc_ld(w).selected(:) = false;
+                glc_ld(w).selected(lowermost) = true;
                 didmove = true;
             end
         end
@@ -386,47 +387,47 @@ function glc_listdlg_display()
             offset = offset+1;
             j = j-1;
         end
-        glc_listdlg_s(winid).ofs = offset;
+        glc_ld(w).ofs = offset;
 
-        glc_listdlg_s(winid).downreq = false;
+        glc_ld(w).downreq = false;
     end
 
     %% Per-line mouse handling.
-    offset = glc_listdlg_s(winid).ofs;
+    offset = glc_ld(w).ofs;
     xrange = bbox([1 3]);
-    yorigin = glc_listdlg_s(winid).wh(2)-20;
+    yorigin = glc_ld(w).wh(2)-20;
 
     point_in_i = glc_textlines_pointinrect(numlines, xrange, yorigin, lineheight, ...
-                                           glc_listdlg_s(winid).mxy);
+                                           glc_ld(w).mxy);
     idx = 0;
     if (point_in_i >= 1 && point_in_i+offset <= numvals)
         idx = point_in_i+offset;
 
-        if (~isempty(glc_listdlg_s(winid).clicked))
-            if (glc_listdlg_s(winid).selmode_multiple)
-                if (glc_listdlg_s(winid).clicked(3)==GL.MOD_SHIFT)
-                    if (glc_listdlg_s(winid).lastclickidx > 0)
-                        bounds = sort([idx glc_listdlg_s(winid).lastclickidx]);
-                        glc_listdlg_s(winid).selected(bounds(1):bounds(2)) = true;
+        if (~isempty(glc_ld(w).clicked))
+            if (glc_ld(w).selmode_multiple)
+                if (glc_ld(w).clicked(3)==GL.MOD_SHIFT)
+                    if (glc_ld(w).lastclickidx > 0)
+                        bounds = sort([idx glc_ld(w).lastclickidx]);
+                        glc_ld(w).selected(bounds(1):bounds(2)) = true;
                     end
-                elseif (glc_listdlg_s(winid).clicked(3)==GL.MOD_CTRL)
-                    glc_listdlg_s(winid).selected(idx) = ~glc_listdlg_s(winid).selected(idx);
+                elseif (glc_ld(w).clicked(3)==GL.MOD_CTRL)
+                    glc_ld(w).selected(idx) = ~glc_ld(w).selected(idx);
                 else
-                    glc_listdlg_s(winid).selected(:) = false;
-                    glc_listdlg_s(winid).selected(idx) = true;
+                    glc_ld(w).selected(:) = false;
+                    glc_ld(w).selected(idx) = true;
                 end
             else
-                glc_listdlg_s(winid).selected(:) = false;
-                glc_listdlg_s(winid).selected(idx) = true;
+                glc_ld(w).selected(:) = false;
+                glc_ld(w).selected(idx) = true;
             end
 
-            glc_listdlg_s(winid).clicked = [];
-            glc_listdlg_s(winid).lastclickidx = idx;
+            glc_ld(w).clicked = [];
+            glc_ld(w).lastclickidx = idx;
         end
     end
 
     xmargin = 12;
-    liststring = glc_listdlg_s(winid).liststring;
+    liststring = glc_ld(w).liststring;
 
     for runi=1:2
         for i=1:numlines
@@ -442,7 +443,7 @@ function glc_listdlg_display()
 
             if (runi==1)
                 color = [1 1 1];
-                if (glc_listdlg_s(winid).selected(idx))
+                if (glc_ld(w).selected(idx))
                     if (point_in_i==i)
                         color = [0.7 0.7 0.9];
                     else
@@ -459,7 +460,7 @@ function glc_listdlg_display()
                 textorigin =  bb([1 2])+[xmargin 2];
                 tmpargs = { textorigin, lineheight-2, liststring{idx} };
 
-                if (glc_listdlg_s(winid).editing == idx)
+                if (glc_ld(w).editing == idx)
                     textlen = glcall(glc.text, tmpargs{:});
                     glcall(glc.text, textorigin+[textlen 0], lineheight-2, '|');
                 end
@@ -473,34 +474,34 @@ function glc_listdlg_display()
 
     % Draw the "continuation triangles"
     centerx = (bbox(3)+bbox(1))/2;
-    if (glc_listdlg_s(winid).ofs > 0)
+    if (glc_ld(w).ofs > 0)
         glcall(glc.draw, GL.TRIANGLES, ...
                [centerx-20 centerx+20 centerx; ...
                 bbox(4) bbox(4) bbox(4)+10]);
     end
-    if (numlines+glc_listdlg_s(winid).ofs < numvals)
+    if (numlines+glc_ld(w).ofs < numvals)
         glcall(glc.draw, GL.TRIANGLES, ...
                [centerx-20 centerx+20 centerx; ...
                 bbox(2) bbox(2) bbox(2)-10]);
     end
 
-    glc_listdlg_s(winid).clicked = [];
+    glc_ld(w).clicked = [];
 
-    if (glc_listdlg_s(winid).done)
+    if (glc_ld(w).done)
         glcall(glc.closewindow);
 
-        parentwinid = glc_listdlg_s(winid).parentwinid;
+        parentwinid = glc_ld(w).parentwinid;
         if (parentwinid > 0)
             glcall(glc.set, GL.WINDOW_ID, parentwinid);  % might be already closed though
         end
 
-        finish_cb = glc_listdlg_s(winid).finish_cb;
+        finish_cb = glc_ld(w).finish_cb;
 
         if (ischar(finish_cb) && ~isempty(finish_cb))
-            [ok, sel] = glc_listdlg_get_ok_sel(winid);
+            [ok, sel] = glc_listdlg_get_ok_sel(w);
             eval(finish_cb);
         elseif (isa(finish_cb, 'function_handle'))
-            [ok, sel] = glc_listdlg_get_ok_sel(winid);
+            [ok, sel] = glc_listdlg_get_ok_sel(w);
             finish_cb(ok, sel);
         end
     end
