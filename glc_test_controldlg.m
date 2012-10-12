@@ -9,5 +9,6 @@ function vals=glc_test_controldlg()
     cdesc(1).extra = struct('format','%.03f', ...
                             'updownfunc',@(ov,dir)min(max(0, ov+dir/10), 4));
 
-    [vals,ok]=glc_listdlg('ControlVals',cvals, 'ControlDesc',cdesc, 'ListSize',[320 200]);
+    [vals,ok]=glc_listdlg('ControlVals',cvals, 'ControlDesc',cdesc, 'ListSize',[320 200], ...
+                          'ControlCb','fprintf(''=== %s ===\n'', cvals.strval)');
 end

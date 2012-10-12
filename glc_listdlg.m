@@ -37,6 +37,8 @@ function [sel,ok]=glc_listdlg(varargin)
     havecontrol = 0;
     controldesc = [];
     controlvals = [];
+    % A callback function that is run whenever 'controlvals' changes.
+    controlcb = @(cvals)0;
 
     liststring = {};
     selmode_multiple = true;
@@ -130,6 +132,10 @@ function [sel,ok]=glc_listdlg(varargin)
           case 'controldesc',  % The description of what constraints the above underlies.
             havecontrol = bitor(havecontrol, 2);
             controldesc = val;
+          case 'controlcb',
+            assert((isvector(val) && ischar(val)) || isa(val, 'function_handle'), ...
+                   'ControlCb must be either a string or a function handle @f(cvals)');
+            controlcb = val;
 
           otherwise,
             warning(sprintf('unrecognized option ''%s''', varargin{i}));
@@ -182,6 +188,7 @@ function [sel,ok]=glc_listdlg(varargin)
 
     s.controldesc = controldesc;
     s.controlvals = controlvals;
+    s.controlcb = controlcb;
 
     s.finish_cb = finish_cb;
 
@@ -369,6 +376,21 @@ function glc_listdlg_mouse(button, downp, x, y, mods)
     glcall(glc.redisplay);
 end
 
+function glc_listdlg_run_cb()
+    global GL glc glc_ld
+
+    w = glcall(glc.get, GL.WINDOW_ID);
+
+    controlcb = glc_ld(w).controlcb;
+    cvals = glc_ld(w).controlvals;
+
+    if (isa(controlcb, 'function_handle'))
+        controlcb(cvals);
+    else
+        eval(controlcb);
+    end
+end
+
 function glc_listdlg_keyboard(asc, x, y, mods)
     global GL glc glc_ld
 
@@ -404,6 +426,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                 val = glc_ld(w).controlvals.(key);
                 dir = 1 - 2*(asc == GL.KEY_LEFT);
                 glc_ld(w).controlvals.(key) = updownfunc(val, dir);
+                glc_listdlg_run_cb();
 
                 % NOTE: it's a bit overkill to reconstruct the whole list, but who cares...
                 glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
@@ -442,6 +465,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                     switch (cd(eidx).type)
                       case 3,
                         glc_ld(w).controlvals.(cd(eidx).key) = ~glc_ld(w).controlvals.(cd(eidx).key);
+                        glc_listdlg_run_cb();
                         glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
                     end
                 end
@@ -451,6 +475,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                 if (isstruct(cd))
                     % TODO: run validation function.
                     glc_ld(w).controlvals.(cd(eidx).key) = newstr;
+                    glc_listdlg_run_cb();
                 end
                 glc_ld(w).liststring{eidx} = [glc_ld(w).editstring{:}];
                 glc_ld(w).oldstring = '';
@@ -701,12 +726,11 @@ function glc_listdlg_display()
 
         finish_cb = glc_ld(w).finish_cb;
 
-        if (ischar(finish_cb) && ~isempty(finish_cb))
-            [ok, sel] = glc_listdlg_get_ok_sel(w);
-            eval(finish_cb);
-        elseif (isa(finish_cb, 'function_handle'))
-            [ok, sel] = glc_listdlg_get_ok_sel(w);
+        [ok, sel] = glc_listdlg_get_ok_sel(w);
+        if (isa(finish_cb, 'function_handle'))
             finish_cb(ok, sel);
+        else
+            eval(finish_cb);  % finish_cb is a string
         end
     end
 end
