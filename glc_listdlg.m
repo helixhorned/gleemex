@@ -12,7 +12,7 @@
 %  'Subwindow',<logical>: if true, create a subwindow instead of a top-level
 %    window.  See glc_test_subwindows.m for an example.
 %
-%  'SelectionMode','edit':
+%  'SelectionMode','edit': DEPRECATED
 %
 %  'ControlDesc',<cdesc-struct>;
 %  'ControlVals',<cvals-struct>:
@@ -213,7 +213,6 @@ function [sel,ok]=glc_listdlg(varargin)
 
     s.bbox = [20 s.wh(1)-20; ...
                         20+24+20 s.wh(2)-20];
-    s.tmpwinid = 0;  % only glc_ld(1).tmpwinid is used (see TMPWINID below)
     s.parentwinid = glcall(glc.get, GL.WINDOW_ID);  % 0 if none or uninited
 
     if (isempty(s.name))
@@ -573,15 +572,13 @@ function glc_listdlg_display()
     end
 
     if (~isempty(glc_ld(w).clicked))
-        % TMPWINID
-        glc_ld(1).tmpwinid = w;
         if (haveokstr)
             glc_callbutton([20 20; 60 24].', glc_ld(w).mxy, ...
-                           'global glc_ld; glc_ld(glc_ld(1).tmpwinid).done=1;');
+                           'global glc_ld; glc_ld(arg).done=1;', w);
         end
         if (havecancelstr)
             glc_callbutton([20+60+20 20; 100 24].', glc_ld(w).mxy, ...
-                           'global glc_ld; glc_ld(glc_ld(1).tmpwinid).done=2;');
+                           'global glc_ld; glc_ld(arg).done=2;', w);
         end
     end
 
