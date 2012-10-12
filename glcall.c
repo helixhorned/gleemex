@@ -1775,9 +1775,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_TEXT:
     {
         /* TODO:
-         *  Make space and TAB have other widths than GLUT default (space is too wide,
-         *   TAB should be used as 'small space')
-         *  <forgot one> */
+         *  Make TAB have other widths than GLUT default (used as 'small space')?
+         *  <forgot one?> */
 
         const double *pos;
         double height;
@@ -1881,6 +1880,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mwSize slen = strlen(text);
             double strokeslen, textlen=0.0;  /* compiler-happy */
 
+            int32_t numspaces = 0;
+            static int32_t *spaceidxs, maxslen;
+
+            if (slen > UINT16_MAX)
+                ourErrMsgTxt("GLCALL: text: TEXT must be 65535 characters or shorter");
+
+            if (slen >= maxslen)
+            {
+                maxslen = slen;
+                spaceidxs = realloc(spaceidxs, slen*sizeof(*spaceidxs));
+            }
+
+            for (i=0; i<slen; i++)
+                if (text[i]==' ')
+                {
+                    text[i] = 't';
+                    spaceidxs[numspaces++] = i;
+                }
+
             if (xyalign[0] != 0.0 || nlhs >= 1)
             {
                 /* XXX: if the string contains a newline, this will be wrong. */
@@ -1895,11 +1913,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 }
             }
 
+            for (i=0; i<numspaces; i++)
+                text[spaceidxs[i]] |= 128;
+
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
             glPushAttrib(GL_CURRENT_BIT|GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
 
-            glColor3d(color[0], color[1], color[2]);
+            glColor4d(color[0], color[1], color[2], 1);
             glDisable(GL_TEXTURE_2D);
 
             glEnable(GL_LINE_SMOOTH);
@@ -1921,7 +1942,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             for (i=0; i<slen; i++)
             {
-                glutStrokeCharacter(font, text[i]);
+                char ch = text[i];
+
+                if (ch&128)
+                {
+                    glColor4d(0, 0, 0, 0);
+                    glutStrokeCharacter(font, ch&127);
+                    glColor4d(color[0], color[1], color[2], 1);
+                }
+                else
+                {
+                    glutStrokeCharacter(font, ch);
+                }
+
                 /* Add a bit of spacing, since by default, GLUT's stroke text
                  * looks too cramped... */
                 glTranslated(xspacing, 0, 0);
