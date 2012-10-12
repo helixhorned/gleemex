@@ -4,8 +4,9 @@
 % Replacement for MATLAB's LISTDLG(), see its doc for most options.
 %
 % Non-MATLAB options:
-%  'Finish_Cb',<func>: must be a handle to a function accepting two input
-%    arguments: 'ok' and 'sel'. The latter is always passed as a row vector.
+%  'FinishCb',<func>: must be a handle to a function accepting two input
+%    arguments: 'ok' and 'sel'. In control-GUI mode, 'sel' is the 'ControlVals'
+%    variable, otherwise it is a row vector of selected line indices.
 %    Called on any exit condition except closing by clicking [x].
 %
 %  'Subwindow',<logical>: if true, create a subwindow instead of a top-level
@@ -15,7 +16,11 @@
 %
 %  'ControlDesc',<cdesc-struct>;
 %  'ControlVals',<cvals-struct>:
+%    Control-GUI mode.  (TODO: better doc.)
 %    These two must occur together and imply 'SelectionMode','edit'.
+%
+%  'ControlCb', @(cvals)(...): specifies a callback function to be run with
+%    the updated 'ControlVals' variable whenever it changes.
 %
 % If glc_listdlg() was called when another window was current (its 'parent
 % window'), then it will be restored to the current window when the list
@@ -113,9 +118,9 @@ function [sel,ok]=glc_listdlg(varargin)
             cancelstr = val;
 
             %% non-standard
-          case 'finish_cb',
+          case 'finishcb',
             assert((isvector(val) && ischar(val)) || isa(val, 'function_handle'), ...
-                   'Finish_Cb must be either a string or a function handle @f(ok, sel)');
+                   'FinishCb must be either a string or a function handle @f(ok, sel)');
             finish_cb = val;
           case 'subwindow',
             assert(isscalar(val) && islogical(val));
