@@ -1,11 +1,21 @@
-% [SEL,OK] = GLC_LISTDLG('ListString',liststring, ...)
+% [SEL, OK] = GLC_LISTDLG('ListString',liststring, ...)
+% [cvals, OK] = GLC_LISTDLG('ControlDesc',cdesc, 'ControlVals',cvals, ...)
 %
 % Replacement for MATLAB's LISTDLG(), see its doc for most options.
 %
 % Non-MATLAB options:
-%  'Finish_Cb': if given, must be a handle to a function @(ok, sel)(...);
-%    sel is always passed as a row vector.  Called with any exit condition
-%    except close by clicking [x].
+%  'Finish_Cb',<func>: must be a handle to a function accepting two input
+%    arguments: 'ok' and 'sel'. The latter is always passed as a row vector.
+%    Called on any exit condition except closing by clicking [x].
+%
+%  'Subwindow',<logical>: if true, create a subwindow instead of a top-level
+%    window.  See glc_test_subwindows.m for an example.
+%
+%  'SelectionMode','edit':
+%
+%  'ControlDesc',<cdesc-struct>;
+%  'ControlVals',<cvals-struct>:
+%    These two must occur together and imply 'SelectionMode','edit'.
 %
 % If glc_listdlg() was called when another window was current (its 'parent
 % window'), then it will be restored to the current window when the list
@@ -22,6 +32,11 @@ function [sel,ok]=glc_listdlg(varargin)
     end
 
     haveliststring = false;
+
+    % CONTROLGUI
+    havecontrol = 0;
+    controldesc = [];
+    controlvals = [];
 
     liststring = {};
     selmode_multiple = true;
@@ -105,15 +120,39 @@ function [sel,ok]=glc_listdlg(varargin)
             subwindowp = val;
           case 'listpos',
             assert(isvector(val) && isnumeric(val) && numel(val)==2, 'ListPos value must be a numeric 2-vector');
-            assert(all(val>=1), 'All elements in Listpos value must be greater or equal 1');
+            assert(all(val>=1), 'All elements in ListPos value must be greater or equal 1');
             listpos = double(val);
+
+            %% CONTROLGUI
+          case 'controlvals',  % A struct of values to change.
+            havecontrol = bitor(havecontrol, 1);
+            controlvals = val;
+          case 'controldesc',  % The description of what constraints the above underlies.
+            havecontrol = bitor(havecontrol, 2);
+            controldesc = val;
 
           otherwise,
             warning(sprintf('unrecognized option ''%s''', varargin{i}));
         end
     end
 
-    % some more input checking
+    %% some more input checking
+
+    % CONTROLGUI
+    if (havecontrol ~= 0)
+        if (havecontrol ~= 3)
+            error('If passing ''controlvals'', must also pass ''controldesc'', and vice versa');
+        end
+
+        controldesc = glc_listdlg_validate_control(controldesc, controlvals);
+        liststring = glc_listdlg_construct_str(controldesc, controlvals);
+
+        haveliststring = true;
+        selmode_edit = true;
+
+        cancelstr = '';  % There's no way to undo the changes
+    end
+
     numvals = numel(liststring);
 
     if (~haveliststring)
@@ -141,6 +180,9 @@ function [sel,ok]=glc_listdlg(varargin)
     s.okstr = okstr;
     s.cancelstr = cancelstr;
 
+    s.controldesc = controldesc;
+    s.controlvals = controlvals;
+
     s.finish_cb = finish_cb;
 
     s.selected = false(size(liststring));
@@ -167,7 +209,7 @@ function [sel,ok]=glc_listdlg(varargin)
     end
 
     if (~isstruct(glc_ld))
-        % init woes: in MATLAB, we can't do either
+        % init woes: in MATLAB or Octave, we can't do either
         %  - S(n) = S2, where S and S2 are structs with different fields
         %  - S(n) = S2, where S is [] (globals on init)
         % WARNING: this means that it's a bad idea to assign to nonexistent
@@ -198,15 +240,98 @@ function [sel,ok]=glc_listdlg(varargin)
     [ok, sel] = glc_listdlg_get_ok_sel(winid);
 end
 
+function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
+    assert(isvector(controldesc) && isstruct(controldesc));
+    assert(numel(controlvals)==1 && isstruct(controlvals));
+
+    numcontrols = numel(controldesc);
+
+    assert(isfield(controldesc, 'name'));
+    assert(isfield(controldesc, 'key'));
+    assert(isfield(controldesc, 'extra'));
+
+    for i=1:numcontrols
+        assert(ischar(controldesc(i).name) && isvector(controldesc(i).name));
+
+        key = controldesc(i).key;
+        assert(ischar(key) && isvector(key));
+        assert(isfield(controlvals, key));
+
+        ex = controldesc(i).extra;
+
+        v = controlvals.(key);
+        thetype = 0;
+        if (numel(v)==1 && isnumeric(v))
+            % number, constrained by a function
+            controldesc(i).type=1;
+
+            assert(numel(ex)==1 && isstruct(ex));
+            % 'updownfunc' expected to be
+            %  newval = func(oldval, direction)
+            % (direction is -1 or 1)
+            assert(isfield(ex, 'updownfunc'));
+            assert(isa(ex.updownfunc, 'function_handle'));
+
+            assert(isfield(ex, 'format'));
+            assert(ischar(ex.format) && isvector(ex.format));
+        elseif (isvector(v) && ischar(v))
+            % editable string
+            controldesc(i).type=2;
+
+            % if non-empty, the validation function is expected to be
+            %  is_ok = func(str)
+            assert(isempty(ex) || isa(ex, 'function_handle'));
+        elseif (numel(v)==1 && islogical(v))
+            % toggle button
+            controldesc(i).type=3;
+        else
+            error('Invalid value type');
+        end
+    end
+end
+
+function liststring = glc_listdlg_construct_str(controldesc, controlvals)
+    numcontrols = numel(controldesc);
+
+    liststring = cell(1, numcontrols);
+    for i=1:numcontrols
+        ex = controldesc(i).extra;
+        str = [controldesc(i).name ': '];
+
+        key = controldesc(i).key;
+        v = controlvals.(key);
+
+        if (numel(v)==1 && isnumeric(v))
+            % number, constrained by a function
+            str = [str sprintf(ex.format, v)];
+        elseif (isvector(v) && ischar(v))
+            % editable string
+            str = [str v];
+        elseif (numel(v)==1 && islogical(v))
+            % toggle button
+            ps = 'false';
+            if (v) ps = 'true'; end
+            str = [str ps];
+        end
+
+        liststring{i} = str;
+    end
+end
+
 function [ok,sel]=glc_listdlg_get_ok_sel(winid)
     global glc_ld
 
     ok = (glc_ld(winid).done==1);
-    sel = find(glc_ld(winid).selected);
-    if (ok)
-        sel = sel(:)';
+
+    if (glc_ld(winid).selmode_edit)
+        sel = glc_ld(winid).controlvals;
     else
-        sel = [];
+        sel = find(glc_ld(winid).selected);
+        if (ok)
+            sel = sel(:)';
+        else
+            sel = [];
+        end
     end
 end
 
@@ -250,6 +375,8 @@ function glc_listdlg_keyboard(asc, x, y, mods)
     w = glcall(glc.get, GL.WINDOW_ID);
 
     eidx = glc_ld(w).editing;
+    cd = glc_ld(w).controldesc;
+
     if (eidx > 0)
         [c,l,r] = deal(glc_ld(w).editstring{:});
 
@@ -264,6 +391,22 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         elseif (asc == GL.KEY_RIGHT)
             if (~isempty(r))
                 glc_ld(w).editstring = { c, [l r(1)], r(2:end) };
+            end
+        end
+    elseif (isstruct(cd))
+        ei = find(glc_ld(w).selected);
+
+        if (cd(ei).type==1)
+            if (asc == GL.KEY_LEFT || asc == GL.KEY_RIGHT)
+                updownfunc = cd(ei).extra.updownfunc;
+
+                key = cd(ei).key;
+                val = glc_ld(w).controlvals.(key);
+                dir = 1 - 2*(asc == GL.KEY_LEFT);
+                glc_ld(w).controlvals.(key) = updownfunc(val, dir);
+
+                % NOTE: it's a bit overkill to reconstruct the whole list, but who cares...
+                glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
             end
         end
     end
@@ -281,20 +424,34 @@ function glc_listdlg_keyboard(asc, x, y, mods)
       case 13,  % enter
         if (glc_ld(w).selmode_edit)
             if (eidx == 0)
-                % starting to type
                 eidx = find(glc_ld(w).selected);
-                glc_ld(w).editing = eidx;
-                str = glc_ld(w).liststring{eidx};
-                glc_ld(w).oldstring = str;
-                colon = strfind(str, ': ');
-                if (~isempty(colon))
-                    colon = colon(1);
-                    glc_ld(w).editstring = { str(1:colon+1), str(colon+2:end), '' };
+
+                if (~isstruct(cd) || cd(eidx).type==2)
+                    % starting to type
+                    glc_ld(w).editing = eidx;
+                    str = glc_ld(w).liststring{eidx};
+                    glc_ld(w).oldstring = str;
+                    colon = strfind(str, ': ');
+                    if (~isempty(colon))
+                        colon = colon(1);
+                        glc_ld(w).editstring = { str(1:colon+1), str(colon+2:end), '' };
+                    else
+                        glc_ld(w).editstring = { '', str, '' };
+                    end
                 else
-                    glc_ld(w).editstring = { '', str, '' };
+                    switch (cd(eidx).type)
+                      case 3,
+                        glc_ld(w).controlvals.(cd(eidx).key) = ~glc_ld(w).controlvals.(cd(eidx).key);
+                        glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
+                    end
                 end
             else
                 % finished typing
+                newstr = [glc_ld(w).editstring{2:3}];
+                if (isstruct(cd))
+                    % TODO: run validation function.
+                    glc_ld(w).controlvals.(cd(eidx).key) = newstr;
+                end
                 glc_ld(w).liststring{eidx} = [glc_ld(w).editstring{:}];
                 glc_ld(w).oldstring = '';
                 glc_ld(w).editing = 0;
