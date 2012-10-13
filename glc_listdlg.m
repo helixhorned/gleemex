@@ -272,7 +272,7 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
 
         v = controlvals.(key);
         thetype = 0;
-        if (numel(v)==1 && isnumeric(v))
+        if (numel(v)==1 && isnumeric(v) && ~strcmp(class(v), 'int32'))
             % number, constrained by a function
             controldesc(i).type=1;
 
@@ -295,6 +295,11 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
         elseif (numel(v)==1 && islogical(v))
             % toggle button
             controldesc(i).type=3;
+        elseif (numel(v)==1 && strcmp(class(v), 'int32'))
+            % multi-state selection
+            controldesc(i).type=4;
+
+            assert(iscellstr(ex) && isvector(ex) && v>=1 && v<=numel(ex));
         else
             error('Invalid value type');
         end
@@ -312,17 +317,21 @@ function liststring = glc_listdlg_construct_str(controldesc, controlvals)
         key = controldesc(i).key;
         v = controlvals.(key);
 
-        if (numel(v)==1 && isnumeric(v))
+        switch (controldesc(i).type)
+          case 1,
             % number, constrained by a function
             str = [str sprintf(ex.format, v)];
-        elseif (isvector(v) && ischar(v))
+          case 2,
             % editable string
             str = [str v];
-        elseif (numel(v)==1 && islogical(v))
+          case 3,
             % toggle button
             ps = 'false';
             if (v) ps = 'true'; end
             str = [str ps];
+          case 4,
+            % multi-state selection
+            str = [str ex{v}];
         end
 
         liststring{i} = str;
@@ -422,19 +431,22 @@ function glc_listdlg_keyboard(asc, x, y, mods)
     elseif (isstruct(cd))
         ei = find(glc_ld(w).selected);
 
-        if (cd(ei).type==1)
-            if (asc == GL.KEY_LEFT || asc == GL.KEY_RIGHT)
+        if ((cd(ei).type==1 || cd(ei).type==4) && (asc == GL.KEY_LEFT || asc == GL.KEY_RIGHT))
+            dir = 1 - 2*(asc == GL.KEY_LEFT);
+            key = cd(ei).key;
+            val = glc_ld(w).controlvals.(key);
+
+            switch (cd(ei).type)
+              case 1,
                 updownfunc = cd(ei).extra.updownfunc;
-
-                key = cd(ei).key;
-                val = glc_ld(w).controlvals.(key);
-                dir = 1 - 2*(asc == GL.KEY_LEFT);
                 glc_ld(w).controlvals.(key) = updownfunc(val, dir);
-                glc_listdlg_run_cb();
-
-                % NOTE: it's a bit overkill to reconstruct the whole list, but who cares...
-                glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
+              case 4,
+                glc_ld(w).controlvals.(key) = min(max(1, val+dir), numel(cd(ei).extra));
             end
+
+            glc_listdlg_run_cb();
+            % NOTE: it's a bit overkill to reconstruct the whole list, but who cares...
+            glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
         end
     end
 
