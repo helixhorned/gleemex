@@ -12,5 +12,6 @@ function vals=glc_test_controldlg()
     cdesc(4).extra = {'Chicken', 'Beef', 'Dog'};
 
     [vals,ok]=glc_listdlg('ControlVals',cvals, 'ControlDesc',cdesc, 'ListSize',[320 200], ...
-                          'ControlCb','fprintf(''=== %s ===\n'', cvals.strval)');
+                          'ControlCb','fprintf(''=== %s ===\n'', cvals.strval)', ...
+                          'Name','Control Dialog Test');
 end

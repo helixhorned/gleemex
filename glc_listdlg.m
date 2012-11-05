@@ -520,7 +520,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         uppermost = [];
         offset = glc_ld(w).ofs;
         didmove = false;
-        if (mods==GL.MOD_CTRL)
+        if (mods~=GL.MOD_CTRL)
             % move selection one up
             uppermost = find(glc_ld(w).selected);
             if (numel(uppermost)==1 && uppermost > 1 && offset<uppermost)
@@ -538,7 +538,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         glc_ld(w).ofs = max(0, glc_ld(w).ofs-10);
 
       case GL.KEY_DOWN,
-        glc_ld(w).downreq = 1 - 2*(mods==GL.MOD_CTRL);
+        glc_ld(w).downreq = 1 - 2*(mods~=GL.MOD_CTRL);
       case GL.KEY_PAGE_DOWN,
         glc_ld(w).downreq = 10;
 
