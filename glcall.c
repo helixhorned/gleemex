@@ -1113,6 +1113,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (menus)
         {
             int32_t numleaves=0;
+            int32_t button = GLUT_RIGHT_BUTTON;
+            const mxArray *buttonar;
 
             /* Save off the 'menus' struct passed from above.
              * XXX: is this problematic with aliasing, i.e. if the user passes the same
@@ -1131,8 +1133,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                                  &createmenu_perentry, 0, NULL))
                 return;
 
-            /* TEMP */
-            glutAttachMenu(GLUT_MIDDLE_BUTTON);
+            buttonar = mxGetField(menus, 0, "button");
+            if (buttonar)
+            {
+                double buttond;
+
+                verifyparam(buttonar, "GLCALL: newwindow: MENUS.button", VP_SCALAR|VP_DOUBLE);
+                buttond = *(double *)mxGetData(buttonar);
+
+                if (buttond==1)
+                    button = GLUT_LEFT_BUTTON;
+                else if (buttond==2)
+                    button = GLUT_MIDDLE_BUTTON;
+                else if (buttond==4)
+                    button = GLUT_RIGHT_BUTTON;
+            }
+
+            glutAttachMenu(button);
         }
 
         /** set callbacks for the newly created window **/
