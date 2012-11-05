@@ -1,13 +1,14 @@
-% GLC_DRAW_COLORBAR(RECT, BOUNDS, LABEL, CMAPTEXNAME [, NUMTICKS [, TEXTHEIGHT]])
+% GLC_DRAW_COLORBAR(RECT, BOUNDS, LABEL, CMAPTEXNAME [, FORMAT [, NUMTICKS [, TEXTHEIGHT]]])
 %
 %  RECT - [x1 y1 x2 y2] bounding box
 %  BOUNDS - [min max]
 %  LABEL - the string to print near the color bar
 %  CMAPTEXNAME - the color map 2D texture name (ID)
+%  FORMAT - defaults to '%.02f'
 %  NUMTICKS - the number of tick marks, divided between min and max
 %             bound. Default: 7
 %  TEXTHEIGHT - the text height passed to glc.text.  Default: 10
-function glc_draw_colorbar(rect, bounds, label, cmaptexname, numticks, textheight)
+function glc_draw_colorbar(rect, bounds, label, cmaptexname, format, numticks, textheight)
     global glc GL
 
     if (~exist('numticks', 'var'))
@@ -16,6 +17,10 @@ function glc_draw_colorbar(rect, bounds, label, cmaptexname, numticks, textheigh
 
     if (~exist('textheight', 'var'))
         textheight = 10;
+    end
+
+    if (~exist('format', 'var'))
+        format = '%.02f';
     end
 
     glcall(glc.draw, GL.QUADS, glc_expandrect(rect), struct(...
@@ -32,6 +37,6 @@ function glc_draw_colorbar(rect, bounds, label, cmaptexname, numticks, textheigh
         y = rect(2) + frac*(rect(4)-rect(2)); % - textheight/2;
 
         glcall(glc.text, [rect(3)+8, y], textheight, ...
-               sprintf('%.02f', bounds(1)+frac*(bounds(2)-bounds(1))), [-1 0]);
+               sprintf(format, bounds(1)+frac*(bounds(2)-bounds(1))), [-1 0]);
     end
 end
