@@ -847,7 +847,7 @@ static void menu_callback(int cbval)
     if (glutwidx > 0)
     {
         const mxArray *menu;
-        int32_t ourwidx = ourwinidx[glutwidx];
+        int32_t ourwidx = ourwinidx[glutwidx], ocbval=cbval;
 
         mxAssert(ourwidx >= 0, "menu callback: ourwinidx[glutwidx] < 0!");
 
@@ -862,8 +862,13 @@ static void menu_callback(int cbval)
 
         if (menulabelar)
         {
+            mxArray *ocbvalar = mxCreateDoubleScalar(ocbval);
+            mxArray *args[2] = { (mxArray *)menulabelar, ocbvalar };
+
             /* call the menu callback with the menu label as arg */
-            do_callback(1, (mxArray **)&menulabelar, menucbfname);
+            do_callback(2, args, menucbfname);
+
+            mxFree(ocbvalar);
         }
     }
 }
