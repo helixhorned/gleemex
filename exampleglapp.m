@@ -105,13 +105,12 @@ function exampleglapp(vertposns)
     glcall(glc.entermainloop);
 end
 
-
-function ex_menucb(label)
+function ex_menucb(label, idx)
     % for root menu and submenu
     fprintf('Clicked menu entry %s.\n', label);
 end
 
-function ex_menucb3(label)
+function ex_menucb3(label, idx)
     % for subsubmenu
     fprintf('3: Clicked menu entry %s.\n', label);
 end

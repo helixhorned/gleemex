@@ -868,7 +868,7 @@ static void menu_callback(int cbval)
             /* call the menu callback with the menu label as arg */
             do_callback(2, args, menucbfname);
 
-            mxFree(ocbvalar);
+//            mxFree(ocbvalar);
         }
     }
 }
