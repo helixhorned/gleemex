@@ -450,6 +450,13 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         end
     end
 
+    if (asc==GL.KEY_LEFT || asc==GL.KEY_RIGHT)
+        if (isstruct(cd) && cd(find(glc_ld(w).selected)).type==3)
+            % left/right arrows --> toggle boolean value
+            asc = 13;
+        end
+    end
+
     switch asc,
       case 1,  % Ctrl+a
         if (glc_ld(w).selmode_multiple)
@@ -695,6 +702,21 @@ function glc_listdlg_display()
 
                 % Draw background.
                 glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
+
+                cd = glc_ld(w).controldesc;
+                if (isstruct(cd) && glc_ld(w).selected(idx))
+                    if (cd(idx).type==4)  % multi-state selection
+                        cv = glc_ld(w).controlvals;
+                        selidx = cv.(cd(idx).key);
+
+                        if (selidx > 1)
+                            glcall(glc.text, [xrange(1)-15 y1+1], lineheight-2, '<');
+                        end
+                        if (selidx < numel(cd(idx).extra))
+                            glcall(glc.text, [xrange(2)+6 y1+1], lineheight-2, '>');
+                        end
+                    end
+                end
             else
                 % Draw text: must distinguish editing and plain cases.
                 textorigin =  bb([1 2])+[xmargin 2];
