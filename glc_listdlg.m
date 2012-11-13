@@ -433,6 +433,9 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
         if ((cd(ei).type==1 || cd(ei).type==4) && (asc == GL.KEY_LEFT || asc == GL.KEY_RIGHT))
             dir = 1 - 2*(asc == GL.KEY_LEFT);
+            if (mods==GL.MOD_CTRL)
+                dir = dir*10;
+            end
             key = cd(ei).key;
             val = glc_ld(w).controlvals.(key);
 
