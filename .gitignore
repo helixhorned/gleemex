@@ -1,3 +1,6 @@
+ex_*.m
+glc_listdlg_*.m
 *.mex
+*.mexw64
 initrepo.sh
 *.o
