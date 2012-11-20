@@ -6,7 +6,12 @@ try
 catch
     % MATLAB
     if (ispc)
-        mex -lglew32 glcall.c
+        if (strcmp(computer('arch'), 'win64'))
+            mex -Iourinclude -Llib64 -lglew32 -lfreeglutd glcall.c
+        else
+            % no 32-bit libs yet
+            mex -Iourinclude -lglew32 glcall.c
+        end
     else
         mex -lGL -lGLU -lGLEW -lglut glcall.c
     end
