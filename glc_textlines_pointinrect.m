@@ -1,6 +1,8 @@
 % POINT_IN_I = GLC_TEXTLINES_POINTINRECT(NUMLINES, XRANGE, YORIGIN)
 function point_in_i = glc_textlines_pointinrect(numlines, xrange, yorigin, lineheight, mxy)
-    narginchk(5, 5);
+    if (nargin ~= 5)
+        error('Must have exactly 5 input arguments');
+    end
 
     for i=1:numlines
         y1 = yorigin - i*lineheight;

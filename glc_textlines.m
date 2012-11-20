@@ -10,7 +10,9 @@ function glc_textlines(liststring, numlines, xrange, yorigin, opts)
 
     numvals = numel(liststring);
 
-    narginchk(4, 5);
+    if (nargin < 4 || nargin > 5)
+        error('Must have between 4 and 5 input arguments');
+    end
 
     assert(iscellstr(liststring));
 
