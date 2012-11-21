@@ -161,7 +161,9 @@ function [sel,ok]=glc_listdlg(varargin)
         haveliststring = true;
         selmode_edit = true;
 
-        cancelstr = '';  % There's no way to undo the changes
+        % There's no way to undo the changes in the control-GUI since they're applied
+        % immediately.
+        cancelstr = '';
     end
 
     numvals = numel(liststring);
@@ -285,20 +287,22 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
 
             assert(isfield(ex, 'format'));
             assert(ischar(ex.format) && isvector(ex.format));
-        elseif (isvector(v) && ischar(v))
+        elseif (ischar(v) && (isempty(v) || isvector(v)))
             % editable string
             controldesc(i).type=2;
 
             % if non-empty, the validation function is expected to be
             %  is_ok = func(str)
-            assert(isempty(ex) || isa(ex, 'function_handle'));
+            % or a logical telling whether editing is permitted.
+            assert(isempty(ex) || isa(ex, 'function_handle') || ...
+                   (numel(ex)==1 && islogical(ex)));
         elseif (numel(v)==1 && islogical(v))
             % toggle button
             controldesc(i).type=3;
+            assert(isempty(ex));
         elseif (numel(v)==1 && strcmp(class(v), 'int32'))
             % multi-state selection
             controldesc(i).type=4;
-
             assert(iscellstr(ex) && isvector(ex) && v>=1 && v<=numel(ex));
         else
             error('Invalid value type');
@@ -322,8 +326,13 @@ function liststring = glc_listdlg_construct_str(controldesc, controlvals)
             % number, constrained by a function
             str = [str sprintf(ex.format, v)];
           case 2,
-            % editable string
-            str = [str v];
+            if (~isempty(v))
+                % editable string
+                str = [str v];
+            else
+                % static string
+                str(end-1:end) = [];  % cut off the ': '
+            end
           case 3,
             % toggle button
             ps = 'false';
@@ -474,18 +483,21 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         if (glc_ld(w).selmode_edit)
             if (eidx == 0)
                 eidx = find(glc_ld(w).selected);
+                assert(numel(eidx)==1);
 
                 if (~isstruct(cd) || cd(eidx).type==2)
-                    % starting to type
-                    glc_ld(w).editing = eidx;
-                    str = glc_ld(w).liststring{eidx};
-                    glc_ld(w).oldstring = str;
-                    colon = strfind(str, ': ');
-                    if (~isempty(colon))
-                        colon = colon(1);
-                        glc_ld(w).editstring = { str(1:colon+1), str(colon+2:end), '' };
-                    else
-                        glc_ld(w).editstring = { '', str, '' };
+                    if (~isempty(glc_ld(w).controlvals.(cd(eidx).key)))
+                        % if string is editable, starting to type
+                        glc_ld(w).editing = eidx;
+                        str = glc_ld(w).liststring{eidx};
+                        glc_ld(w).oldstring = str;
+                        colon = strfind(str, ': ');
+                        if (~isempty(colon))
+                            colon = colon(1);
+                            glc_ld(w).editstring = { str(1:colon+1), str(colon+2:end), '' };
+                        else
+                            glc_ld(w).editstring = { '', str, '' };
+                        end
                     end
                 else
                     switch (cd(eidx).type)
@@ -732,7 +744,20 @@ function glc_listdlg_display()
                            struct('colors',[0 0 0]));
                     tmpargs{3} = [glc_ld(w).editstring{:}];
                 end
+
+                glcall(glc.push, GL.LINE_BIT);
+                ex = [];
+                if (isstruct(cd))
+                    ex = cd(idx).extra;
+                end
+                if (islogical(ex) && ex)
+                    % highlight the text
+                    glcall(glc.set, GL.LINE_WIDTH, 1.5)
+                end
+
                 glcall(glc.text, tmpargs{:});
+
+                glcall(glc.pop, GL.LINE_BIT);
             end
         end
     end
