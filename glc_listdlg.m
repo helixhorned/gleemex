@@ -149,6 +149,14 @@ function [sel,ok]=glc_listdlg(varargin)
 
     %% some more input checking
 
+    need_glc_ld_init = false;
+    TYPE = struct('NUMBER',1, 'STRING',2, 'TOGBTN',3, 'MULTISEL',4);
+    if (~isstruct(glc_ld))
+        % we need the symbolic names in glc_listdlg_{construct_str,validate_control}
+        glc_ld = struct('TYPE',TYPE);
+        need_glc_ld_init = true;
+    end
+
     % CONTROLGUI
     if (havecontrol ~= 0)
         if (havecontrol ~= 3)
@@ -217,11 +225,13 @@ function [sel,ok]=glc_listdlg(varargin)
                         20+24+20 s.wh(2)-20];
     s.parentwinid = glcall(glc.get, GL.WINDOW_ID);  % 0 if none or uninited
 
+    s.TYPE = TYPE;  % will be a struct filled with TYPE.* constants
+
     if (isempty(s.name))
         s.name = ' ';
     end
 
-    if (~isstruct(glc_ld))
+    if (need_glc_ld_init)
         % init woes: in MATLAB or Octave, we can't do either
         %  - S(n) = S2, where S and S2 are structs with different fields
         %  - S(n) = S2, where S is [] (globals on init)
@@ -229,6 +239,7 @@ function [sel,ok]=glc_listdlg(varargin)
         %  fields of glc_ld in callbacks, in other words they should be
         %  'declared' above first
         glc_ld = glc_listdlg_dummyize_struct(s);
+        glc_ld.TYPE = TYPE;
     end
 
     winid = glcall(glc.newwindow, listpos, s.wh, s.name, ...
@@ -254,6 +265,9 @@ function [sel,ok]=glc_listdlg(varargin)
 end
 
 function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
+    global glc_ld
+    TYPE = glc_ld(1).TYPE;
+
     assert(isvector(controldesc) && isstruct(controldesc));
     assert(numel(controlvals)==1 && isstruct(controlvals));
 
@@ -276,7 +290,7 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
         thetype = 0;
         if (numel(v)==1 && isnumeric(v) && ~strcmp(class(v), 'int32'))
             % number, constrained by a function
-            controldesc(i).type=1;
+            controldesc(i).type = TYPE.NUMBER;
 
             assert(numel(ex)==1 && isstruct(ex));
             % 'updownfunc' expected to be
@@ -289,7 +303,7 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
             assert(ischar(ex.format) && isvector(ex.format));
         elseif (ischar(v) && (isempty(v) || isvector(v)))
             % editable string
-            controldesc(i).type=2;
+            controldesc(i).type = TYPE.STRING;
 
             % if non-empty, the validation function is expected to be
             %  is_ok = func(str)
@@ -298,11 +312,11 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
                    (numel(ex)==1 && islogical(ex)));
         elseif (numel(v)==1 && islogical(v))
             % toggle button
-            controldesc(i).type=3;
+            controldesc(i).type = TYPE.TOGBTN;
             assert(isempty(ex));
         elseif (numel(v)==1 && strcmp(class(v), 'int32'))
             % multi-state selection
-            controldesc(i).type=4;
+            controldesc(i).type = TYPE.MULTISEL;
             assert(iscellstr(ex) && isvector(ex) && v>=1 && v<=numel(ex));
         else
             error('Invalid value type');
@@ -311,6 +325,9 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
 end
 
 function liststring = glc_listdlg_construct_str(controldesc, controlvals)
+    global glc_ld
+    TYPE = glc_ld(1).TYPE;
+
     numcontrols = numel(controldesc);
 
     liststring = cell(1, numcontrols);
@@ -322,10 +339,10 @@ function liststring = glc_listdlg_construct_str(controldesc, controlvals)
         v = controlvals.(key);
 
         switch (controldesc(i).type)
-          case 1,
+          case TYPE.NUMBER,
             % number, constrained by a function
             str = [str sprintf(ex.format, v)];
-          case 2,
+          case TYPE.STRING,
             if (~isempty(v))
                 % editable string
                 str = [str v];
@@ -333,12 +350,12 @@ function liststring = glc_listdlg_construct_str(controldesc, controlvals)
                 % static string
                 str(end-1:end) = [];  % cut off the ': '
             end
-          case 3,
+          case TYPE.TOGBTN,
             % toggle button
             ps = 'false';
             if (v) ps = 'true'; end
             str = [str ps];
-          case 4,
+          case TYPE.MULTISEL,
             % multi-state selection
             str = [str ex{v}];
         end
@@ -415,6 +432,7 @@ end
 
 function glc_listdlg_keyboard(asc, x, y, mods)
     global GL glc glc_ld
+    TYPE = glc_ld(1).TYPE;
 
     w = glcall(glc.get, GL.WINDOW_ID);
 
@@ -440,7 +458,9 @@ function glc_listdlg_keyboard(asc, x, y, mods)
     elseif (isstruct(cd))
         ei = find(glc_ld(w).selected);
 
-        if ((cd(ei).type==1 || cd(ei).type==4) && (asc == GL.KEY_LEFT || asc == GL.KEY_RIGHT))
+        if ((cd(ei).type==TYPE.NUMBER || cd(ei).type==TYPE.MULTISEL) && ...
+            (asc == GL.KEY_LEFT || asc == GL.KEY_RIGHT))
+
             dir = 1 - 2*(asc == GL.KEY_LEFT);
             if (mods==GL.MOD_CTRL)
                 dir = dir*10;
@@ -449,10 +469,10 @@ function glc_listdlg_keyboard(asc, x, y, mods)
             val = glc_ld(w).controlvals.(key);
 
             switch (cd(ei).type)
-              case 1,
+              case TYPE.NUMBER,
                 updownfunc = cd(ei).extra.updownfunc;
                 glc_ld(w).controlvals.(key) = updownfunc(val, dir);
-              case 4,
+              case TYPE.MULTISEL,
                 glc_ld(w).controlvals.(key) = min(max(1, val+dir), numel(cd(ei).extra));
             end
 
@@ -463,7 +483,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
     end
 
     if (asc==GL.KEY_LEFT || asc==GL.KEY_RIGHT)
-        if (isstruct(cd) && cd(find(glc_ld(w).selected)).type==3)
+        if (isstruct(cd) && cd(find(glc_ld(w).selected)).type==TYPE.TOGBTN)
             % left/right arrows --> toggle boolean value
             asc = 13;
         end
@@ -485,7 +505,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                 eidx = find(glc_ld(w).selected);
                 assert(numel(eidx)==1);
 
-                if (~isstruct(cd) || cd(eidx).type==2)
+                if (~isstruct(cd) || cd(eidx).type==TYPE.STRING)
                     if (~isempty(glc_ld(w).controlvals.(cd(eidx).key)))
                         % if string is editable, starting to type
                         glc_ld(w).editing = eidx;
@@ -501,7 +521,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                     end
                 else
                     switch (cd(eidx).type)
-                      case 3,
+                      case TYPE.TOGBTN,
                         glc_ld(w).controlvals.(cd(eidx).key) = ~glc_ld(w).controlvals.(cd(eidx).key);
                         glc_listdlg_run_cb();
                         glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
@@ -588,6 +608,7 @@ end
 
 function glc_listdlg_display()
     global GL glc glc_ld
+    TYPE = glc_ld(1).TYPE;
 
     w = glcall(glc.get, GL.WINDOW_ID);
 
@@ -703,6 +724,7 @@ function glc_listdlg_display()
             bb = [xrange; ...
                   y1, y1+lineheight];
 
+            cd = glc_ld(w).controldesc;
             if (runi==1)
                 color = [1 1 1];
                 if (glc_ld(w).selected(idx))
@@ -718,9 +740,8 @@ function glc_listdlg_display()
                 % Draw background.
                 glcall(glc.draw, GL.QUADS, glc_expandrect(bb), struct('colors', color));
 
-                cd = glc_ld(w).controldesc;
                 if (isstruct(cd) && glc_ld(w).selected(idx))
-                    if (cd(idx).type==4)  % multi-state selection
+                    if (cd(idx).type==TYPE.MULTISEL)  % multi-state selection
                         cv = glc_ld(w).controlvals;
                         selidx = cv.(cd(idx).key);
 
