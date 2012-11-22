@@ -1,8 +1,10 @@
 try
-    octave_core_file_name;
+    OCTAVE_VERSION;
 
     % Octave
-    mkoctfile -mex -W -Wall -Wextra -Werror-implicit-function-declaration -lGL -lGLU -lGLEW -lglut glcall.c
+    % For building using a different compiler, run from the command line with CC=... prepended
+    % (e.g. CC='clang -fcatch-undefined-behavior' mkoctfile ...)
+    mkoctfile --mex -g -W -Wall -Wextra -Werror-implicit-function-declaration -lGL -lGLU -lGLEW -lglut glcall.c
 catch
     % MATLAB
     if (ispc)
