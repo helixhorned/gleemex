@@ -223,14 +223,16 @@ const char *glcall_names[] =
 
 /*//////// DATA //////////*/
 
-#define MAXACTIVEWINDOWS 32  /* max glutomex windows open at the same time */
-#define MAXLIFETIMEWINDOWS 32768  /* max glutomex windows while top-level glcall is active */
+#define MAXACTIVEWINDOWS 32  /* max gleemex windows open at the same time */
+#define MAXLIFETIMEWINDOWS 32768  /* max gleemex windows while top-level glcall is active */
 #define MAXCBNAMELEN 63  /* max strlen of callback name */
 
 static int curglutwinidx, curourwinidx=-1;
-/* our window index (start at 0) --> GLUT window index (start at 1) */
+/* The mapping of our window indices (starting at 0) to GLUT window indices
+ * (starting at 1). The value 0 is used as 'none'. */
 static uint16_t glutwinidx[MAXACTIVEWINDOWS];
-/* the reverse mapping, MAXLIFETIMEWINDOWS is practically Inf for that purpose */
+/* The reverse mapping. MAXLIFETIMEWINDOWS is practically infinite for that
+ * purpose. The value -1 is used as 'none'. */
 static int8_t ourwinidx[MAXLIFETIMEWINDOWS];
 static char callback_funcname[MAXACTIVEWINDOWS][NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;  /* entermainloop entered? */
@@ -241,6 +243,7 @@ static struct windata_
     mxArray *menus;  /* persistent */
 } win[MAXACTIVEWINDOWS];
 
+/* The GL texture name for the color map 1D texture. */
 static GLuint cmaptexname /*, proginuse */;
 static GLfloat g_strokefontheight;
 
@@ -1070,8 +1073,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         oglutwinidx = glutGetWindow();
 
-        /* look for a free ourwinidx slot and clean up window slots for windows
-         * that got destroyed by clicking [x] instead of calling glcall(glc.closewindow) */
+        /* Look for a free ourwinidx slot and clean up window slots for windows
+         * that got destroyed by clicking [x] instead of calling glcall(glc.closewindow). */
         for (i=0; i<MAXACTIVEWINDOWS; i++)
         {
             if (glutwinidx[i]==0)
@@ -1087,7 +1090,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         /* Reset the old current window before the potential error. This
          * doesn't matter normally, but users might protect this NEWWINDOW
-         * call with a try/catch, where it does. */
+         * call with a try/catch, where it does. XXX: really?*/
         if (oglutwinidx > 0)
             glutSetWindow(oglutwinidx);
 
@@ -2591,7 +2594,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(CLOSEWINDOW_IN_OURWINID, "GLCALL: closewindow: OURWINID", VP_SCALAR|VP_INT32);
             ourwidx = *(int32_t *)mxGetData(CLOSEWINDOW_IN_OURWINID);
 
-            if (ourwidx <= 0 || ourwidx > MAXACTIVEWINDOWS)
+            if (ourwidx < 1 || ourwidx > MAXACTIVEWINDOWS)
                 ourErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
             ourwidx--;
 
