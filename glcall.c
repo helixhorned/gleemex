@@ -523,8 +523,30 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
 
 /*//////// FUNCTIONS //////////*/
 
+static void destroy_menu_struct(int32_t ourwidx)
+{
+    if (win[ourwidx].menus)
+        mxDestroyArray(win[ourwidx].menus);
+    win[ourwidx].menus = NULL;
+}
+
+static void cleanup_window(int32_t ourwidx)
+{
+    destroy_menu_struct(ourwidx);
+    memset(&win[ourwidx], 0, sizeof(win[0]));
+}
+
+static void clear_window_indices(int32_t ourwidx, int32_t glutwidx)
+{
+    ourwinidx[glutwidx] = -1;
+    if (ourwidx >= 0)
+        glutwinidx[ourwidx] = 0;
+}
+
 static void cleanup_after_mainloop(void)
 {
+    int32_t i;
+
     memset(callback_funcname, 0, sizeof(callback_funcname));
     memset(ourwinidx, 0xff, sizeof(ourwinidx));
     memset(glutwinidx, 0, sizeof(glutwinidx));
@@ -538,7 +560,8 @@ static void cleanup_after_mainloop(void)
     curglutwinidx = 0;
     curourwinidx = -1;
 
-    memset(win, 0, sizeof(win));
+    for (i=0; i<MAXACTIVEWINDOWS; i++)
+        cleanup_window(i);
 }
 
 /* GLUT->MATLAB callback functionality */
@@ -618,6 +641,7 @@ static void mouse_cb(int button, int state, int x, int y)
         if (button>=0 && button<=2)
             printf("window %d: %s button %s\n", curourwinidx, btns[button], state==GLUT_DOWN?"down":"up");
 #endif
+        /* Save which buttons are pressed or released for the mouse motion events. */
         if (state==GLUT_DOWN)
             win[curourwinidx].buttons |= (1<<button);
         else
@@ -640,8 +664,10 @@ static void motion_cb(int x, int y)
 
         if (win[curourwinidx].buttons==0)
         {
-            printf("window %d motion_cb: win[%d].buttons==0\n", curourwinidx, curourwinidx);
-            args[0] = 1<<GLUT_LEFT_BUTTON;  /* guess, ugh */
+            /* We hit an inconsistency: we're in the motion event whereas
+             * win[].buttons tells us that none is pressed. */
+            printf("window %d motion_cb: win[].buttons==0\n", curourwinidx);
+            args[0] = 1<<GLUT_LEFT_BUTTON;  /* guess that it's the left button, ugh */
         }
 
         call_mfile_callback(CB_MOTION, 3, args);
@@ -656,8 +682,10 @@ static void passivemotion_cb(int x, int y)
 
         if (win[curourwinidx].buttons!=0)
         {
-            printf("window %d passivemotion_cb: win[%d].buttons==%d\n",
-                   curourwinidx, curourwinidx, win[curourwinidx].buttons);
+            /* We hit an inconsistency: we're in the passive motion event
+             * whereas win[].buttons tells us that one is pressed. */
+            printf("window %d passivemotion_cb: win[].buttons==%d\n",
+                   curourwinidx, win[curourwinidx].buttons);
             win[curourwinidx].buttons = 0;
         }
 
@@ -722,6 +750,24 @@ static void reshape_cb(int w, int h)
         if (glutGetWindow())
             glViewport(0, 0, (GLsizei)w, (GLsizei)h);
     }
+}
+
+/* Window closure/destruction callback. Also runs when closing a window using
+ * its [x] button. */
+static void close_cb()
+{
+    /* This is the soon to be destroyed window's index, see
+     * http://sourceforge.net/mailarchive/message.php?msg_id=30131865 */
+    int32_t glutwidx=glutGetWindow(), ourwidx;
+
+    mxAssert((unsigned)glutwidx < MAXLIFETIMEWINDOWS, "XXX");
+    ourwidx = ourwinidx[glutwidx];
+
+//    mxAssert((unsigned)ourwidx < MAXACTIVEWINDOWS, "XXX");
+    if (ourwidx >= 0)
+        cleanup_window(ourwidx);
+    clear_window_indices(ourwidx, glutwidx);
+//    printf("Closed window GLUT %d, our %d\n", glutwidx, ourwidx);
 }
 
 #ifndef HAVE_OCTAVE
@@ -870,8 +916,6 @@ static void menu_callback(int cbval)
 
             /* call the menu callback with the menu label as arg */
             do_callback(2, args, menucbfname);
-
-//            mxFree(ocbvalar);
         }
     }
 }
@@ -1074,7 +1118,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         oglutwinidx = glutGetWindow();
 
         /* Look for a free ourwinidx slot and clean up window slots for windows
-         * that got destroyed by clicking [x] instead of calling glcall(glc.closewindow). */
+         * that aren't alive any more, for example because we bailed out due to
+         * an error in the M code earlier. */
         for (i=0; i<MAXACTIVEWINDOWS; i++)
         {
             if (glutwinidx[i]==0)
@@ -1083,8 +1128,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glutSetWindow(glutwinidx[i]);
             if (glutGetWindow() != glutwinidx[i])  /* window nonexistent! */
             {
-                ourwinidx[glutwinidx[i]] = -1;
-                glutwinidx[i] = 0;
+                cleanup_window(i);
+                clear_window_indices(i, glutwinidx[i]);
+                break;
             }
         }
 
@@ -1119,13 +1165,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             int32_t button = GLUT_RIGHT_BUTTON;
             const mxArray *buttonar;
 
-            /* Save off the 'menus' struct passed from above.
-             * XXX: is this problematic with aliasing, i.e. if the user passes the same
-             * 'menus' mxArray to two different windows? */
-            if (win[i].menus)
-                mxDestroyArray(win[i].menus);
+            /* Save off the 'menus' struct passed from above, clearing a
+             * potential old one first. Note that this is not problematic with
+             * aliasing (same menu struct passed to two different windows),
+             * because we duplicate the mxArrays below. */
+            destroy_menu_struct(i);
 
-            /* We must not make the arg mxArray persistent (e.g. on Octave: crash) */
+            /* We must not make the original, input argument mxArray persistent
+             * (e.g. on Octave: crash) */
             win[i].menus = mxDuplicateArray(menus);
             mexMakeArrayPersistent(win[i].menus);
 
@@ -1159,6 +1206,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* these two are always there */
         glutDisplayFunc(display_cb);
         glutReshapeFunc(reshape_cb);
+        glutCloseFunc(close_cb);
 
         /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...) */
         /*    is called)? Doesn't seem really necessary... */
@@ -2609,13 +2657,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourwidx = ourwinidx[glutwidx];
         }
 
-        if (glutwidx > 0)  /* XXX: still might be nonexistent because closed by clicking [x] */
+        if (glutwidx > 0)  /* XXX: still might be nonexistent? */
             glutDestroyWindow(glutwidx);
 
+        // use clear_window_indices()?
         ourwinidx[glutwidx] = -1;
-        if (ourwidx < 0)
-            ourErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
-        glutwinidx[ourwidx] = 0;
+//        if (ourwidx < 0)
+//            ourErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
+        if (ourwidx >= 0)
+            glutwinidx[ourwidx] = 0;
+//        printf("Closewindow GLUT %d, our %d\n", glutwidx, ourwidx);
     }
     return;
 
