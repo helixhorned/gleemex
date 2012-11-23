@@ -150,7 +150,7 @@ function [sel,ok]=glc_listdlg(varargin)
     %% some more input checking
 
     need_glc_ld_init = false;
-    TYPE = struct('NUMBER',1, 'STRING',2, 'TOGBTN',3, 'MULTISEL',4);
+    TYPE = struct('NUMBER',1, 'STRING',2, 'TOGBTN',3, 'MULTISEL',4, 'KEYBIND',5);
     if (~isstruct(glc_ld))
         % we need the symbolic names in glc_listdlg_{construct_str,validate_control}
         glc_ld = struct('TYPE',TYPE);
@@ -288,7 +288,7 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
 
         v = controlvals.(key);
         thetype = 0;
-        if (numel(v)==1 && isnumeric(v) && ~strcmp(class(v), 'int32'))
+        if (numel(v)==1 && isfloat(v))
             % number, constrained by a function
             controldesc(i).type = TYPE.NUMBER;
 
@@ -318,10 +318,41 @@ function controldesc=glc_listdlg_validate_control(controldesc, controlvals)
             % multi-state selection
             controldesc(i).type = TYPE.MULTISEL;
             assert(iscellstr(ex) && isvector(ex) && v>=1 && v<=numel(ex));
+        elseif (numel(v)==1 && strcmp(class(v), 'uint32'))
+            % key bind
+            controldesc(i).type = TYPE.KEYBIND;
+            assert(isempty(ex));
         else
             error('Invalid value type');
         end
     end
+end
+
+function key=glc_listdlg_get_keyname(v)
+    key = '<unknown>';
+    if (v>=33 && v<=126)
+        key = ['<' v '>'];
+    elseif (v>=65536+1 && v<=65536+12)
+        key = sprintf('<F%d>', v-65536);
+    elseif (v>=65536+100 && v<=65536+108)
+        KEYS = { 'LEFT', 'UP', 'RIGHT', 'DOWN', 'PGUP', ...
+                 'PGDN', 'HOME', 'END', 'INSERT' };
+        key = ['<' KEYS{v-(65536+100)+1} '>'];
+    else
+        switch (v)
+          case 8,
+            key = '<BACKSPACE>';
+          case 9,
+            key = '<TAB>';
+          case 13,
+            key = '<ENTER>';
+          case 32,
+            key = '<SPACE>';
+          case 127,
+            key = '<DEL>';
+        end
+    end
+%    key = sprintf('%s %d', key, v);
 end
 
 function liststring = glc_listdlg_construct_str(controldesc, controlvals)
@@ -358,6 +389,11 @@ function liststring = glc_listdlg_construct_str(controldesc, controlvals)
           case TYPE.MULTISEL,
             % multi-state selection
             str = [str ex{v}];
+          case TYPE.KEYBIND,
+            % key binding dialog
+            % TODO: better user-configurable verification. (E.g. duplicates allowed?
+            % etc. But in a general fashion, i.e. through a callback function.)
+            str = [str glc_listdlg_get_keyname(v)];
         end
 
         liststring{i} = str;
@@ -439,7 +475,16 @@ function glc_listdlg_keyboard(asc, x, y, mods)
     eidx = glc_ld(w).editing;
     cd = glc_ld(w).controldesc;
 
-    if (eidx > 0)
+    if (eidx < 0)
+        % doing keybind
+        glc_ld(w).editing = 0;
+        if (~strcmp(glc_listdlg_get_keyname(asc), '<unknown>'))
+            glc_ld(w).controlvals.(cd(-eidx).key) = uint32(asc);
+            glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
+        end
+        glcall(glc.redisplay);
+        return;
+    elseif (eidx > 0)
         [c,l,r] = deal(glc_ld(w).editstring{:});
 
         if (asc >= 32 && asc <= 126)
@@ -505,7 +550,9 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                 eidx = find(glc_ld(w).selected);
                 assert(numel(eidx)==1);
 
-                if (~isstruct(cd) || cd(eidx).type==TYPE.STRING)
+                if (isstruct(cd) && cd(eidx).type==TYPE.KEYBIND)
+                    glc_ld(w).editing = -eidx;  % <0: doing key bind
+                elseif (~isstruct(cd) || cd(eidx).type==TYPE.STRING)
                     if (~isempty(glc_ld(w).controlvals.(cd(eidx).key)))
                         % if string is editable, starting to type
                         glc_ld(w).editing = eidx;
@@ -583,7 +630,6 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         glc_ld(w).downreq = 1 - 2*(mods~=GL.MOD_CTRL);
       case GL.KEY_PAGE_DOWN,
         glc_ld(w).downreq = 10;
-
     end
 
     glcall(glc.redisplay);
@@ -732,6 +778,10 @@ function glc_listdlg_display()
                         color = [0.7 0.7 0.9];
                     else
                         color = [0.6 0.6 0.9];
+                    end
+                    if (glc_ld(w).editing == -i)
+                        % doing keybind
+                        color = color([3 1 2]);
                     end
                 elseif (point_in_i==i)
                     color = [0.92 0.92 0.92];
