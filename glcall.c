@@ -227,13 +227,13 @@ const char *glcall_names[] =
 #define MAXLIFETIMEWINDOWS 32768  /* max gleemex windows while top-level glcall is active */
 #define MAXCBNAMELEN 63  /* max strlen of callback name */
 
-static int curglutwinidx, curourwinidx=-1;
+static int g_curglutwidx=0, g_curourwidx=-1;
 /* The mapping of our window indices (starting at 0) to GLUT window indices
  * (starting at 1). The value 0 is used as 'none'. */
-static uint16_t glutwinidx[MAXACTIVEWINDOWS];
+static uint16_t g_glutwinidx[MAXACTIVEWINDOWS];
 /* The reverse mapping. MAXLIFETIMEWINDOWS is practically infinite for that
  * purpose. The value -1 is used as 'none'. */
-static int8_t ourwinidx[MAXLIFETIMEWINDOWS];
+static int8_t g_ourwinidx[MAXLIFETIMEWINDOWS];
 static char callback_funcname[MAXACTIVEWINDOWS][NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;  /* entermainloop entered? */
 
@@ -538,9 +538,9 @@ static void cleanup_window(int32_t ourwidx)
 
 static void clear_window_indices(int32_t ourwidx, int32_t glutwidx)
 {
-    ourwinidx[glutwidx] = -1;
+    g_ourwinidx[glutwidx] = -1;
     if (ourwidx >= 0)
-        glutwinidx[ourwidx] = 0;
+        g_glutwinidx[ourwidx] = 0;
 }
 
 static void cleanup_after_mainloop(void)
@@ -548,8 +548,8 @@ static void cleanup_after_mainloop(void)
     int32_t i;
 
     memset(callback_funcname, 0, sizeof(callback_funcname));
-    memset(ourwinidx, 0xff, sizeof(ourwinidx));
-    memset(glutwinidx, 0, sizeof(glutwinidx));
+    memset(g_ourwinidx, 0xff, sizeof(g_ourwinidx));
+    memset(g_glutwinidx, 0, sizeof(g_glutwinidx));
 
     if (cmaptexname)
     {
@@ -557,8 +557,8 @@ static void cleanup_after_mainloop(void)
         cmaptexname = 0;
     }
 
-    curglutwinidx = 0;
-    curourwinidx = -1;
+    g_curglutwidx = 0;
+    g_curourwidx = -1;
 
     for (i=0; i<MAXACTIVEWINDOWS; i++)
         cleanup_window(i);
@@ -568,9 +568,9 @@ static void cleanup_after_mainloop(void)
 #define MAX_CB_ARGS 5  /* REMEMBER */
 static int check_callback(int CallbackID)
 {
-    return (curglutwinidx=glutGetWindow()) &&
-        (curourwinidx=ourwinidx[curglutwinidx],  /* assumed >= 0 */
-         callback_funcname[curourwinidx][CallbackID][0]!='\0');
+    return (g_curglutwidx=glutGetWindow()) &&
+        (g_curourwidx=g_ourwinidx[g_curglutwidx],  /* assumed >= 0 */
+         callback_funcname[g_curourwidx][CallbackID][0]!='\0');
 }
 
 static int do_callback(int numargs, mxArray **mxargs, const char *cbfuncname)
@@ -621,7 +621,7 @@ static int call_mfile_callback(int callbackid, int numargs, const int *args)
     for (i=0; i<numargs; i++)
         mxargs[i] = mxCreateDoubleScalar((double)args[i]);
 
-    return do_callback(numargs, mxargs, callback_funcname[curourwinidx][callbackid]);
+    return do_callback(numargs, mxargs, callback_funcname[g_curourwidx][callbackid]);
 }
 
 /* callbacks for specific events */
@@ -634,18 +634,18 @@ static void mouse_cb(int button, int state, int x, int y)
 {
     int havecb = check_callback(CB_MOUSE);
 
-    if (curglutwinidx && curourwinidx>=0)
+    if (g_curglutwidx && g_curourwidx>=0)
     {
 #if 0
         static const char *btns[3] = {"left","middle","right"};
         if (button>=0 && button<=2)
-            printf("window %d: %s button %s\n", curourwinidx, btns[button], state==GLUT_DOWN?"down":"up");
+            printf("window %d: %s button %s\n", g_curourwidx, btns[button], state==GLUT_DOWN?"down":"up");
 #endif
         /* Save which buttons are pressed or released for the mouse motion events. */
         if (state==GLUT_DOWN)
-            win[curourwinidx].buttons |= (1<<button);
+            win[g_curourwidx].buttons |= (1<<button);
         else
-            win[curourwinidx].buttons &= ~(1<<button);
+            win[g_curourwidx].buttons &= ~(1<<button);
     }
 
     if (havecb)
@@ -660,13 +660,13 @@ static void motion_cb(int x, int y)
 {
     if (check_callback(CB_MOTION))
     {
-        int args[MAX_CB_ARGS] = {win[curourwinidx].buttons, x, y};
+        int args[MAX_CB_ARGS] = {win[g_curourwidx].buttons, x, y};
 
-        if (win[curourwinidx].buttons==0)
+        if (win[g_curourwidx].buttons==0)
         {
             /* We hit an inconsistency: we're in the motion event whereas
              * win[].buttons tells us that none is pressed. */
-            printf("window %d motion_cb: win[].buttons==0\n", curourwinidx);
+            printf("window %d motion_cb: win[].buttons==0\n", g_curourwidx);
             args[0] = 1<<GLUT_LEFT_BUTTON;  /* guess that it's the left button, ugh */
         }
 
@@ -680,13 +680,13 @@ static void passivemotion_cb(int x, int y)
     {
         int args[MAX_CB_ARGS] = {0, x, y};
 
-        if (win[curourwinidx].buttons!=0)
+        if (win[g_curourwidx].buttons!=0)
         {
             /* We hit an inconsistency: we're in the passive motion event
              * whereas win[].buttons tells us that one is pressed. */
             printf("window %d passivemotion_cb: win[].buttons==%d\n",
-                   curourwinidx, win[curourwinidx].buttons);
-            win[curourwinidx].buttons = 0;
+                   g_curourwidx, win[g_curourwidx].buttons);
+            win[g_curourwidx].buttons = 0;
         }
 
         call_mfile_callback(CB_MOTION, 3, args);
@@ -737,8 +737,8 @@ static void reshape_cb(int w, int h)
 {
     int havecb = check_callback(CB_RESHAPE);
 
-    if (curglutwinidx && curourwinidx>=0)
-        win[curourwinidx].height = h;
+    if (g_curglutwidx && g_curourwidx>=0)
+        win[g_curourwidx].height = h;
 
     if (havecb)
     {
@@ -761,7 +761,7 @@ static void close_cb()
     int32_t glutwidx=glutGetWindow(), ourwidx;
 
     mxAssert((unsigned)glutwidx < MAXLIFETIMEWINDOWS, "XXX");
-    ourwidx = ourwinidx[glutwidx];
+    ourwidx = g_ourwinidx[glutwidx];
 
 //    mxAssert((unsigned)ourwidx < MAXACTIVEWINDOWS, "XXX");
     if (ourwidx >= 0)
@@ -896,9 +896,9 @@ static void menu_callback(int cbval)
     if (glutwidx > 0)
     {
         const mxArray *menu;
-        int32_t ourwidx = ourwinidx[glutwidx], ocbval=cbval;
+        int32_t ourwidx = g_ourwinidx[glutwidx], ocbval=cbval;
 
-        mxAssert(ourwidx >= 0, "menu callback: ourwinidx[glutwidx] < 0!");
+        mxAssert(ourwidx >= 0, "menu callback: g_ourwinidx[glutwidx] < 0!");
 
         menu = win[ourwidx].menus;
         mxAssert(menu, "menu callback: win[ourwidx].menus == NULL!");
@@ -1019,7 +1019,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         double *posptr, *extentptr;
 
-        int32_t i, pos[2], extent[2], winid, oglutwinidx;
+        int32_t i, pos[2], extent[2], winid, oglutwidx;
         int32_t multisamplep=0, subwindowp=0;
         char windowname[80];
 
@@ -1115,21 +1115,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glutInitWindowSize(extent[0], extent[1]);
         }
 
-        oglutwinidx = glutGetWindow();
+        oglutwidx = glutGetWindow();
 
-        /* Look for a free ourwinidx slot and clean up window slots for windows
+        /* Look for a free g_ourwinidx slot and clean up window slots for windows
          * that aren't alive any more, for example because we bailed out due to
          * an error in the M code earlier. */
         for (i=0; i<MAXACTIVEWINDOWS; i++)
         {
-            if (glutwinidx[i]==0)
+            if (g_glutwinidx[i]==0)
                 break;
 
-            glutSetWindow(glutwinidx[i]);
-            if (glutGetWindow() != glutwinidx[i])  /* window nonexistent! */
+            glutSetWindow(g_glutwinidx[i]);
+            if (glutGetWindow() != g_glutwinidx[i])  /* window nonexistent! */
             {
                 cleanup_window(i);
-                clear_window_indices(i, glutwinidx[i]);
+                clear_window_indices(i, g_glutwinidx[i]);
                 break;
             }
         }
@@ -1137,14 +1137,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* Reset the old current window before the potential error. This
          * doesn't matter normally, but users might protect this NEWWINDOW
          * call with a try/catch, where it does. XXX: really?*/
-        if (oglutwinidx > 0)
-            glutSetWindow(oglutwinidx);
+        if (oglutwidx > 0)
+            glutSetWindow(oglutwidx);
 
         if (i==MAXACTIVEWINDOWS)
             GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum active window count (%d)", MAXACTIVEWINDOWS);
 
         if (subwindowp)
-            winid = glutCreateSubWindow(oglutwinidx, pos[0],pos[1], extent[0],extent[1]);
+            winid = glutCreateSubWindow(oglutwidx, pos[0],pos[1], extent[0],extent[1]);
         else
             winid = glutCreateWindow(windowname);
 
@@ -1154,8 +1154,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (winid >= MAXLIFETIMEWINDOWS)
             GLC_MEX_ERROR("GLCALL: newwindow: exceeded maximum lifetime window count (%d)", MAXLIFETIMEWINDOWS);
 
-        glutwinidx[i] = winid;
-        ourwinidx[winid] = i;
+        g_glutwinidx[i] = winid;
+        g_ourwinidx[winid] = i;
 
         win[i].height = extent[1];
 
@@ -1235,7 +1235,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs > 0)
         {
             /* +1 is a convenience for the Octave/MATLAB coder */
-            int32_t ret_ourwidx = ourwinidx[winid]+1;
+            int32_t ret_ourwidx = g_ourwinidx[winid]+1;
             NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ret_ourwidx);
         }
     }
@@ -1580,7 +1580,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourErrMsgTxt("GLCALL: setcallback: FUNCNAME must be a valid "
                          "MATLAB identifier ([A-Za-z][A-Za-z0-9_]+)");
 
-        memcpy(&callback_funcname[ourwinidx[glutwidx]][callbackid], tmpbuf, sizeof(tmpbuf));
+        memcpy(&callback_funcname[g_ourwinidx[glutwidx]][callbackid], tmpbuf, sizeof(tmpbuf));
     }
     return;
 
@@ -2183,7 +2183,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (glutwidx==0)
                 ret_ourwidx = 0;
             else
-                ret_ourwidx = ourwinidx[glutwidx]+1;
+                ret_ourwidx = g_ourwinidx[glutwidx]+1;
 
             GET_OUT_VALUE = createScalar(mxINT32_CLASS, &ret_ourwidx);
             return;
@@ -2270,7 +2270,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourwidx = *(int32_t *)mxGetData(SET_IN_VALUE);
             ourwidx--;
 
-            if ((unsigned)ourwidx >= MAXACTIVEWINDOWS || (glutwidx=glutwinidx[ourwidx])==0)
+            if ((unsigned)ourwidx >= MAXACTIVEWINDOWS || (glutwidx=g_glutwinidx[ourwidx])==0)
                 ourErrMsgTxt("GLC: set GL.WINDOW_ID: window index invalid or nonexistent window");
 
             glutSetWindow(glutwidx);
@@ -2646,7 +2646,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 ourErrMsgTxt("GLCALL: closewindow: passed invalid window identifier");
             ourwidx--;
 
-            glutwidx = glutwinidx[ourwidx];
+            glutwidx = g_glutwinidx[ourwidx];
         }
         else
         {
@@ -2654,18 +2654,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (glutwidx <= 0)
                 GLC_MEX_ERROR("GLCALL: closewindow: glutGetWindow returned %d!", glutwidx);
 
-            ourwidx = ourwinidx[glutwidx];
+            ourwidx = g_ourwinidx[glutwidx];
         }
 
         if (glutwidx > 0)  /* XXX: still might be nonexistent? */
             glutDestroyWindow(glutwidx);
 
         // use clear_window_indices()?
-        ourwinidx[glutwidx] = -1;
+        g_ourwinidx[glutwidx] = -1;
 //        if (ourwidx < 0)
 //            ourErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
         if (ourwidx >= 0)
-            glutwinidx[ourwidx] = 0;
+            g_glutwinidx[ourwidx] = 0;
 //        printf("Closewindow GLUT %d, our %d\n", glutwidx, ourwidx);
     }
     return;
