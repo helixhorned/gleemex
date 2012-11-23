@@ -12,8 +12,6 @@
 %  'Subwindow',<logical>: if true, create a subwindow instead of a top-level
 %    window.  See glc_test_subwindows.m for an example.
 %
-%  'SelectionMode','edit': DEPRECATED
-%
 %  'ControlDesc',<cdesc-struct>;
 %  'ControlVals',<cvals-struct>:
 %    Control-GUI mode.  (TODO: better doc.)
@@ -80,9 +78,6 @@ function [sel,ok]=glc_listdlg(varargin)
                 selmode_multiple = false;
             elseif (strcmpi(val, 'multiple'))
                 selmode_multiple = true;
-            elseif (strcmpi(val, 'edit'))  % non-MATLAB
-                selmode_edit = true;
-                selmode_multiple = false;
             else
                 error('SelectionMode value must be one of ''single'' or ''multiple''');
             end
@@ -168,6 +163,7 @@ function [sel,ok]=glc_listdlg(varargin)
 
         haveliststring = true;
         selmode_edit = true;
+        selmode_multiple = false;
 
         % There's no way to undo the changes in the control-GUI since they're applied
         % immediately.
@@ -374,7 +370,7 @@ function liststring = glc_listdlg_construct_str(controldesc, controlvals)
             % number, constrained by a function
             str = [str sprintf(ex.format, v)];
           case TYPE.STRING,
-            if (~isempty(v))
+            if (all(v~=0))
                 % editable string
                 str = [str v];
             else
@@ -546,14 +542,17 @@ function glc_listdlg_keyboard(asc, x, y, mods)
 
       case 13,  % enter
         if (glc_ld(w).selmode_edit)
+            assert(isstruct(cd));
+
             if (eidx == 0)
                 eidx = find(glc_ld(w).selected);
                 assert(numel(eidx)==1);
 
-                if (isstruct(cd) && cd(eidx).type==TYPE.KEYBIND)
+                switch (cd(eidx).type)
+                  case TYPE.KEYBIND,
                     glc_ld(w).editing = -eidx;  % <0: doing key bind
-                elseif (~isstruct(cd) || cd(eidx).type==TYPE.STRING)
-                    if (~isempty(glc_ld(w).controlvals.(cd(eidx).key)))
+                  case TYPE.STRING,
+                    if (all(glc_ld(w).controlvals.(cd(eidx).key)~=0))
                         % if string is editable, starting to type
                         glc_ld(w).editing = eidx;
                         str = glc_ld(w).liststring{eidx};
@@ -566,22 +565,17 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                             glc_ld(w).editstring = { '', str, '' };
                         end
                     end
-                else
-                    switch (cd(eidx).type)
-                      case TYPE.TOGBTN,
-                        glc_ld(w).controlvals.(cd(eidx).key) = ~glc_ld(w).controlvals.(cd(eidx).key);
-                        glc_listdlg_run_cb();
-                        glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
-                    end
+                  case TYPE.TOGBTN,
+                    glc_ld(w).controlvals.(cd(eidx).key) = ~glc_ld(w).controlvals.(cd(eidx).key);
+                    glc_listdlg_run_cb();
+                    glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
                 end
-            else
+            elseif (eidx > 0)
                 % finished typing
                 newstr = [glc_ld(w).editstring{2:3}];
-                if (isstruct(cd))
-                    % TODO: run validation function.
-                    glc_ld(w).controlvals.(cd(eidx).key) = newstr;
-                    glc_listdlg_run_cb();
-                end
+                % TODO: run validation function.
+                glc_ld(w).controlvals.(cd(eidx).key) = newstr;
+                glc_listdlg_run_cb();
                 glc_ld(w).liststring{eidx} = [glc_ld(w).editstring{:}];
                 glc_ld(w).oldstring = '';
                 glc_ld(w).editing = 0;
