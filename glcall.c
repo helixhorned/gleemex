@@ -127,10 +127,10 @@
 /**** GET tokens ****/
 /* Use negative values for GLC tokens since we might want to allow GL ones
  * later. This way there will be no collisions. */
-#define GLC_GET_WINDOW_ID (-100)
-#define GLC_GET_WINDOW_SIZE (-101)
-#define GLC_GET_MOUSE_POS (-102)  /* SET only */
-#define GLC_GET_MENU_ENABLE (-103)  /* SET only */
+#define GLC__WINDOW_ID (-100)
+#define GLC__WINDOW_SIZE (-101)
+#define GLC__MOUSE_POS (-102)  /* SET only */
+#define GLC__MENU_ENABLE (-103)  /* SET only */
 
 
 enum glcalls_setcallback_
@@ -2178,12 +2178,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(GET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(GET_IN_WHAT);
 
-        if (!inited && what != GLC_GET_WINDOW_ID)
+        if (!inited && what != GLC__WINDOW_ID)
             ourErrMsgTxt("GLCALL: get: Only GL.WINDOW_ID supported when not initialized");
 
         switch (what)
         {
-        case GLC_GET_WINDOW_ID:
+        case GLC__WINDOW_ID:
         {
             int32_t glutwidx = inited ? glutGetWindow() : 0, ret_ourwidx;
 
@@ -2196,7 +2196,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
-        case GLC_GET_WINDOW_SIZE:
+        case GLC__WINDOW_SIZE:
         {
             mxArray *whar;
             double *wh;
@@ -2246,7 +2246,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         switch (what)
         {
-        case GLC_GET_MENU_ENABLE:
+        case GLC__MENU_ENABLE:
         {
             int32_t glutwidx = glutGetWindow(), ourwidx, menuid, yn;
 
@@ -2275,19 +2275,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             return;
         }
-        case GLC_GET_MOUSE_POS:
+
+        case GLC__MOUSE_POS:
         {
             int32_t wh[2], newposi[2];
             const double *newpos;
 
-            verifyparam(SET_IN_VALUE, "GLC: set GL.MOUSE_POS: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.MOUSE_POS: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
 
             wh[0] = glutGet(GLUT_WINDOW_WIDTH);
             wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
 
             newpos = mxGetPr(SET_IN_VALUE);
-            newposi[0] = util_dtoi(newpos[0], 0, wh[0], "GLC: set mouse pos: POS(1)");
-            newposi[1] = util_dtoi(newpos[1], 0, wh[1], "GLC: set mouse pos: POS(2)");
+            newposi[0] = util_dtoi(newpos[0], 0, wh[0], "GLCALL: set mouse pos: POS(1)");
+            newposi[1] = util_dtoi(newpos[1], 0, wh[1], "GLCALL: set mouse pos: POS(2)");
 
             RETIFERR(newposi[0]);
             RETIFERR(newposi[1]);
@@ -2298,16 +2299,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
-        case GLC_GET_WINDOW_ID:
+        case GLC__WINDOW_ID:
         {
             int32_t ourwidx, glutwidx;
 
-            verifyparam(SET_IN_VALUE, "GLC: set GL.WINDOW_ID: ID", VP_SCALAR|VP_INT32);
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.WINDOW_ID: ID", VP_SCALAR|VP_INT32);
             ourwidx = *(int32_t *)mxGetData(SET_IN_VALUE);
             ourwidx--;
 
             if ((unsigned)ourwidx >= MAXACTIVEWINDOWS || (glutwidx=g_glutwinidx[ourwidx])==0)
-                ourErrMsgTxt("GLC: set GL.WINDOW_ID: window index invalid or nonexistent window");
+                ourErrMsgTxt("GLCALL: set GL.WINDOW_ID: window index invalid or nonexistent window");
 
             glutSetWindow(glutwidx);
             /* glutSetWindow might still come up empty; in that case following commands
@@ -2340,17 +2341,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             break;
         }
 
-        case GLC_GET_WINDOW_SIZE:
+        case GLC__WINDOW_SIZE:
         {
             const double *wh_d;
             int32_t wh[2];
 
-            verifyparam(SET_IN_VALUE, "GLC: set GL.WINDOW_SIZE: WH",
+            verifyparam(SET_IN_VALUE, "GLCALL: set window size: WH",
                         VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
             wh_d = mxGetPr(SET_IN_VALUE);
 
-            wh[0] = util_dtoi(wh_d[0], 1, 16384, "GLC: setwindowsize: WH(1)");
-            wh[1] = util_dtoi(wh_d[1], 1, 16384, "GLC: setwindowsize: WH(2)");
+            wh[0] = util_dtoi(wh_d[0], 1, 16384, "GLCALL: set window size: WH(1)");
+            wh[1] = util_dtoi(wh_d[1], 1, 16384, "GLCALL: set window size: WH(2)");
 
             RETIFERR(wh[0]);
             RETIFERR(wh[1]);
@@ -2361,21 +2362,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         case GL_BLEND_EQUATION:
         {
-            verifyparam(SET_IN_VALUE, "GLC: set GL.BLEND_EQUATION: EQN", VP_SCALAR|VP_INT32);
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.BLEND_EQUATION: EQN", VP_SCALAR|VP_INT32);
             glBlendEquation(*(int32_t *)mxGetData(SET_IN_VALUE));
             break;  /* glGetError handles invalid enum vals */
         }
 
         case GL_DEPTH_FUNC:
         {
-            verifyparam(SET_IN_VALUE, "GLC: set GL.DEPTH_FUNC: FUNC", VP_SCALAR|VP_INT32);
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.DEPTH_FUNC: FUNC", VP_SCALAR|VP_INT32);
             glDepthFunc(*(int32_t *)mxGetData(SET_IN_VALUE));
             break;  /* glGetError handles invalid enum vals */
         }
 
         case GL_LINE_STIPPLE_PATTERN:
         {
-            verifyparam(SET_IN_VALUE, "GLC: set GL.LINE_STIPPLE_PATTERN: PATTERN", VP_SCALAR|VP_UINT16);
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.LINE_STIPPLE_PATTERN: PATTERN", VP_SCALAR|VP_UINT16);
             glLineStipple(1, *(uint16_t *)mxGetData(SET_IN_VALUE));
             break;
         }
