@@ -130,6 +130,7 @@
 #define GLC_GET_WINDOW_ID (-100)
 #define GLC_GET_WINDOW_SIZE (-101)
 #define GLC_GET_MOUSE_POS (-102)  /* SET only */
+#define GLC_GET_MENU_ENABLE (-103)  /* SET only */
 
 
 enum glcalls_setcallback_
@@ -241,6 +242,7 @@ static struct windata_
 {
     int32_t height, buttons;
     mxArray *menus;  /* persistent */
+    int32_t menubutton, menuid;
 } win[MAXACTIVEWINDOWS];
 
 /* The GL texture name for the color map 1D texture. */
@@ -1198,6 +1200,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 else if (buttond==4)
                     button = GLUT_RIGHT_BUTTON;
             }
+
+            win[i].menubutton = button;
+            win[i].menuid = glutGetMenu();
+            if (win[i].menuid <= 0)
+                ourErrMsgTxt("GLCALL: newwindow: INTERNAL ERROR, menu ID is <= 0!");
 
             glutAttachMenu(button);
         }
@@ -2239,6 +2246,35 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         switch (what)
         {
+        case GLC_GET_MENU_ENABLE:
+        {
+            int32_t glutwidx = glutGetWindow(), ourwidx, menuid, yn;
+
+            verifyparam(SET_IN_VALUE, "GLCALL: set menu enable: YN", VP_SCALAR|VP_LOGICAL);
+
+            if (glutwidx < 1)
+                ourErrMsgTxt("GLCALL: set menu enable: invalid current window");
+
+            ourwidx = g_ourwinidx[glutwidx];
+            mxAssert((unsigned)ourwidx < MAXACTIVEWINDOWS, "XXX");
+
+            menuid = win[ourwidx].menuid;
+            if (win[ourwidx].menus == NULL || menuid < 1)
+                ourErrMsgTxt("GLCALL: set menu enable: window has no menu");
+
+            yn = *(uint8_t *)mxGetData(SET_IN_VALUE);
+
+            glutSetMenu(menuid);
+            if (glutGetMenu() != menuid)
+                ourErrMsgTxt("GLCALL: set menu enable: INTERNAL error, glutSetMenu() failed");
+
+            if (yn)
+                glutAttachMenu(win[ourwidx].menubutton);
+            else
+                glutDetachMenu(win[ourwidx].menubutton);
+
+            return;
+        }
         case GLC_GET_MOUSE_POS:
         {
             int32_t wh[2], newposi[2];
