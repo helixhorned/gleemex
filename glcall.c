@@ -1007,6 +1007,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
 
+    // XXX: GLUT functions may be called with uninited freeglut when passing GLC_GET.
     if (!inited && !(cmd == GLC_NEWWINDOW || cmd == GLC_GET
 #ifndef HAVE_OCTAVE
                      || cmd == GLC_GETERRSTR
@@ -1866,7 +1867,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         double xyalign[2] = { 0.0, 0.0 };  /* corresponds to passed [-1 -1] */
         double color[3] = { 0.2, 0.2, 0.2 };
 
-        /* This value is was determined to look good by trial/error. */
+        /* This value was determined to look good by trial/error. */
         double xspacing = (FONTHEIGHT/10.0);
         void *font = GLUT_STROKE_ROMAN;
 
@@ -1937,14 +1938,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             tmpar = mxGetField(optsAr, 0, "xgap");
             if (tmpar)
             {
-                verifyparam(tmpar, "GLC: text: OPTS.colors", VP_SCALAR|VP_DOUBLE);
+                verifyparam(tmpar, "GLC: text: OPTS.xgap", VP_SCALAR|VP_DOUBLE);
                 xspacing = *(double *)mxGetData(tmpar) * SPCWIDTH;
             }
 
             tmpar = mxGetField(optsAr, 0, "mono");
             if (tmpar)
             {
-                verifyparam(tmpar, "GLC: text: OPTS.colors", VP_SCALAR|VP_LOGICAL);
+                verifyparam(tmpar, "GLC: text: OPTS.mono", VP_SCALAR|VP_LOGICAL);
                 if (*(int8_t *)mxGetData(tmpar))
                     font = GLUT_STROKE_MONO_ROMAN;
             }
