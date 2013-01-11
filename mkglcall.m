@@ -1,10 +1,5 @@
 try
     OCTAVE_VERSION;
-
-    % Octave
-    % For building using a different compiler, run from the command line with CC=... prepended
-    % (e.g. CC='clang -fcatch-undefined-behavior' mkoctfile ...)
-    mkoctfile --mex -g -W -Wall -Wextra -Werror-implicit-function-declaration -lGL -lGLU -lGLEW -lglut glcall.c
 catch
     % MATLAB
     if (ispc)
@@ -17,4 +12,16 @@ catch
     else
         mex -lGL -lGLU -lGLEW -lglut glcall.c
     end
+    return
 end
+
+    % Octave
+    % For building using a different compiler, run from the command line with CC=... prepended
+    % (e.g. CC='clang -fcatch-undefined-behavior' mkoctfile ...)
+    if (~isempty(strfind(computer(), 'linux')))
+        % linux (generic)
+        mkoctfile --mex -g -W -Wall -Wextra -Werror-implicit-function-declaration -lGL -lGLU -lGLEW -lglut glcall.c
+    else
+        % mingw32
+        mkoctfile --mex -g -W -Wall -Wextra -Iourinclude -Llib32 -lopengl32 -lglu32 -lglew32 -lfreeglut glcall.c
+    end
