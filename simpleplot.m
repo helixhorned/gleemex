@@ -22,7 +22,7 @@ function simpleplot(data)
     simpl = struct();
 
     %% data-data
-    sp_setup_data(data);
+    simpl_setup_data(data, true);
 
     %% app data
     simpl.omx = -1;  % old mouse-x position, -1: invalid
@@ -53,33 +53,6 @@ function simpleplot(data)
     glcall(glc.entermainloop);
 end
 
-
-function sp_setup_data(data)
-    global simpl
-
-    %% validation
-    if (~isnumeric(data))
-        error('DATA must be numeric');
-    end
-
-    numdims = size(data, 1);
-    if (numdims ~= 2 && numdims ~= 3)
-        error('DATA must have 2 or 3 ''dimensions'' (i.e. length of 1st dim must be 2 or 3)');
-    end
-
-    simpl.numsamples = size(data, 2);
-    simpl.data = single(data);
-
-    if (numdims == 2)
-        simpl.data(3, :) = 0;  % pad 3rd dim with zeros
-    end
-    simpl.numdims = numdims;
-
-    % some data stats
-    simpl.mean = mean(simpl.data, 2);
-    simpl.min = min(simpl.data, [], 2);
-    simpl.max = max(simpl.data, [], 2);
-end
 
 function sp_setup_axes_rect()
     global simpl
