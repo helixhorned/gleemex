@@ -1,18 +1,16 @@
-% GLCALL application template, based on 'simpleplot'
-%
-% Usage:
-%  - choose a unique global name (here, 'simpl')
-%  - choose a convenient prefix (here, 'sp_')
-%  - s/sp_/<your prefix>/g; s/simpl/<your global-name>/g
-%
-%  - if the application may have multiple running instances, follow <TODO: write doc>
-
-function simpleplot(data)
+% Simple plot.
+function simpleplot(data, keycb)
     global simpl GL glc
 
     if (nargin < 1)
-        disp('Usage: simpleplot(data), data is DIM x N, where DIM is either 2 or 3')
+        disp('Usage: simpleplot(data [, keycb]), data is DIM x N, where DIM is either 2 or 3')
         return
+    end
+
+    if (nargin >= 2)
+        if (~isa(keycb, 'function_handle'))
+            error('KEYCB must be a function handle');
+        end
     end
 
     glc = glcall();
@@ -34,6 +32,11 @@ function simpleplot(data)
     simpl.ang = 0;  % angle around y axis in degrees
 
     simpl.lineidxs = [1 1];  % beginning and end indices of show-as-line   XXX: blah
+    simpl.keycb = [];
+    if (nargin >= 2)
+        simpl.keycb = keycb;
+    end
+    simpl.moretext = 'Test';
 
     % create the window!
     winid = glcall(glc.newwindow, [20 20], simpl.wh, 'Simple plot');
@@ -111,9 +114,10 @@ function sp_display()
     glcall(glc.text, [28 top-14], 14, ...
            sprintf('means: %s | mins: %s | maxs: %s', pretty(simpl.mean), ...
                    pretty(simpl.min), pretty(simpl.max)));
-    glcall(glc.text, [28 top-14-8-14], 14, ...
+    glcall(glc.text, [28 top-14-(8+14)], 14, ...
            sprintf('[%d  %d..%d  %d], zoom=%.02f', 1, simpl.lineidxs(1), simpl.lineidxs(2), ...
                    simpl.numsamples, simpl.zoom));
+    glcall(glc.text, [28 top-14-2*(8+14)], 14, simpl.moretext);
 
     [yes, fracs] = glc_pointinxywh(simpl.mxy, simpl.axxywh);
     if (simpl.numdims == 2 && yes)
@@ -125,7 +129,7 @@ function sp_display()
         assert(abs(ndc) <= 1);
         mousedpos = mvpr \ ndc';
 
-        glcall(glc.text, [28 top-14-2*(8+14)], 14, ...
+        glcall(glc.text, [28 top-14-3*(8+14)], 14, ...
                sprintf('(x, y) = (%.02f, %.02f)', mousedpos(1), mousedpos(2)));
     end
 end
@@ -145,6 +149,10 @@ function sp_keyboard(key, x, y, mods)
       case { GL.KEY_UP, GL.KEY_DOWN }
         simpl.lineidxs(1) = simpl.lineidxs(1) + mul*(1-2*(key==GL.KEY_DOWN));
         simpl.lineidxs(1) = sp_clamp(simpl.lineidxs(1), 1,simpl.lineidxs(2));
+    end
+
+    if (isa(simpl.keycb, 'function_handle'))
+        simpl.keycb(key, x, y, mods);
     end
 
     glcall(glc.redisplay);
