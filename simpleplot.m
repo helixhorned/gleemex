@@ -1,15 +1,30 @@
-% Simple plot.
-function simpleplot(data, keycb)
+% GLCALL application template, based on 'simpleplot'
+%
+% Usage:
+%  - choose a unique global name (here, 'simpl')
+%  - choose a convenient prefix (here, 'sp_')
+%  - s/sp_/<your prefix>/g; s/simpl/<your global-name>/g
+%
+%  - if the application may have multiple running instances, follow <TODO: write doc>
+
+function simpleplot(data, idxs)
     global simpl GL glc
 
     if (nargin < 1)
-        disp('Usage: simpleplot(data [, keycb]), data is DIM x N, where DIM is either 2 or 3')
+        % IDXS is 3 x #tris
+        disp('Usage: simpleplot(data [, idxs]), data is DIM x N, where DIM is either 2 or 3')
         return
     end
 
-    if (nargin >= 2)
-        if (~isa(keycb, 'function_handle'))
-            error('KEYCB must be a function handle');
+    if (nargin < 2)
+        idxs = zeros(3,0,'uint32');
+    else
+        if (~strcmp(class(idxs), 'uint32'))
+            error('IDXS must have class uint32')
+        end
+
+        if (size(idxs, 1)~=3)
+            error('IDXS must have 3 rows')
         end
     end
 
@@ -20,7 +35,7 @@ function simpleplot(data, keycb)
     simpl = struct();
 
     %% data-data
-    simpl_setup_data(data, true);
+    sp_setup_data(data, idxs);
 
     %% app data
     simpl.omx = -1;  % old mouse-x position, -1: invalid
@@ -56,6 +71,35 @@ function simpleplot(data, keycb)
     glcall(glc.entermainloop);
 end
 
+
+function sp_setup_data(data, idxs)
+    global simpl
+
+    %% validation
+    if (~isnumeric(data))
+        error('DATA must be numeric');
+    end
+
+    numdims = size(data, 1);
+    if (numdims ~= 2 && numdims ~= 3)
+        error('DATA must have 2 or 3 ''dimensions'' (i.e. length of 1st dim must be 2 or 3)');
+    end
+
+    simpl.numsamples = size(data, 2);
+    simpl.data = single(data);
+
+    if (numdims == 2)
+        simpl.data(3, :) = 0;  % pad 3rd dim with zeros
+    end
+    simpl.numdims = numdims;
+
+    simpl.idxs = idxs-1;
+
+    % some data stats
+    simpl.mean = mean(simpl.data, 2);
+    simpl.min = min(simpl.data, [], 2);
+    simpl.max = max(simpl.data, [], 2);
+end
 
 function sp_setup_axes_rect()
     global simpl
@@ -104,6 +148,10 @@ function sp_display()
                struct('colors',[.2 .2 .2]));
     end
     glcall(glc.draw, GL.POINTS, simpl.data);
+
+    if (~isempty(simpl.idxs))
+        glcall(glc.draw, GL.TRIANGLES, simpl.data, struct('indices',simpl.idxs(:)));
+    end
 
     glc_axes_finish([0 0 0]); % }}}
 
