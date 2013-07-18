@@ -477,6 +477,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
         if (~strcmp(glc_listdlg_get_keyname(asc), '<unknown>'))
             glc_ld(w).controlvals.(cd(-eidx).key) = uint32(asc);
             glc_ld(w).liststring = glc_listdlg_construct_str(cd, glc_ld(w).controlvals);
+            glc_listdlg_run_cb();
         end
         glcall(glc.redisplay);
         return;
