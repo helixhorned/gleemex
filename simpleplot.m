@@ -1,30 +1,30 @@
-% GLCALL application template, based on 'simpleplot'
-%
-% Usage:
-%  - choose a unique global name (here, 'simpl')
-%  - choose a convenient prefix (here, 'sp_')
-%  - s/sp_/<your prefix>/g; s/simpl/<your global-name>/g
-%
-%  - if the application may have multiple running instances, follow <TODO: write doc>
-
-function simpleplot(data, idxs)
+% Simple plot.
+function simpleplot(data, idxs, keycb)
     global simpl GL glc
 
     if (nargin < 1)
         % IDXS is 3 x #tris
-        disp('Usage: simpleplot(data [, idxs]), data is DIM x N, where DIM is either 2 or 3')
+        disp('Usage: simpleplot(data [, idxs [, keycb]]), data is DIM x N, where DIM is either 2 or 3')
         return
     end
 
     if (nargin < 2)
         idxs = zeros(3,0,'uint32');
     else
-        if (~strcmp(class(idxs), 'uint32'))
-            error('IDXS must have class uint32')
-        end
+        if (~isempty(idxs))
+            if (~strcmp(class(idxs), 'uint32') && ~strcmp(class(idxs), 'uint8'))
+                error('IDXS must have class uint32 or uint8')
+            end
 
-        if (size(idxs, 1)~=3)
-            error('IDXS must have 3 rows')
+            if (size(idxs, 1)~=3)
+                error('IDXS must have 3 rows')
+            end
+        end
+    end
+
+    if (nargin >= 3)
+        if (~isa(keycb, 'function_handle'))
+            error('KEYCB must be a function handle');
         end
     end
 
@@ -35,7 +35,7 @@ function simpleplot(data, idxs)
     simpl = struct();
 
     %% data-data
-    sp_setup_data(data, idxs);
+    simpl_setup_data(data, true, idxs);
 
     %% app data
     simpl.omx = -1;  % old mouse-x position, -1: invalid
@@ -48,7 +48,7 @@ function simpleplot(data, idxs)
 
     simpl.lineidxs = [1 1];  % beginning and end indices of show-as-line   XXX: blah
     simpl.keycb = [];
-    if (nargin >= 2)
+    if (nargin >= 3)
         simpl.keycb = keycb;
     end
     simpl.moretext = 'Test';
@@ -71,35 +71,6 @@ function simpleplot(data, idxs)
     glcall(glc.entermainloop);
 end
 
-
-function sp_setup_data(data, idxs)
-    global simpl
-
-    %% validation
-    if (~isnumeric(data))
-        error('DATA must be numeric');
-    end
-
-    numdims = size(data, 1);
-    if (numdims ~= 2 && numdims ~= 3)
-        error('DATA must have 2 or 3 ''dimensions'' (i.e. length of 1st dim must be 2 or 3)');
-    end
-
-    simpl.numsamples = size(data, 2);
-    simpl.data = single(data);
-
-    if (numdims == 2)
-        simpl.data(3, :) = 0;  % pad 3rd dim with zeros
-    end
-    simpl.numdims = numdims;
-
-    simpl.idxs = idxs-1;
-
-    % some data stats
-    simpl.mean = mean(simpl.data, 2);
-    simpl.min = min(simpl.data, [], 2);
-    simpl.max = max(simpl.data, [], 2);
-end
 
 function sp_setup_axes_rect()
     global simpl

@@ -1,4 +1,4 @@
-function simpl_setup_data(data, firsttime)
+function simpl_setup_data(data, firsttime, idxs)
     global simpl
 
     if (nargin < 2)
@@ -13,6 +13,10 @@ function simpl_setup_data(data, firsttime)
     numdims = size(data, 1);
     if (numdims ~= 2 && numdims ~= 3)
         error('DATA must have 2 or 3 ''dimensions'' (i.e. length of 1st dim must be 2 or 3)');
+    end
+
+    if (any(idxs==0))
+        error('IDXS are one-based and thus must not contain zeros')
     end
 
     if (~firsttime)
