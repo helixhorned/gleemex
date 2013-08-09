@@ -1809,8 +1809,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             /* we're replacing an existing texture */
             verifyparam(NEWTEXTURE_IN_TEXNAME, "GLCALL: newtexture: TEXNAME", VP_SCALAR|VP_UINT32);
             texname = *(uint32_t *)mxGetData(NEWTEXTURE_IN_TEXNAME);
-            if (texname == 0)
-                ourErrMsgTxt("GLCALL: newtexture: TEXNAME must be greater 0");
+            if (!glIsTexture(texname))
+                ourErrMsgTxt("GLCALL: newtexture: TEXNAME must specify an existing texture");
         }
         else
         {
