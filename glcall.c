@@ -7,7 +7,7 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-/*////////*/
+/********/
 #include "mex.h"
 #ifndef HAVE_OCTAVE
 # include "matrix.h"
@@ -21,7 +21,7 @@
 #define snprintf _snprintf
 #endif
 
-/*////////*/
+/********/
 
 /* 1 lhs, 0 rhs */
 #define OUT_GLCSTRUCT (plhs[0])
@@ -222,7 +222,7 @@ const char *glcall_names[] =
 };
 
 
-/*//////// DATA //////////*/
+/******** DATA ********/
 
 #define MAXACTIVEWINDOWS 32  /* max gleemex windows open at the same time */
 #define MAXLIFETIMEWINDOWS 32768  /* max gleemex windows while top-level glcall is active */
@@ -249,7 +249,7 @@ static struct windata_
 static GLuint cmaptexname /*, proginuse */;
 static GLfloat g_strokefontheight;
 
-/*//////// UTIL //////////*/
+/******** UTIL ********/
 static char errstr[256];
 
 #ifndef HAVE_OCTAVE
@@ -523,7 +523,7 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
 }
 
 
-/*//////// FUNCTIONS //////////*/
+/******** FUNCTIONS ********/
 
 static void destroy_menu_struct(int32_t ourwidx)
 {
@@ -765,11 +765,11 @@ static void close_cb()
     mxAssert((unsigned)glutwidx < MAXLIFETIMEWINDOWS, "XXX");
     ourwidx = g_ourwinidx[glutwidx];
 
-//    mxAssert((unsigned)ourwidx < MAXACTIVEWINDOWS, "XXX");
+/*    mxAssert((unsigned)ourwidx < MAXACTIVEWINDOWS, "XXX"); */
     if (ourwidx >= 0)
         cleanup_window(ourwidx);
     clear_window_indices(ourwidx, glutwidx);
-//    printf("Closed window GLUT %d, our %d\n", glutwidx, ourwidx);
+/*    printf("Closed window GLUT %d, our %d\n", glutwidx, ourwidx); */
 }
 
 #ifndef HAVE_OCTAVE
@@ -780,7 +780,7 @@ static void close_cb()
 
 #define GLC_MEX_ERROR(Text, ...) GLC_MEX_ERROR_((void)0, Text, ## __VA_ARGS__)
 
-/********** MENUS **********/
+/******** MENUS ********/
 /* menu struct walker */
 static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
                                int (begin_func(const mxArray *cbf)),
@@ -968,7 +968,7 @@ static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t
 }
 
 
-/******************** THE MAIN MEX FUNCTION ********************/
+/**************** THE MAIN MEX FUNCTION ****************/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     int32_t cmd;
@@ -1007,7 +1007,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     verifyparam(IN_COMMAND, "COMMAND", VP_SCALAR|VP_INT32);
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
 
-    // XXX: GLUT functions may be called with uninited freeglut when passing GLC_GET.
+    /* XXX: GLUT functions may be called with uninited freeglut when passing GLC_GET. */
     if (!inited && !(cmd == GLC_NEWWINDOW || cmd == GLC_GET
 #ifndef HAVE_OCTAVE
                      || cmd == GLC_GETERRSTR
@@ -1015,7 +1015,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ))
         ourErrMsgTxt("GLCALL: Must call 'newwindow' subcommand to initialize GLUT before any other command!");
 
-    /*////////*/
+    /*********/
     switch (cmd)
     {
     case GLC_NEWWINDOW:
@@ -2698,13 +2698,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (glutwidx > 0)  /* XXX: still might be nonexistent? */
             glutDestroyWindow(glutwidx);
 
-        // use clear_window_indices()?
+        /* use clear_window_indices()? */
         g_ourwinidx[glutwidx] = -1;
-//        if (ourwidx < 0)
-//            ourErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
+/*
+        if (ourwidx < 0)
+            ourErrMsgTxt("GLCALL: closewindow: INTERNAL ERROR: ourwidx < 0!");
+*/
         if (ourwidx >= 0)
             g_glutwinidx[ourwidx] = 0;
-//        printf("Closewindow GLUT %d, our %d\n", glutwidx, ourwidx);
+/*        printf("Closewindow GLUT %d, our %d\n", glutwidx, ourwidx); */
     }
     return;
 
