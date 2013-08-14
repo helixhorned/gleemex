@@ -33,6 +33,8 @@
     extern void GLC_ASSERT_NAME(__LINE__)(int STATIC_ASSERTION_FAILED[(cond)?1:-1])
 #endif
 
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+
 /* 1 lhs, 0 rhs */
 #define OUT_GLCSTRUCT (plhs[0])
 
@@ -149,11 +151,10 @@ enum glcalls_setcallback_
 {
     CB_DISPLAY = 0,
     CB_RESHAPE,
-    CB_KEYBOARD,
-/*    CB_SPECIAL, */
+    CB_KEYBOARD, /* for us, subsumes normal and special keyboard input */
     CB_MOUSE,
-    CB_MOTION,
-/*    CB_PASSIVEMOTION, */
+    CB_MOTION,  /* for us, subsumes both motion and passivemotion */
+    CB_POSITION,
     NUM_CALLBACKS,  /* must be last */
 };
 
@@ -162,11 +163,12 @@ const char *glcall_callback_names[] =
     "cb_display",
     "cb_reshape",
     "cb_keyboard",
-/*    "cb_special", */
     "cb_mouse",
     "cb_motion",
-/*    "cb_passivemotion", */
+    "cb_position",
 };
+
+GLC_STATIC_ASSERT(ARRAY_SIZE(glcall_callback_names) == NUM_CALLBACKS);
 
 
 /*** GLCALL commands enum ***/
@@ -232,6 +234,8 @@ const char *glcall_names[] =
     "readpixels",
     "fog",
 };
+
+GLC_STATIC_ASSERT(ARRAY_SIZE(glcall_names) == NUM_GLCALLS);
 
 
 /******** DATA ********/
@@ -778,6 +782,15 @@ static void reshape_cb(int w, int h)
     }
 }
 
+static void position_cb(int x, int y)
+{
+    if (check_callback(CB_POSITION))
+    {
+        int args[MAX_CB_ARGS] = {x, y};
+        call_mfile_callback(CB_POSITION, 2, args);
+    }
+}
+
 /* Window closure/destruction callback. Also runs when closing a window using
  * its [x] button. */
 static void close_cb()
@@ -1238,6 +1251,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* these two are always there */
         glutDisplayFunc(display_cb);
         glutReshapeFunc(reshape_cb);
+        glutPositionFunc(position_cb);
         glutCloseFunc(close_cb);
 
         /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...) */
