@@ -126,11 +126,13 @@
 
 /**** GET tokens ****/
 /* Use negative values for GLC tokens since we might want to allow GL ones
- * later. This way there will be no collisions. */
+ * later. This way there will be no collisions. KEEPINSYNC GLC_GET_TOKENS
+ * in glconstants.m. */
 #define GLC__WINDOW_ID (-100)
 #define GLC__WINDOW_SIZE (-101)
 #define GLC__MOUSE_POS (-102)  /* SET only */
 #define GLC__MENU_ENABLE (-103)  /* SET only */
+#define GLC__WINDOW_POS (-104)
 
 
 enum glcalls_setcallback_
@@ -2209,6 +2211,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
 
         case GLC__WINDOW_SIZE:
+        case GLC__WINDOW_POS:
         {
             mxArray *whar;
             double *wh;
@@ -2216,13 +2219,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             glutwidx = glutGetWindow();
             if (glutwidx==0)
-                ourErrMsgTxt("GLCALL: get WINDOW_SIZE: no active window!");
+                ourErrMsgTxt("GLCALL: get WINDOW_*: no active window!");
 
             whar = mxCreateNumericMatrix(1,2, mxDOUBLE_CLASS, mxREAL);
             wh = mxGetPr(whar);
 
-            wh[0] = glutGet(GLUT_WINDOW_WIDTH);
-            wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
+            if (what == GLC__WINDOW_SIZE)
+            {
+                wh[0] = glutGet(GLUT_WINDOW_WIDTH);
+                wh[1] = glutGet(GLUT_WINDOW_HEIGHT);
+            }
+            else
+            {
+                wh[0] = glutGet(GLUT_WINDOW_X);
+                wh[1] = glutGet(GLUT_WINDOW_Y);
+            }
 
             GET_OUT_VALUE = whar;
             return;

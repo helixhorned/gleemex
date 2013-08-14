@@ -125,10 +125,12 @@ GL.PROJECTION_MATRIX = int32(2983);  % 0x0BA7
 %% GLC specific
 
 % GET tokens
+% KEEPINSYNC GLC_GET_TOKENS in glcall.c.
 GL.WINDOW_ID = int32(-100);
 GL.WINDOW_SIZE = int32(-101);
 GL.MOUSE_POS = int32(-102);  % SET only
 GL.MENU_ENABLE = int32(-103);  % SET only
+GL.WINDOW_POS = int32(-104);
 
 
 %% GLUT stuff follows
