@@ -1442,6 +1442,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 glColor3dv(colors);
             else if (colorsz==4)
                 glColor4dv(colors);
+            else if (texname)
+                glColor3f(1.0f, 1.0f, 1.0f);
             else
                 glColor3f(0.5f, 0.5f, 0.5f);
         }
