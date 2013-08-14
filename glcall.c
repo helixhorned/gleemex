@@ -311,6 +311,10 @@ enum verifyparam_flags
     VP_VECTOR = 0x00000200,
     VP_MATRIX = 0x00000300,
     VP_DIMN = 0x00000400,
+    VP_EMPTY_OK = 0x00000800,
+    /* NOTE: May use flags up to
+     *        0x00008000
+     * (because of VP_VECLEN_MASK) */
     VP_SVM_MASK = 0x00000300,
     VP_DIMN_MASK = 0x0000f000,
     VP_DIMN_SHIFT = 12,
@@ -334,13 +338,19 @@ static const char *class_names[] = {
 
 #define GLC_MEX_ERROR_VP_(Text, ...) GLC_MEX_ERROR_(GL_TRUE, Text, ## __VA_ARGS__)
 
-static int arIsVector(const mxArray *ar)
+static int32_t arIsVector(const mxArray *ar, int32_t emptyok)
 {
     /* XXX: It can be argued whether a 0x0 array is a vector or not.
      * Since we check for strings by seeing whether it's a "vector of chars",
      * this is practically relevant... */
-    return (mxGetNumberOfDimensions(ar) == 2 &&
-            (mxGetN(ar)==1 || mxGetM(ar)==1));
+    if (mxGetNumberOfDimensions(ar) == 2)
+    {
+        return !emptyok ?
+            (mxGetN(ar)==1 || mxGetM(ar)==1) :
+            (mxGetN(ar)<=1 || mxGetM(ar)<=1);
+    }
+
+    return 0;
 }
 
 /* return value: if vpflags contains VP_FP_TYPE or VP_INDEX_TYPE, either
@@ -371,7 +381,7 @@ static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vp
         int bad = 1, wronglength=0;
         uint32_t reqdveclen;
 
-        if (arIsVector(ar))
+        if (arIsVector(ar, vpflags&VP_EMPTY_OK))
         {
             if (vpflags&VP_VECLEN_MASK)
             {
@@ -2119,7 +2129,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs != 0 || nrhs != 2)
             ourErrMsgTxt("Usage: GLCALL(glc.deltextures, [texname1 texname2 ...])");
 
-        verifyparam(DELTEXTURES_IN_TEXNAMES, "GLCALL: deltextures: TEXNAMES", VP_VECTOR|VP_UINT32);
+        verifyparam(DELTEXTURES_IN_TEXNAMES, "GLCALL: deltextures: TEXNAMES",
+                    VP_VECTOR|VP_EMPTY_OK|VP_UINT32);
         numtexs = mxGetNumberOfElements(DELTEXTURES_IN_TEXNAMES);
 
         glDeleteTextures(numtexs, (uint32_t *)mxGetData(DELTEXTURES_IN_TEXNAMES));
