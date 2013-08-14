@@ -29,6 +29,7 @@ GL.TRIANGLE_FAN = uint32(6);
 GL.QUADS = uint32(7);
 GL.QUAD_STRIP = uint32(8);
 GL.POLYGON = uint32(9);
+GL.DRAW_AS_LINE = @(primitivetype)primitivetype+16;
 
 %% Matrix Modes
 GL.MODELVIEW = uint32(5888);  % 0x1700
@@ -174,3 +175,7 @@ GL.KEY_PGDN = 65536+105;
 GL.KEY_HOME = 65536+106;
 GL.KEY_END = 65536+107;
 GL.KEY_INSERT = 65536+108;
+
+% Should be really in GLAux or something?
+GL.TYPEFUNC_TEXTURE = @uint32;
+GL.INVALID_TEXTURE = uint32(0);
