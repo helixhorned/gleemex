@@ -1117,10 +1117,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* init!*/
         if (!inited)
         {
-            char *argvdummy[1] = {"dummy_program_parameter"};
-            int argcdummy = 1;
+            /* Pass a dummy arg vector to glutInit(). Trailing NULL is so that
+             * it's consistent with how C99 mandates main()'s argv[]. */
+            char *argvdummy[1] = { NULL };
+            int argcdummy = 0;
 
-            glutInit(&argcdummy, argvdummy);  /* XXX */
+            glutInit(&argcdummy, argvdummy);
             glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
             /* only set initial display mode options when creating the first window
