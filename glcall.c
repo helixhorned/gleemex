@@ -20,8 +20,18 @@
 #if _MSC_VER
 #define snprintf _snprintf
 #endif
-
 /********/
+
+/* Static assertions, based on source found in LuaJIT's src/lj_def.h. */
+#define GLC_ASSERT_NAME2(name, line) name ## line
+#define GLC_ASSERT_NAME(line) GLC_ASSERT_NAME2(eduke32_assert_, line)
+#ifdef __COUNTER__
+# define GLC_STATIC_ASSERT(cond) \
+    extern void GLC_ASSERT_NAME(__COUNTER__)(int STATIC_ASSERTION_FAILED[(cond)?1:-1])
+#else
+# define GLC_STATIC_ASSERT(cond) \
+    extern void GLC_ASSERT_NAME(__LINE__)(int STATIC_ASSERTION_FAILED[(cond)?1:-1])
+#endif
 
 /* 1 lhs, 0 rhs */
 #define OUT_GLCSTRUCT (plhs[0])
@@ -499,9 +509,11 @@ static mxArray *createScalar(mxClassID cid, const void *ptr)
 {
     mxArray *tmpar = mxCreateNumericMatrix(1,1, cid, mxREAL);
 
+    GLC_STATIC_ASSERT(sizeof(mxLogical)==1);
+
     switch (cid)
     {
-    case mxLOGICAL_CLASS:  /* see mxAssert() about sizeof(mxLogical) */
+    case mxLOGICAL_CLASS:
         *(int8_t *)mxGetData(tmpar) = !!*(int8_t *)ptr;
         break;
     /* case mxCHAR_CLASS: */
@@ -1039,8 +1051,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         char windowname[80];
 
         mxArray *menus = NULL;
-
-        mxAssert(sizeof(mxLogical)==1, "INTERNAL ERROR");
 
         if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
             ourErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
