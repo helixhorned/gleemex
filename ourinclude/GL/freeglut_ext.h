@@ -136,12 +136,18 @@ FGAPI void    FGAPIENTRY glutFullScreenToggle( void );
 FGAPI void    FGAPIENTRY glutLeaveFullScreen( void );
 
 /*
+ * Menu functions
+ */
+FGAPI void    FGAPIENTRY glutSetMenuFont( int menuID, void* font );
+
+/*
  * Window-specific callback functions, see freeglut_callbacks.c
  */
 FGAPI void    FGAPIENTRY glutMouseWheelFunc( void (* callback)( int, int, int, int ) );
+FGAPI void    FGAPIENTRY glutPositionFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutCloseFunc( void (* callback)( void ) );
 FGAPI void    FGAPIENTRY glutWMCloseFunc( void (* callback)( void ) );
-/* A. Donev: Also a destruction callback for menus */
+/* And also a destruction callback for menus */
 FGAPI void    FGAPIENTRY glutMenuDestroyFunc( void (* callback)( void ) );
 
 /*
@@ -172,6 +178,15 @@ FGAPI void    FGAPIENTRY glutWireSierpinskiSponge ( int num_levels, double offse
 FGAPI void    FGAPIENTRY glutSolidSierpinskiSponge ( int num_levels, double offset[3], double scale );
 FGAPI void    FGAPIENTRY glutWireCylinder( double radius, double height, GLint slices, GLint stacks);
 FGAPI void    FGAPIENTRY glutSolidCylinder( double radius, double height, GLint slices, GLint stacks);
+
+/*
+ * Rest of functions for rendering Newell's teaset, found in freeglut_teapot.c
+ * NB: front facing polygons have clockwise winding, not counter clockwise
+ */
+FGAPI void    FGAPIENTRY glutWireTeacup( double size );
+FGAPI void    FGAPIENTRY glutSolidTeacup( double size );
+FGAPI void    FGAPIENTRY glutWireTeaspoon( double size );
+FGAPI void    FGAPIENTRY glutSolidTeaspoon( double size );
 
 /*
  * Extension functions, see freeglut_ext.c
@@ -218,24 +233,25 @@ void    glutJoystickGetCenter( int ident, float *axes );
 /*
  * Initialization functions, see freeglut_init.c
  */
+/* to get the typedef for va_list */
+#include <stdarg.h>
 FGAPI void    FGAPIENTRY glutInitContextVersion( int majorVersion, int minorVersion );
 FGAPI void    FGAPIENTRY glutInitContextFlags( int flags );
 FGAPI void    FGAPIENTRY glutInitContextProfile( int profile );
-
-/* to get the typedef for va_list */
-#include <stdarg.h>
-
-FGAPI void    FGAPIENTRY glutInitErrorFunc( void (* vError)( const char *fmt, va_list ap ) );
-FGAPI void    FGAPIENTRY glutInitWarningFunc( void (* vWarning)( const char *fmt, va_list ap ) );
+FGAPI void    FGAPIENTRY glutInitErrorFunc( void (* callback)( const char *fmt, va_list ap ) );
+FGAPI void    FGAPIENTRY glutInitWarningFunc( void (* callback)( const char *fmt, va_list ap ) );
 
 /* OpenGL >= 2.0 support */
 FGAPI void    FGAPIENTRY glutSetVertexAttribCoord3(GLint attrib);
 FGAPI void    FGAPIENTRY glutSetVertexAttribNormal(GLint attrib);
+FGAPI void    FGAPIENTRY glutSetVertexAttribTexCoord2(GLint attrib);
 
 /* Mobile platforms lifecycle */
 FGAPI void    FGAPIENTRY glutInitContextFunc(void (* callback)());
-FGAPI void    FGAPIENTRY glutPauseFunc(void (* callback)());
-FGAPI void    FGAPIENTRY glutResumeFunc(void (* callback)());
+FGAPI void    FGAPIENTRY glutAppStatusFunc(void (* callback)(int));
+/* state flags that can be passed to callback set by glutAppStatusFunc */
+#define GLUT_APPSTATUS_PAUSE                0x0001
+#define GLUT_APPSTATUS_RESUME               0x0002
 
 /*
  * GLUT API macro definitions -- the display mode definitions
