@@ -1,6 +1,8 @@
-% EXTRACTSECFUNCS(FILENAME): Extract secondary functions from an M-file
-%  into separate M-files.
-function extractsecfuncs(filename, numspace, thedir)
+% EXTRACTSECFUNCS(FILENAME [, NUMSPACE [, THEDIR [, ASKP]]]) Extract secondary
+% functions from an M-file into separate M-files.
+%
+% ASKP - if true (the default), ask for confirmation when creating files.
+function extractsecfuncs(filename, numspace, thedir, askp)
 
 if (~exist('numspace', 'var'))
     numspace = 0;
@@ -18,6 +20,10 @@ end
 
 if (~exist('thedir', 'var'))
     thedir = '.';
+end
+
+if (~exist('askp', 'var'))
+    askp = true;
 end
 
 %%
@@ -81,7 +87,12 @@ try
 catch
 end
 
-s = input(prompt, 's');
+if (askp)
+    s = input(prompt, 's');
+else
+    s = 'y';
+end
+
 if (strcmp(s, 'y'))
     for i=1:length(fnames)
         [fid,msg] = fopen(fullfile(thedir, [fnames{i} '.m']), 'w+');
@@ -92,4 +103,9 @@ if (strcmp(s, 'y'))
         fwrite(fid, sprintf('%s\n', match{i}), 'char');
         fclose(fid);
     end
+end
+
+if (~askp)
+    fprintf('Extracted %d secondary functions from %s.\n', ...
+            length(fnames), filename);
 end
