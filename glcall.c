@@ -4,7 +4,14 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <GL/glew.h>
+#ifdef _WIN32
+/* On Windows, include the GLEW source directly here! */
+# include "GL/glew.c"
+#else
+/* On other OSes, take the system-provided GLEW. */
+# include <GL/glew.h>
+#endif
+
 #include <GL/freeglut.h>
 
 /********/
