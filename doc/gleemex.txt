@@ -1,0 +1,55 @@
+
+Gleemex User Manual
+===================
+Philipp Kutin
+:max-width: 56em
+:numbered:
+
+
+Introduction
+------------
+
+Gleemex is a high-level interface to OpenGL functionality for GNU Octave and
+MATLAB. It uses FreeGLUT to provide windowing and peripheral access for various
+platforms, GLEW for OpenGL feature detection, and the MEX API to communicate
+with the host program. It allows writing interactive graphical applications
+entirely in the M scripting language.
+
+
+Motivation
+~~~~~~~~~~
+
+The graphics systems of MATLAB and Octave are geared towards producing plots of
+moderate complexity for offline display and printout, but are less suited for
+writing applications that interact with the user. Gleemex enables the creation
+of event-driven graphical tools, on one hand aiming at simplicity of usage, but
+without sacrificing performance where it is needed. Its main virtues are in
+
+* Being a _high level_ interface to OpenGL. Thus, rather than exposing OpenGL
+  functions directly, they are wrapped in commands that perform a composite
+  function. At the same time, it tries to add as little overhead as possible.
+
+* Providing _safety_ as a consequence of the above. It must not be possible to
+  invoke erratic behavior (such as crashes caused by accessing memory out of
+  some allowed bounds) by providing invalid data to Gleemex. Input is validated
+  where necessary. If undefined behavior can be invoked from M code, it is
+  always a Gleemex bug.
+
+* Aiming at simplicity of both usage and concept. For example,
+
+** After creating a window and adding the desired callbacks, starting the
+   FreeGLUT main loop makes it run in a single thread of execution. This is in
+   contrast to the native MATLAB ``handle graphics'' system, that allows for
+   some form of concurrency.
+
+** Drawing proceeds in a ``fire and forget'' fashion familiar from game
+   programming. Instead of having to _manage_ objects (such as lines) by
+   writing separate code for their creation, potential update, and deletion, a
+   customary Gleemex app only keeps some _state_ in a global M variable. In the
+   display callback, that state is then used to render one frame.
+
+* Being strict with regard to errors. Any error from M code while the main loop
+  is active makes Gleemex close all of its windows and report it. This eases
+  debugging of graphical apps, since otherwise an erroneous condition may
+  produce followup failures, obscuring the original cause.
+
