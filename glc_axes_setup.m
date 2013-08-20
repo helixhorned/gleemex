@@ -1,10 +1,12 @@
-% GLC_AXES_SETUP(VIEWPORT_XYWH, PROJECTION)
+% T = GLC_AXES_SETUP(VIEWPORT_XYWH, PROJECTION)
 %
 % TODO: write doc
 %
 %  VIEWPORT_XYWH should be [X Y W H] of the viewport
 %  PROJECTION is passed to glcall(glc.setmatrix, ...)
-function glc_axes_setup(viewport_xywh, projection)
+%
+%  T -- true.
+function t = glc_axes_setup(viewport_xywh, projection)
     global glc GL
 
     global glc_viewport_xywh
@@ -19,4 +21,6 @@ function glc_axes_setup(viewport_xywh, projection)
     glcall(glc.setmatrix, GL.MODELVIEW, []);
     glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
     glcall(glc.scissor, int32(viewport_xywh));
+
+    t = true;
 end
