@@ -14,8 +14,8 @@
 
 #include <GL/freeglut.h>
 
-/********/
 #include "mex.h"
+/**** COMPATIBILITY SWITCHES ****/
 #ifndef HAVE_OCTAVE
 # include "matrix.h"
 #endif
@@ -26,6 +26,11 @@
 
 #if _MSC_VER
 #define snprintf _snprintf
+#endif
+
+/* Determine whether we're compiling for modern FreeGLUT (> 2.4) */
+#ifdef GLUT_KEY_NUM_LOCK
+# define GLC_HAVE_MODERN_FG
 #endif
 /********/
 
@@ -789,6 +794,7 @@ static void reshape_cb(int w, int h)
     }
 }
 
+#ifdef GLC_HAVE_MODERN_FG
 static void position_cb(int x, int y)
 {
     if (check_callback(CB_POSITION))
@@ -797,6 +803,7 @@ static void position_cb(int x, int y)
         call_mfile_callback(CB_POSITION, 2, args);
     }
 }
+#endif
 
 /* Window closure/destruction callback. Also runs when closing a window using
  * its [x] button. */
@@ -1258,7 +1265,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         /* these two are always there */
         glutDisplayFunc(display_cb);
         glutReshapeFunc(reshape_cb);
+#ifdef GLC_HAVE_MODERN_FG
         glutPositionFunc(position_cb);
+#endif
         glutCloseFunc(close_cb);
 
         /* X: make register/unregister on demand (when GLCALL(glc.setcallback, ...) */
