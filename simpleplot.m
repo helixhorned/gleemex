@@ -1,4 +1,7 @@
-% Simple plot.
+% SIMPLEPLOT(DATA [, IDXS [, KEYCB]]) Simple interactive plot.
+%
+% DATA: 3 x numverts
+% IDXS: one-based
 function simpleplot(data, idxs, keycb)
     global simpl GL glc
 
@@ -121,7 +124,7 @@ function sp_display()
     glcall(glc.draw, GL.POINTS, simpl.data);
 
     if (~isempty(simpl.idxs))
-        glcall(glc.draw, GL.TRIANGLES, simpl.data, struct('indices',simpl.idxs(:)));
+        glcall(glc.draw, GL.TRIANGLES+16, simpl.data, struct('indices',simpl.idxs(:)));
     end
 
     glc_axes_finish([0 0 0]); % }}}
