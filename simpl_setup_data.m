@@ -1,4 +1,4 @@
-function simpl_setup_data(data, firsttime, idxs)
+function simpl_setup_data(data, firsttime, idxs, colors)
     global simpl
 
     if (nargin < 2)
@@ -38,6 +38,9 @@ function simpl_setup_data(data, firsttime, idxs)
         simpl.data(3, :) = 0;  % pad 3rd dim with zeros
     end
     simpl.numdims = numdims;
+
+    simpl.idxs = idxs-1;
+    simpl.colors = colors;
 
     % some data stats
     simpl.mean = mean(simpl.data, 2);

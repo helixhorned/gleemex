@@ -2,12 +2,13 @@
 %
 % DATA: 3 x numverts
 % IDXS: one-based
-function simpleplot(data, idxs, keycb)
+function simpleplot(data, idxs, colors, keycb)
     global simpl GL glc
 
     if (nargin < 1)
         % IDXS is 3 x #tris
-        disp('Usage: simpleplot(data [, idxs [, keycb]]), data is DIM x N, where DIM is either 2 or 3')
+        disp(['Usage: simpleplot(data [, idxs [, colors [, keycb]]]), ', ...
+              'data is DIM x N, where DIM is either 2 or 3'])
         return
     end
 
@@ -25,7 +26,19 @@ function simpleplot(data, idxs, keycb)
         end
     end
 
-    if (nargin >= 3)
+    if (nargin < 3)
+        colors = zeros(3, 0);
+    else
+        if (~isempty(colors))
+            if (~strcmp(class(colors), 'double'))
+                errmsg('COLORS must have class double')
+            end
+
+            % size check: left to glcall
+        end
+    end
+
+    if (nargin >= 4)
         if (~isa(keycb, 'function_handle'))
             error('KEYCB must be a function handle');
         end
@@ -38,7 +51,7 @@ function simpleplot(data, idxs, keycb)
     simpl = struct();
 
     %% data-data
-    simpl_setup_data(data, true, idxs);
+    simpl_setup_data(data, true, idxs, colors);
 
     %% app data
     simpl.omx = -1;  % old mouse-x position, -1: invalid
@@ -51,7 +64,7 @@ function simpleplot(data, idxs, keycb)
 
     simpl.lineidxs = [1 1];  % beginning and end indices of show-as-line   XXX: blah
     simpl.keycb = [];
-    if (nargin >= 3)
+    if (nargin >= 4)
         simpl.keycb = keycb;
     end
     simpl.moretext = 'Test';
@@ -124,7 +137,11 @@ function sp_display()
     glcall(glc.draw, GL.POINTS, simpl.data);
 
     if (~isempty(simpl.idxs))
-        glcall(glc.draw, GL.TRIANGLES+16, simpl.data, struct('indices',simpl.idxs(:)));
+        opts = struct('indices',simpl.idxs(:));
+        if (~isempty(simpl.colors))
+            opts.colors = simpl.colors;
+        end
+        glcall(glc.draw, GL.TRIANGLES+16, simpl.data, opts);
     end
 
     glc_axes_finish([0 0 0]); % }}}
