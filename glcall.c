@@ -1414,7 +1414,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 colorsz = szprod;
             else
             {
-                if ((sz[0] != 3 && sz[1] != 4) || sz[1] != numtotalverts)
+                if ((sz[0] != 3 && sz[0] != 4) || sz[1] != numtotalverts)
                     ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must either have length 3 or 4,\n"
                                  "              or have 3 or 4 rows and size(VERTEXDATA,2) columns");
                 colorsz = -sz[0];
