@@ -4,16 +4,18 @@ Gleemex User Manual
 Philipp Kutin
 :max-width: 56em
 :numbered:
+:toc:
 
+:language: matlab
 
 Introduction
 ------------
 
 Gleemex is a high-level interface to OpenGL functionality for GNU Octave and
-MATLAB. It uses FreeGLUT to provide windowing and peripheral access for various
-platforms, GLEW for OpenGL feature detection, and the MEX API to communicate
-with the host program. It allows writing interactive graphical applications
-entirely in the M scripting language.
+MATLAB^(R)^. It uses FreeGLUT to provide windowing and peripheral access for
+various platforms, GLEW for OpenGL feature detection, and the MEX API to
+communicate with the host program. It allows writing interactive graphical
+applications entirely in the M scripting language.
 
 
 Motivation
@@ -25,7 +27,7 @@ writing applications that interact with the user. Gleemex enables the creation
 of event-driven graphical tools, on one hand aiming at simplicity of usage, but
 without sacrificing performance where it is needed. Its main virtues are in
 
-* Being a _high level_ interface to OpenGL. Thus, rather than exposing OpenGL
+* Being a _higher level_ interface to OpenGL. Thus, rather than exposing OpenGL
   functions directly, they are wrapped in commands that perform a composite
   function. At the same time, it tries to add as little overhead as possible.
 
@@ -52,4 +54,161 @@ without sacrificing performance where it is needed. Its main virtues are in
   is active makes Gleemex close all of its windows and report it. This eases
   debugging of graphical apps, since otherwise an erroneous condition may
   produce followup failures, obscuring the original cause.
+
+Installation
+~~~~~~~~~~~~
+
+:FreeGLUT: http://freeglut.sourceforge.net/
+:GLEW: http://glew.sourceforge.net/
+
+The Gleemex core is implemented in a single MEX file, `glcall.c`. On a
+supported combination of OS, architecture and M-language implementation,
+running `mkglcall` usually suffices to build from it a dynamically loaded
+library that can be used with the given setup.
+
+Gleemex depends on {FreeGLUT}[FreeGLUT] and {GLEW}[GLEW]. For convenience, on
+Windows, GLEW is packaged together with Gleemex and does not need to be
+installed separately.
+
+//////////
+Usage overview
+~~~~~~~~~~~~~~
+
+From a bird's eye perspective, a Gleemex application maintains app-related
+state, handles events such as key presses, and redraws the view when
+necessary. It is customary to keep the state in a *`global`* struct
+variable.footnote:[It may be preferable to use a custom object of a
+_handle_-derived class, but as of time of writing, classdef functionality is
+not present in Octave mainline yet.] If it is desired that one app may have
+multiple windows, additional measures have to be taken.
+
+// TODO: write about those measures.
+//////////
+
+
+The `glcall` API
+----------------
+
+The `glcall` MEX function is the only entry point to Gleemex. It consolidates
+various sub-functions which are selected depending on the first argument passed
+to it, the _command_. Invoking `glcall` without input arguments returns a
+struct containing mappings of symbolic names to numeric constants denoting
+these commands, as well as callback functions to be registered once a window
+has been created. It is customary, but not required, to store this struct in a
+global named `glc`.
+
+Another function, `glconstants`, returns a struct containing mappings for
+OpenGL and FreeGLUT constants, together with some auxiliary definitions. By
+convention, it is stored into a global `GL`.
+
+Thus, in the ``main'' function of an application, one usually initializes these
+two globals for future use as follows:
+
+[source]
+.`hello_gleemex.m`
+----------
+function hello_gleemex()
+    global GL glc
+    glc = glcall()
+    GL = glconstants()
+
+    % ...
+end
+----------
+
+
+Callback functions
+~~~~~~~~~~~~~~~~~~
+
+Callback functions are user-defined functions that are invoked when a
+particular event, such as a mouse press, happens. Because the MEX API provides
+no means of inspecting _function handle_ objects, callbacks are passed to
+Gleemex *by name*. For example, the preceding hello-world app could register a
+display callback named `hg_display` like this:
+
+[source]
+----------
+function hello_gleemex()
+    % ...
+
+    glcall(glc.setcallback, glc.cb_display, 'hg_display');
+    % ...
+end
+
+function hg_display()
+    global GL glc
+    glcall(glc.clear, [1 0 0])  % clear the window to a red color
+end
+----------
+
+How the actual function corrensponding to a particular name is looked up
+differs between Octave and MATLAB. In Octave, it is possible to call secondary
+functions by name when the primary function is active, but only when the latter
+(here, `hello_gleemex`) has been invoked from the top level!
+
+In MATLAB, secondary functions appear to never be considered. For this reason,
+they can either be written in separate files from the start, or have to be
+extracted from the common file. A helper function `extractsecfuncs` is provided
+for this task.
+
+
+Initialization and setup
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+:FGAPI: http://freeglut.sourceforge.net/docs/api.php
+
+==== `[WINID =] glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
+
+:glutCreateSubWindow: http://www.opengl.org/documentation/specs/glut/spec3/node17.html#SECTION00052000000000000000
+
+Creates a new (sub-)window with the given properties and a separate, new OpenGL
+context. To make the window do something useful, it needs to have callbacks
+attached afterwards.
+
+* `WINDOWNAME`: The name of the window, to be shown in the top bar.
+
+* `POS`: The initial (x, y) position of the window, must be of type `double`.
+* `EXTENT`: The initial (width, height) pair of of window, must be of type `double`
++
+When creating a top-level window (`OPTS.multisample` not given or false), `POS`
+and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
+{FGAPI}[`glutInitWindowSize`], respectively. Otherwise, they are passed to
+{glutCreateSubWindow}[`glutCreateSubWindow`].
+
+* `OPTS`: A struct containing additional options:
+
+** `multisample`: pass `GLUT_MULTISAMPLE` to {FGAPI}[`glutInitDisplayMode`]?
+** `subwindow`: if true, creates a sub-window in the current window instead of
+   a new top-level one.
+
+** `menus`: A special kind of struct (called _menu struct_ from now on) that
+   defines a menu to be opened when a particular mouse button is pressed in the
+   window to be created. The menu has some top-level properties and may
+   recursively include sub-menus. Consequently, some of its fields may only
+   appear in the outermost struct, while others are also allowed to exist in
+   those nested deeper.
+*** `button` (top level only): the button that needs to be pressed in order to
+    open the menu
+*** `cbfunc`: the name of the callback function to be invoked when the user
+    activates a menu entry. It may appear in both root and child menu structs,
+    with semantics detailed below.
+*** `entries`: a cell array +{ e~1~, e~2~, ..., e~n~ }+ sequence of the menu's
+    entries, in the order they ultimately appear. An element +e~i~+ can be
+    either a leaf that can be activated, or another sub-menu. Where this cell's
+    element is a string, the entry is considered a leaf, and the string is
+    taken as its label in the menu. Otherwise, the element is expected to be a
+    menu struct describing the child, and its label is taken from the child's
+    `label` field.
+*** +label+: (child only): the label of the sub-menu which this menu
+    struct describes in its parent's menu.
+
+** When the user activates a menu entry, a suitable callback function is
+   searched first. Conceptually, this is done by traversing the menu tree,
+   starting at the selected entry and working towards the root (i.e. following
+   the ``parent'' links). When a menu struct containing a `cbfunc` field is
+   encountered, the named function is invoked with two arguments:
+   `cbfunc(label, idx)`.
+
+*** `label`: the label of the menu entry, as given in the menu struct
+*** `idx`: TODO (not yet specified)
 

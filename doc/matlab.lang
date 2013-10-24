@@ -1,0 +1,10 @@
+keyword = "end|global"
+
+environment string delim "'" "'" begin
+  specialchar = '\\.'
+end
+
+comment start "%"
+
+(keyword,normal,function) =
+    `(function)([[:blank:]]+)([[:alnum:]_]+)`
