@@ -129,7 +129,7 @@ function sp_display()
     % inv(mvpr) :: clip coords -> object coords
     assert(mvpr(4,4)==1);
 
-
+    glcall(glc.toggle, [GL.DEPTH_TEST 1]);
     if (simpl.lineidxs(2) > simpl.lineidxs(1))
         glcall(glc.draw, GL.LINE_STRIP, simpl.data(:, simpl.lineidxs(1):simpl.lineidxs(2)), ...
                struct('colors',[.2 .2 .2]));
