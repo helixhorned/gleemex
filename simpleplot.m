@@ -1,8 +1,9 @@
-% SIMPLEPLOT(DATA [, IDXS [, KEYCB]]) Simple interactive plot.
+% SIMPLEPLOT(DATA [, IDXS [, COLORS [, KEYCB [, DISPLAYCB [, UD]]]]])
+% Simple interactive plot.
 %
 % DATA: 3 x numverts
 % IDXS: zero-based, 3 x numfaces, matrix of triangle indices
-function simpleplot(data, idxs, colors, keycb)
+function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     global simpl GL glc
 
     if (nargin < 1)
@@ -44,6 +45,12 @@ function simpleplot(data, idxs, colors, keycb)
         end
     end
 
+    if (nargin >= 5)
+        if (~isa(keycb, 'function_handle'))
+            error('DISPLAYCB must be a function handle');
+        end
+    end
+
     glc = glcall();
     GL = glconstants();
 
@@ -67,7 +74,18 @@ function simpleplot(data, idxs, colors, keycb)
     if (nargin >= 4)
         simpl.keycb = keycb;
     end
+    simpl.displaycb = [];
+    if (nargin >= 5)
+        simpl.displaycb = displaycb;
+    end
     simpl.moretext = 'Test';
+
+    if (nargin < 6)
+        % no userdata
+        simpl.ud = [];
+    else
+        simpl.ud = ud;
+    end
 
     % create the window!
     winid = glcall(glc.newwindow, [20 20], simpl.wh, 'Simple plot');
@@ -129,19 +147,23 @@ function sp_display()
     % inv(mvpr) :: clip coords -> object coords
     assert(mvpr(4,4)==1);
 
-    glcall(glc.toggle, [GL.DEPTH_TEST 1]);
-    if (simpl.lineidxs(2) > simpl.lineidxs(1))
-        glcall(glc.draw, GL.LINE_STRIP, simpl.data(:, simpl.lineidxs(1):simpl.lineidxs(2)), ...
-               struct('colors',[.2 .2 .2]));
-    end
-    glcall(glc.draw, GL.POINTS, simpl.data);
-
-    if (~isempty(simpl.idxs))
-        opts = struct('indices',simpl.idxs(:));
-        if (~isempty(simpl.colors))
-            opts.colors = simpl.colors;
+    if (isa(simpl.displaycb, 'function_handle'))
+        simpl.displaycb();
+    else
+        glcall(glc.toggle, [GL.DEPTH_TEST 1]);
+        if (simpl.lineidxs(2) > simpl.lineidxs(1))
+            glcall(glc.draw, GL.LINE_STRIP, simpl.data(:, simpl.lineidxs(1):simpl.lineidxs(2)), ...
+                   struct('colors',[.2 .2 .2]));
         end
-        glcall(glc.draw, GL.TRIANGLES+16, simpl.data, opts);
+        glcall(glc.draw, GL.POINTS, simpl.data);
+
+        if (~isempty(simpl.idxs))
+            opts = struct('indices',simpl.idxs(:));
+            if (~isempty(simpl.colors))
+                opts.colors = simpl.colors;
+            end
+            glcall(glc.draw, GL.TRIANGLES+16, simpl.data, opts);
+        end
     end
 
     glc_axes_finish([0 0 0]); % }}}
@@ -180,18 +202,18 @@ end
 function sp_keyboard(key, x, y, mods)
     global simpl GL glc
 
-    mul = (1+9*(~~bitand(mods,GL.MOD_CTRL) + 6*(~~bitand(mods,GL.MOD_SHIFT))));
-    switch key
-      case { GL.KEY_RIGHT, GL.KEY_LEFT }
-        simpl.lineidxs(2) = simpl.lineidxs(2) + mul*(1-2*(key==GL.KEY_LEFT));
-        simpl.lineidxs(2) = sp_clamp(simpl.lineidxs(2), simpl.lineidxs(1),simpl.numsamples);
-      case { GL.KEY_UP, GL.KEY_DOWN }
-        simpl.lineidxs(1) = simpl.lineidxs(1) + mul*(1-2*(key==GL.KEY_DOWN));
-        simpl.lineidxs(1) = sp_clamp(simpl.lineidxs(1), 1,simpl.lineidxs(2));
-    end
-
     if (isa(simpl.keycb, 'function_handle'))
         simpl.keycb(key, x, y, mods);
+    else
+        mul = (1+9*(~~bitand(mods,GL.MOD_CTRL) + 6*(~~bitand(mods,GL.MOD_SHIFT))));
+        switch key
+          case { GL.KEY_RIGHT, GL.KEY_LEFT }
+            simpl.lineidxs(2) = simpl.lineidxs(2) + mul*(1-2*(key==GL.KEY_LEFT));
+            simpl.lineidxs(2) = sp_clamp(simpl.lineidxs(2), simpl.lineidxs(1),simpl.numsamples);
+          case { GL.KEY_UP, GL.KEY_DOWN }
+            simpl.lineidxs(1) = simpl.lineidxs(1) + mul*(1-2*(key==GL.KEY_DOWN));
+            simpl.lineidxs(1) = sp_clamp(simpl.lineidxs(1), 1,simpl.lineidxs(2));
+        end
     end
 
     glcall(glc.redisplay);
