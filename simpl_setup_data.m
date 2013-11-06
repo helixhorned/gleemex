@@ -15,10 +15,6 @@ function simpl_setup_data(data, firsttime, idxs, colors)
         error('DATA must have 2 or 3 ''dimensions'' (i.e. length of 1st dim must be 2 or 3)');
     end
 
-    if (any(idxs(:)==0))
-        error('IDXS are one-based and thus must not contain zeros')
-    end
-
     if (~firsttime)
         onumsamples = simpl.numsamples;
     end
@@ -39,7 +35,7 @@ function simpl_setup_data(data, firsttime, idxs, colors)
     end
     simpl.numdims = numdims;
 
-    simpl.idxs = idxs-1;
+    simpl.idxs = idxs;
     simpl.colors = colors;
 
     % some data stats

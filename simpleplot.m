@@ -1,7 +1,7 @@
 % SIMPLEPLOT(DATA [, IDXS [, KEYCB]]) Simple interactive plot.
 %
 % DATA: 3 x numverts
-% IDXS: one-based
+% IDXS: zero-based, 3 x numfaces, matrix of triangle indices
 function simpleplot(data, idxs, colors, keycb)
     global simpl GL glc
 
