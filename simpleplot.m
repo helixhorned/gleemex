@@ -207,7 +207,7 @@ function sp_motion(buttonsdown, x, y)
         if (simpl.omx == -1)
             simpl.omx = simpl.mxy(1);
         else
-            dx = simpl.mxy(1) - simpl.omx;
+            dx = simpl.omx - simpl.mxy(1);
             simpl.omx = simpl.mxy(1);
 
             simpl.ang = simpl.ang - dx/6;
