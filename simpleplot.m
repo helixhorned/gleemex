@@ -32,7 +32,7 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     else
         if (~isempty(colors))
             if (~strcmp(class(colors), 'double'))
-                errmsg('COLORS must have class double')
+                error('COLORS must have class double')
             end
 
             % size check: left to glcall
@@ -155,7 +155,6 @@ function sp_display()
             glcall(glc.draw, GL.LINE_STRIP, simpl.data(:, simpl.lineidxs(1):simpl.lineidxs(2)), ...
                    struct('colors',[.2 .2 .2]));
         end
-        glcall(glc.draw, GL.POINTS, simpl.data);
 
         if (~isempty(simpl.idxs))
             opts = struct('indices',simpl.idxs(:));
@@ -163,6 +162,8 @@ function sp_display()
                 opts.colors = simpl.colors;
             end
             glcall(glc.draw, GL.TRIANGLES+16, simpl.data, opts);
+        else
+            glcall(glc.draw, GL.POINTS, simpl.data);
         end
     end
 
