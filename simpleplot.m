@@ -131,7 +131,7 @@ function sp_display()
     %% draw axes
     axwh = simpl.axxywh([3 4]);
     wbyhmpone = [-1 1]*axwh(1)/axwh(2);  % width-by-height minus-plus one
-    glc_axes_setup(simpl.axxywh, [wbyhmpone, -1 1, 10*wbyhmpone]);  % {{{
+    glc_axes_setup(simpl.axxywh, [wbyhmpone, -1 1, 10*wbyhmpone], GL.DEPTH_BUFFER_BIT);  % {{{
 
     sc = double(max((simpl.max-simpl.min)/2));
     scalemat = simpl.zoom.*eye(4)./sc;

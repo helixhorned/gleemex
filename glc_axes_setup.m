@@ -6,14 +6,19 @@
 %  PROJECTION is passed to glcall(glc.setmatrix, ...)
 %
 %  T -- true.
-function t = glc_axes_setup(viewport_xywh, projection)
+function t = glc_axes_setup(viewport_xywh, projection, additional_bits)
     global glc GL
 
     global glc_viewport_xywh
     glc_viewport_xywh = viewport_xywh;
 
     % pushing ENABLE_BIT: convenience
-    glcall(glc.push, [GL.PROJECTION GL.MODELVIEW GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT]);
+    bits = [GL.PROJECTION, GL.MODELVIEW, GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT];
+    if (nargin >= 3)
+        bits(3) = bitor(bits(3), additional_bits);
+    end
+
+    glcall(glc.push, bits);
 
     % setup
     glcall(glc.viewport, viewport_xywh);
