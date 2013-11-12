@@ -4,3 +4,9 @@ glc_listdlg_*.m
 *.mexw64
 initrepo.sh
 *.o
+# git-owl BEGIN: DO NOT EDIT!
+freeglutd.dll
+freeglutd.pdb
+glcall.mexw64
+glcall.mexw64.pdb
+# git-owl END
