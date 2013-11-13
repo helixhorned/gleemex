@@ -1025,6 +1025,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int32_t cmd;
 
     static int inited = 0;
+    static int locked = 0;
+
+    if (!locked)
+    {
+        mexLock();
+        locked = 1;
+    }
 
     if (nrhs==0)
     {
