@@ -68,6 +68,7 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
 
     simpl.zoom = 1;
     simpl.ang = 0;  % angle around y axis in degrees
+    simpl.fog = false;  % show fog?
 
     simpl.lineidxs = [1 1];  % beginning and end indices of show-as-line   XXX: blah
     simpl.keycb = [];
@@ -147,6 +148,11 @@ function sp_display()
     % inv(mvpr) :: clip coords -> object coords
     assert(mvpr(4,4)==1);
 
+    if (simpl.fog)
+        glcall(glc.fog, GL.EXP2, single(0.7), single([1 1 1 0]));
+        glcall(glc.toggle, [GL.FOG 1]);
+    end
+
     if (isa(simpl.displaycb, 'function_handle'))
         simpl.displaycb();
     else
@@ -174,8 +180,8 @@ function sp_display()
     pretty = @(vec)regexprep(num2str(vec(:)'), ' +', ', ');
 
     glcall(glc.text, [28 top-14], 14, ...
-           sprintf('means: %s | mins: %s | maxs: %s', pretty(simpl.mean), ...
-                   pretty(simpl.min), pretty(simpl.max)));
+           sprintf('means: %s | mins: %s | maxs: %s | fog: %d', pretty(simpl.mean), ...
+                   pretty(simpl.min), pretty(simpl.max), simpl.fog));
     glcall(glc.text, [28 top-14-(8+14)], 14, ...
            sprintf('[%d  %d..%d  %d], zoom=%.02f', 1, simpl.lineidxs(1), simpl.lineidxs(2), ...
                    simpl.numsamples, simpl.zoom));
@@ -202,6 +208,11 @@ end
 
 function sp_keyboard(key, x, y, mods)
     global simpl GL glc
+
+    % Common
+    if (key==double('f'))
+        simpl.fog = ~simpl.fog;
+    end
 
     if (isa(simpl.keycb, 'function_handle'))
         simpl.keycb(key, x, y, mods);
