@@ -77,10 +77,10 @@ Usage overview
 From a bird's eye perspective, a Gleemex application maintains app-related
 state, handles events such as key presses, and redraws the view when
 necessary. It is customary to keep the state in a *`global`* struct
-variable.footnote:[It may be preferable to use a custom object of a
+variable,footnote:[It may be preferable to use a custom object of a
 _handle_-derived class, but as of time of writing, classdef functionality is
-not present in Octave mainline yet.] If it is desired that one app may have
-multiple windows, additional measures have to be taken.
+not present in Octave mainline yet.] one per application. If it is desired that
+an app may have multiple windows, additional measures have to be taken.
 
 // TODO: write about those measures.
 //////////
@@ -92,10 +92,13 @@ The `glcall` API
 The `glcall` MEX function is the only entry point to Gleemex. It consolidates
 various sub-functions which are selected depending on the first argument passed
 to it, the _command_. Invoking `glcall` without input arguments returns a
-struct containing mappings of symbolic names to numeric constants denoting
-these commands, as well as callback functions to be registered once a window
-has been created. It is customary, but not required, to store this struct in a
-global named `glc`.
+struct containing a mapping of names to numeric constants denoting these
+commands, as well as those of callback functions to be registered once a window
+has been created.
+This struct should be stored in a global named `glc`.
+
+//It is customary, but not required, to store this struct in a
+//global named `glc`.
 
 Another function, `glconstants`, returns a struct containing mappings for
 OpenGL and FreeGLUT constants, together with some auxiliary definitions. By
@@ -211,4 +214,21 @@ and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
 
 *** `label`: the label of the menu entry, as given in the menu struct
 *** `idx`: TODO (not yet specified)
+
+The return value `WINID` is a small integer identifying the window for as long
+as it is live. Note that it's *not* the identifier passed from FreeGLUT but one
+specific to Gleemex. Its values are in the range
+[1{nbsp}..{nbsp}MAXACTIVEWINDOWS], where at most MAXACTIVEWINDOWS can be open
+at the same time (currently, 32). The identifiers may be reused.
+
+==== `glcall(glc.setcallback, callback_kind, cbfunc_name)`
+
+Sets the specified callback `callback_kind` of the current window to the
+function named `cbfunc_name`. The following values are permissible for
+`callback_kind`:
+
+`glc.cb_display`::
+
+Invoked when the windows is about to be redrawn. At the end, a
+`glutSwapBuffers()` is always issued implicitly.
 
