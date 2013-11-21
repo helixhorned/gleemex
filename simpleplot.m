@@ -261,7 +261,6 @@ function sp_mouse(button, downp, x, y, mods)
     if (downp)
         switch button
           case GL.MWHEEL_UP,
-            % XXX: ctrl doesn't work here (linux)
             simpl.zoom = simpl.zoom * (1.2 + 0.3*(mods==GL.MOD_CTRL));
           case GL.MWHEEL_DOWN,
             simpl.zoom = simpl.zoom / (1.2 + 0.3*(mods==GL.MOD_CTRL));

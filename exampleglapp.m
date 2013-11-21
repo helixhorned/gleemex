@@ -107,12 +107,12 @@ end
 
 function ex_menucb(label, idx)
     % for root menu and submenu
-    fprintf('Clicked menu entry %s.\n', label);
+    fprintf('Clicked menu entry %s (%d).\n', label, idx);
 end
 
 function ex_menucb3(label, idx)
     % for subsubmenu
-    fprintf('3: Clicked menu entry %s.\n', label);
+    fprintf('3: Clicked menu entry %s (%d).\n', label, idx);
 end
 
 function ex_reshape(w, h)
