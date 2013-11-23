@@ -160,7 +160,7 @@ Initialization and setup
 
 :FGAPI: http://freeglut.sourceforge.net/docs/api.php
 
-==== `[WINID =] glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
+==== `WINID = glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
 
 :glutCreateSubWindow: http://www.opengl.org/documentation/specs/glut/spec3/node17.html#SECTION00052000000000000000
 
@@ -218,17 +218,66 @@ and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
 The return value `WINID` is a small integer identifying the window for as long
 as it is live. Note that it's *not* the identifier passed from FreeGLUT but one
 specific to Gleemex. Its values are in the range
-[1{nbsp}..{nbsp}MAXACTIVEWINDOWS], where at most MAXACTIVEWINDOWS can be open
-at the same time (currently, 32). The identifiers may be reused.
+[1{nbsp}..{nbsp}`MAXACTIVEWINDOWS`], where at most `MAXACTIVEWINDOWS` can be
+open at the same time (currently, 32). The identifiers of windows that have
+been closed may subsequently be reused.
 
 ==== `glcall(glc.setcallback, callback_kind, cbfunc_name)`
 
+:FGWindowCallback: http://freeglut.sourceforge.net/docs/api.php#WindowCallback
+
 Sets the specified callback `callback_kind` of the current window to the
 function named `cbfunc_name`. The following values are permissible for
-`callback_kind`:
+`callback_kind`; the names in angle brackets denote the respective GLUT
+registration functions.
 
-`glc.cb_display`::
+`glc.cb_display`, [`glutDisplayFunc`]::
 
-Invoked when the windows is about to be redrawn. At the end, a
-`glutSwapBuffers()` is always issued implicitly.
+Invoked with no arguments when the windows is about to be redrawn. At the end,
+Gleemex always issues a `glutSwapBuffers()`.
+
+`glc.cb_reshape`, [`glutReshapeFunc`]::
+
+Invoked with two arguments `(width, height)` when the window has been resized,
+and on initialization. Thus, it is possible to e.g. set up a projection matrix
+in this callback. If no custom reshape callback is registered, Gleemex
+registers one that issues `glViewport(0, 0, width, height)`.
+
+`glc.cb_position`, [{FGWindowCallback}[`glutPositionFunc`]]::
+
+Invoked with two arguments `(x, y)` when the window is repositioned/moved
+programatically or by the user.
+
+`glc.cb_keyboard`, [`glutKeyboardFunc`, `glutSpecialFunc`]::
+
+Invoked with four arguments `(key, x, y, mods)` when a keyboard key has been
+pressed. Gleemex consolidates the two GLUT callback functions into one for ease
+of use. The `key` argument can be checked for equality with either a
+single-character string such as `'a'`, or with constants `GL.KEY_*`. The
+`mods` argument denotes which modifier keys are pressed and can be checked
+against the `GL.MOD_*` bit constants.
++
+NOTE: For ``key chords'' such as `Ctrl`+`a`, FreeGLUT may pass different
+combinations of `key` and `mods` on different platforms.
+
+`glc.cb_mouse`, [`glutMouseFunc`]::
+
+Invoked with five arguments `(button, downp, x, y, mods)` when a mouse button
+is pressed (`downp` is true) or released (`downp` is false). The `button`
+arguments can be checked against the `GL.BUTTON_*` and `GL.MWHEEL_*` bit
+constants, `mods` are the pressed modifier keys as with the keyboard callback.
+
+`glc.cb_motion`, [`glutMotionFunc`, `glutPassiveMotionFunc`]::
+
+Invoked with three arguments `(buttons, x, y)` when the mouse is moved. The
+`buttons` argument has the `GL.BUTTON_*` bits set which are depressed at the
+time the movement happens.
++
+NOTE: Currently, `buttons` may not be entirely reliable in multi-window
+scenarios.
+
+==== `glcall(glc.entermainloop)`
+
+Enters the FreeGLUT main loop once. Issuing `glc.entermainloop` while the main
+loop is active is a no-op.
 
