@@ -13,7 +13,7 @@ Introduction
 
 Gleemex is a high-level interface to OpenGL functionality for GNU Octave and
 MATLAB^(R)^. It uses FreeGLUT to provide windowing and peripheral access for
-various platforms, GLEW for OpenGL feature detection, and the MEX API to
+various platforms, GLEW for OpenGL feature determination, and the MEX API to
 communicate with the host program. It allows writing interactive graphical
 applications entirely in the M scripting language.
 
@@ -155,11 +155,12 @@ extracted from the common file. A helper function `extractsecfuncs` is provided
 for this task.
 
 
-Initialization and setup
-~~~~~~~~~~~~~~~~~~~~~~~~
+Initialization, setup and teardown commands
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :FGAPI: http://freeglut.sourceforge.net/docs/api.php
 
+[float]
 ==== `WINID = glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
 
 :glutCreateSubWindow: http://www.opengl.org/documentation/specs/glut/spec3/node17.html#SECTION00052000000000000000
@@ -168,20 +169,21 @@ Creates a new (sub-)window with the given properties and a separate, new OpenGL
 context. To make the window do something useful, it needs to have callbacks
 attached afterwards.
 
-* `WINDOWNAME`: The name of the window, to be shown in the top bar.
+* `WINDOWNAME`: the name of the window, to be shown in the top bar
 
-* `POS`: The initial (x, y) position of the window, must be of type `double`.
-* `EXTENT`: The initial (width, height) pair of of window, must be of type `double`
+* `POS`: the initial (x, y) position of the window, must be of type `double`
+* `EXTENT`: the initial (width, height) pair of the window, must be of type
+  `double`
 +
-When creating a top-level window (`OPTS.multisample` not given or false), `POS`
+When creating a top-level window (`OPTS.subwindow` not given or false), `POS`
 and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
 {FGAPI}[`glutInitWindowSize`], respectively. Otherwise, they are passed to
 {glutCreateSubWindow}[`glutCreateSubWindow`].
 
 * `OPTS`: A struct containing additional options:
 
-** `multisample`: pass `GLUT_MULTISAMPLE` to {FGAPI}[`glutInitDisplayMode`]?
-** `subwindow`: if true, creates a sub-window in the current window instead of
+** `multisample`: Pass `GLUT_MULTISAMPLE` to {FGAPI}[`glutInitDisplayMode`]?
+** `subwindow`: If true, creates a sub-window in the current window instead of
    a new top-level one.
 
 ** `menus`: A special kind of struct (called _menu struct_ from now on) that
@@ -192,10 +194,10 @@ and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
    those nested deeper.
 *** `button` (top level only): the button that needs to be pressed in order to
     open the menu
-*** `cbfunc`: the name of the callback function to be invoked when the user
+*** `cbfunc`: The name of the callback function to be invoked when the user
     activates a menu entry. It may appear in both root and child menu structs,
     with semantics detailed below.
-*** `entries`: a cell array +{ e~1~, e~2~, ..., e~n~ }+ sequence of the menu's
+*** `entries`: A cell array +{ e~1~, e~2~, ..., e~n~ }+ sequence of the menu's
     entries, in the order they ultimately appear. An element +e~i~+ can be
     either a leaf that can be activated, or another sub-menu. Where this cell's
     element is a string, the entry is considered a leaf, and the string is
@@ -203,7 +205,7 @@ and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
     menu struct describing the child, and its label is taken from the child's
     `label` field.
 *** +label+: (child only): the label of the sub-menu which this menu
-    struct describes in its parent's menu.
+    struct describes in its parent's menu
 
 ** When the user activates a menu entry, a suitable callback function is
    searched first. Conceptually, this is done by traversing the menu tree,
@@ -222,13 +224,20 @@ specific to Gleemex. Its values are in the range
 open at the same time (currently, 32). The identifiers of windows that have
 been closed may subsequently be reused.
 
-==== `glcall(glc.setcallback, callback_kind, cbfunc_name)`
+[float]
+==== `glcall(glc.closewindow [, WINID])`
+
+Closes the window given by the Gleemex identifier `WINID`, or the current
+window if `WINID` is omitted.
+
+[float]
+==== `glcall(glc.setcallback, CALLBACK_KIND, CBFUNC_NAME)`
 
 :FGWindowCallback: http://freeglut.sourceforge.net/docs/api.php#WindowCallback
 
-Sets the specified callback `callback_kind` of the current window to the
-function named `cbfunc_name`. The following values are permissible for
-`callback_kind`; the names in angle brackets denote the respective GLUT
+Sets the specified callback `CALLBACK_KIND` of the current window to the
+function named `CBFUNC_NAME`. The following values are permissible for
+`CALLBACK_KIND`; the names in angle brackets denote the respective GLUT
 registration functions.
 
 `glc.cb_display`, [`glutDisplayFunc`]::
@@ -276,8 +285,202 @@ time the movement happens.
 NOTE: Currently, `buttons` may not be entirely reliable in multi-window
 scenarios.
 
+[float]
 ==== `glcall(glc.entermainloop)`
 
 Enters the FreeGLUT main loop once. Issuing `glc.entermainloop` while the main
 loop is active is a no-op.
 
+[float]
+==== `glcall(glc.leavemainloop)`
+
+Instructs FreeGLUT to stop executing the main loop. This will close *all*
+Gleemex windows and return to the prompt of the M-language implementation.
+In most cases, `glc.closewindow` should be preferred.
+
+
+Commands that change or query OpenGL state
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[float]
+==== `glcall(glc.viewport, XYWH)`
+
+:glViewport: http://www.opengl.org/sdk/docs/man2/xhtml/glViewport.xml
+
+Sets the viewport by calling {glViewport}[`glViewport`] with the elements of
+`XYWH`, which must be a 4-vector of type `double`.
+
+[float]
+==== `glcall(glc.scissor, XYWH)`
+
+:glScissor: http://www.opengl.org/sdk/docs/man2/xhtml/glScissor.xml
+
+Defines a scissor box by calling {glScissor}[`glScissor`] with the elements of
+`XYWH`, which must be a 4-vector of type `int32`.
+
+[float]
+==== `glcall(glc.toggle, KV_PAIRS)`
+
+:glEnable: http://www.opengl.org/sdk/docs/man2/xhtml/glEnable.xml
+
+Toggles the {glEnable}[enable] state of various server-side GL capabilities.
+
+* `KV_PAIRS`: A vector of even length containing successive pairs of `KEY` and
+  `VALUE`. Must be of type `int32`; this is automatically ensured if `KV_PAIRS`
+  is constructed as concantenation of values containing `GL.*` values, as
+  detailed below.
+
+** `KEY`: An allowed GL constant denoting the capability: one of
+   `GL.DEPTH_TEST`, `GL.SCISSOR_TEST`, `GL.BLEND`, `GL.POINT_SMOOTH`,
+   `GL.LINE_SMOOTH`, `GL.LINE_STIPPLE`, `GL.POLYGON_SMOOTH` or `GL.FOG`.
+
+** `VALUE`: 1 for enabling the capability, 0 for disabling it, or -1 for
+   flipping its enable state.
+
+.Example
+[source]
+----------
+    % enable depth testing and blending
+    glcall(glc.toggle, [GL.DEPTH_TEST 1, GL.BLEND 1]);
+----------
+
+[float]
+==== `glcall(glc.push, WHAT)` and `glcall(glc.pop, WHAT)`
+
+:glPushMatrix: http://www.opengl.org/sdk/docs/man2/xhtml/glPushMatrix.xml
+:glPushAttrib: http://www.opengl.org/sdk/docs/man2/xhtml/glPushAttrib.xml
+
+Push or pop the {glPushMatrix}[matrix] or {glPushAttrib}[server attribute]
+stack. `WHAT` is a vector of constants denoting what to push or pop: allowed
+values are
+
+* `GL.PROJECTION`, `GL.MODELVIEW` and `GL.TEXTURE` for the respective matrices
+* The `GL.*_BIT` constants for the sets of attributes documented in
+  {glPushAttrib}[`glPushAttrib`]
+
+[float]
+==== `glcall(glc.set, WHAT, VALUE)` and `VALUE = glcall(glc.get, WHAT)`
+
+*TODO*
+
+[float]
+==== `glcall(glc.fog, FOG_MODE, FOG_PARAM, FOG_COLOR)`
+
+:glFog: http://www.opengl.org/sdk/docs/man2/xhtml/glFog.xml
+
+Sets the {glFog}[fog] parameters and color.
+
+* `FOG_MODE`: one of `GL.LINEAR`, `GL.EXP` or `GL.EXP2`
+* `FOG_PARAM`: for `GL.LINEAR` fog, a 2-vector specifying the near and far
+  distances for the linear fog equation. Otherwise, the fog density. Must have
+  numeric type `single`.
+* `FOG_COLOR`: a 4-vector of `single` numeric type specifying the color of the
+  fog
+
+
+Drawing and related commands
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[float]
+==== `glcall(glc.clear [, COLOR])`
+
+:glClear: http://www.opengl.org/sdk/docs/man2/xhtml/glClear.xml
+
+{glClear}[Clears] the depth buffer to 1. Also, if `COLOR` is provided as an
+`(R, G, B [, A])` vector of type `double`, the color buffer is cleared to that
+value.
+
+[float]
+==== `glcall(glc.draw, PRIMITIVE_TYPE, VERTEXDATA [, OPTSTRUCT])`
+
+:glDrawElements: http://www.opengl.org/sdk/docs/man2/xhtml/glDrawElements.xml
+:glBegin: http://www.opengl.org/sdk/docs/man2/xhtml/glBegin.xml
+
+Passes vertex data to OpenGL, instructing it to draw them as primitives of
+`PRIMITIVE_TYPE` and optionally providing face indices, colors and/or texture
+coordinates.
+
+* `PRIMITIVE_TYPE`: The kind of geometric {glBegin}[primitive] to pass, one of +
+  `GL.POINTS`, `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP`, `GL.TRIANGLES`,
+  `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN`, `GL.QUADS`, `GL.QUAD_STRIP` or
+  `GL.POLYGON`. +
+  If 16 is added to `PRIMITIVE_TYPE`, only the outlines of polygons are drawn.
+
+* `VERTEXDATA`: A `(K, NumTotalVerts)` matrix of floating numeric type
+  containing the vertex coordinates of the primitives.
+
+** `K`: The number of ``dimensions''. Can be 2, 3 or 4, corresponding to x, y,
+  z and/or w coordinates.
+** `NumTotalVerts`: The total number of vertices, must be consistent with the
+  given `PRIMITIVE_TYPE`. For example, requesting `GL.LINES` expects
+  `NumTotalVerts` to be even.
+
+* `OPTSTRUCT`: A struct that can be used to pass additional data. May contain
+  the following fields:
+
+** `colors`: The `(R, G, B [, A])` colors. Can be either a vector of length 3 or 4,
+   in which case all vertices are given that color, or a `(3 or 4,
+   NumTotalVerts)` matrix, specifying a separate color for each vertex. Must
+   have type `double`. +
+   If no colors are passed, the default one is white when a texture is
+   provided, and (0.5, 0.5, 0.5) otherwise.
+
+** `indices`: Zero-based indices into the columns of `VERTEXDATA` used to
+   construct the primitives. See {glDrawElements}[`glDrawElements`]. Must have
+   _index type_ (`uint8` or `uint32`). +
+   When `indices` are passed, the number of drawn vertices is thus its length,
+   and each of its elements must be less than `NumTotalVerts`. This bound check
+   has to be done every `glc.draw` call, so providing a large amount of indices
+   may be expensive.
+
+** `tex`: The OpenGL ``texture name'' (a non-zero `uint32` number) with which
+   the primitives are to be textured.
+
+** `texcoords`: The s and t texture coordinates at each vertex. Must be a `(2,
+   NumTotalVerts)` matrix of floating numeric type. Must be passed whenever
+   `tex` is passed.
+
+[float]
+==== `glcall(glc.text, POS, HEIGHT, TEXT [, XYALIGN] [, OPTS])`
+
+Renders a line of text using a FreeGLUT's roman stroke font.
+
+Assuming that <<glc_setup2d,`glc_setup2d`>> has been used to set up a 2D view,
+the string `TEXT` is drawn at pixel position `POS` and height `HEIGHT` (which
+should be a `double`-typed 2-vector and scalar, respectively). `TEXT` should
+not contain newlines.
+
+* `XYALIGN`: an optional `double`-typed 2-vector `[xalign yalign]` specifying
+  the horizontal and vertical alignment of the text.
+
+** --1: align on left/bottom (i.e. towards negative coordinates)
+** 0: align at the center
+** 1: align on right/top
+
+* `OPTS`: an option struct which may contain the following fields:
+
+** `colors`: a 3-vector of type `double` giving the `(R, G, B)` color of the
+   text
+
+** `xgap`: The distance between successive characters, expressed as a
+   proportion of the width of the space character. The default is a value that
+   was experimentally determined to look good. Must have `double` type.
+
+** `mono`: a scalar logical of whether to use the monospaced Roman font
+
+
+Auxiliary functions
+-------------------
+
+Gleemex provides a number of convenience functions built on top of the basic
+`glcall` routines.
+
+[float]
+[[glc_setup2d]]
+==== `glc_setup2d(WIDTH, HEIGHT [, ZRANGE])`
+
+Sets up the viewport and projection matrix suitable for 2D drawing in a window
+of size `WIDTH` and `HEIGHT`, and resets the modelview matrix to the identity
+matrix.  In the so constructed view, position (1, 1) denotes the center of the
+leftmost and bottommost pixel. +
+`ZRANGE`: *TODO*
