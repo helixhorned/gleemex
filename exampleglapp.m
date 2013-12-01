@@ -104,7 +104,7 @@ function exampleglapp(vertposns)
     [glex.shaderid, glex.shaderuniforms] = glcall(glc.newfragprog, SHADERSRC);
 
     % XXX: treat errors between newwindow and entermainloop properly
-    glex.tex = glcall(glc.newtexture, glex.im, struct('u32rgba',~imagetex));
+    glex.tex = glcall(glc.texture, glex.im, struct('u32rgba',~imagetex));
     glcall(glc.colormap, uint8(jet(256)' * 255));
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
@@ -334,7 +334,7 @@ function ex_motion(buttonsdown, x, y)
             glex.im(glex.im == 256) = 128;
         end
 
-        glcall(glc.newtexture, glex.im, glex.tex, struct('u32rgba',~glex.imagetex));
+        glcall(glc.texture, glex.im, glex.tex, struct('u32rgba',~glex.imagetex));
     else
         glex.mxy = [x y];
         glex.mxy(2) = glex.wh(2)-glex.mxy(2);

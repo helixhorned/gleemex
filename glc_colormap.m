@@ -35,9 +35,9 @@ function cmaptexname = glc_colormap(cmaptexname, cmap_or_func)
     % ... but upload as 2x256 (WxH)
     if (cmaptexname == 0)
         % upload first time
-        cmaptexname = glcall(glc.newtexture, permute(cmap_img, [1 3 2]));
+        cmaptexname = glcall(glc.texture, permute(cmap_img, [1 3 2]));
     else
         % reupload
-        glcall(glc.newtexture, permute(cmap_img, [1 3 2]), cmaptexname);
+        glcall(glc.texture, permute(cmap_img, [1 3 2]), cmaptexname);
     end
 end

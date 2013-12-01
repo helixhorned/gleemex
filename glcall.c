@@ -86,11 +86,11 @@
 /* redisplay */
 #define REDISPLAY_IN_NOWP (prhs[1])
 
-/* newtexture */
-#define NEWTEXTURE_IN_TEXAR (prhs[1])
-#define NEWTEXTURE_IN_TEXNAME (prhs[2])
-#define NEWTEXTURE_IN_OPTS (prhs[3-nlhs])
-#define NEWTEXTURE_OUT_TEXNAME (plhs[0])
+/* texture */
+#define TEXTURE_IN_TEXAR (prhs[1])
+#define TEXTURE_IN_TEXNAME (prhs[2])
+#define TEXTURE_IN_OPTS (prhs[3-nlhs])
+#define TEXTURE_OUT_TEXNAME (plhs[0])
 
 /* text */
 #define TEXT_IN_POS (prhs[1])
@@ -196,7 +196,7 @@ enum glcalls_
     GLC_CLEAR,
     GLC_REDISPLAY,
     GLC_GETERRSTR,
-    GLC_NEWTEXTURE,
+    GLC_TEXTURE,
     GLC_TEXT,
     GLC_TOGGLE,
     GLC_SCISSOR,
@@ -228,7 +228,7 @@ const char *glcall_names[] =
     "clear",
     "redisplay",
     "geterrstr",
-    "newtexture",
+    "texture",
     "text",
     "toggle",
     "scissor",
@@ -1755,7 +1755,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     return;
 
-    case GLC_NEWTEXTURE:
+    case GLC_TEXTURE:
     {
         /* TODO: generalize
          -  OK: 1, 2, 3, 4 components: LUM, LUM_ALPHA, RGB, RGBA
@@ -1784,16 +1784,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mxClassID classid;
 
         if (!newtex && !repltex)
-            ourErrMsgTxt("Usage: texname = GLCALL(glc.newtexture, texar [, opts]), texar must be 3xNxM uint8 or NxM single\n"
-                         "   or: GLCALL(glc.newtexture, texar, texname [, opts])  to replace an earlier texture");
+            ourErrMsgTxt("Usage: texname = GLCALL(glc.texture, texar [, opts]), texar must be 3xNxM uint8 or NxM single\n"
+                         "   or: GLCALL(glc.texture, texar, texname [, opts])  to replace an earlier texture");
 
-        numdims = mxGetNumberOfDimensions(NEWTEXTURE_IN_TEXAR);
+        numdims = mxGetNumberOfDimensions(TEXTURE_IN_TEXAR);
 
         if (numdims != 2 && numdims != 3)
-            ourErrMsgTxt("GLCALL: newtexture: TEXAR must have either 2 or 3 dimensions");
+            ourErrMsgTxt("GLCALL: texture: TEXAR must have either 2 or 3 dimensions");
 
         /* first, get the texture width, height and format */
-        dimsizes = mxGetDimensions(NEWTEXTURE_IN_TEXAR);
+        dimsizes = mxGetDimensions(TEXTURE_IN_TEXAR);
         if (numdims == 2)
         {
             width = dimsizes[0];
@@ -1809,16 +1809,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             height = dimsizes[2];
 
             if (dimsizes[0] < 2 || dimsizes[0] > 4)
-                ourErrMsgTxt("GLCALL: newtexture: TEXAR's 1st dimension must have length 2, 3, or 4");
+                ourErrMsgTxt("GLCALL: texture: TEXAR's 1st dimension must have length 2, 3, or 4");
 
             format = formats[dimsizes[0]-2];
         }
 
         if (width == 0 || height == 0)
-            ourErrMsgTxt("GLCALL: newtexture: TEXAR's width and height must not be 0");
+            ourErrMsgTxt("GLCALL: texture: TEXAR's width and height must not be 0");
 
         /* next, determine the data type and alignment... */
-        classid = mxGetClassID(NEWTEXTURE_IN_TEXAR);
+        classid = mxGetClassID(TEXTURE_IN_TEXAR);
         switch (classid)
         {
         case mxSINGLE_CLASS:
@@ -1836,7 +1836,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         case mxUINT32_CLASS:
             type = GL_UNSIGNED_INT; alignment = 4; break;
         default:
-            ourErrMsgTxt("GLCALL: newtexture: TEXAR must have 'single' or [u]int{8,16,32} numeric class");
+            ourErrMsgTxt("GLCALL: texture: TEXAR must have 'single' or [u]int{8,16,32} numeric class");
         }
 
         /* we could tweak the internal format for more precision, but the internalFormat value
@@ -1844,24 +1844,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (haveopts)
         {
-            verifyparam(NEWTEXTURE_IN_OPTS, "GLCALL: newtexture: OPTS", VP_SCALAR|VP_STRUCT);
+            verifyparam(TEXTURE_IN_OPTS, "GLCALL: texture: OPTS", VP_SCALAR|VP_STRUCT);
 
-            minmag_mxar = mxGetField(NEWTEXTURE_IN_OPTS, 0, "minmag");
+            minmag_mxar = mxGetField(TEXTURE_IN_OPTS, 0, "minmag");
             if (minmag_mxar)
             {
                 const int32_t *minmagptr;
                 mwSize nel;
 
-                verifyparam(minmag_mxar, "GLCALL: newtexture: OPTS.minmag", VP_VECTOR|VP_INT32);
+                verifyparam(minmag_mxar, "GLCALL: texture: OPTS.minmag", VP_VECTOR|VP_INT32);
                 nel = mxGetNumberOfElements(minmag_mxar);
                 if (nel != 1 && nel != 2)
-                    ourErrMsgTxt("GLCALL: newtexture: OPTS.minmag must have length 1 or 2");
+                    ourErrMsgTxt("GLCALL: texture: OPTS.minmag must have length 1 or 2");
                 minmagptr = mxGetData(minmag_mxar);
 
                 if ((minmagptr[0]!=GL_NEAREST && minmagptr[0]!=GL_LINEAR) ||
                     (nel > 1 && minmagptr[1]!=GL_NEAREST && minmagptr[1]!=GL_LINEAR))
                 {
-                    ourErrMsgTxt("GLCALL: newtexture: OPTS.minmag elements must be either GL.NEAREST or GL.LINEAR");
+                    ourErrMsgTxt("GLCALL: texture: OPTS.minmag elements must be either GL.NEAREST or GL.LINEAR");
                 }
 
                 minfilt = minmagptr[0];
@@ -1871,17 +1871,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             {
                 /* Bonus option: A width-by-height uint32 matrix as RGBA. */
 
-                const mxArray *u32rgbaAr = mxGetField(NEWTEXTURE_IN_OPTS, 0, "u32rgba");
+                const mxArray *u32rgbaAr = mxGetField(TEXTURE_IN_OPTS, 0, "u32rgba");
                 if (u32rgbaAr)
                 {
-                    verifyparam(u32rgbaAr, "GLCALL: newtexture: OPTS.u32rgba", VP_SCALAR|VP_LOGICAL);
+                    verifyparam(u32rgbaAr, "GLCALL: texture: OPTS.u32rgba", VP_SCALAR|VP_LOGICAL);
                     const int8_t u32rgba = *(int8_t *)mxGetData(u32rgbaAr);
 
                     if (u32rgba)
                     {
                         if (type != GL_UNSIGNED_INT || format != GL_LUMINANCE)
                         {
-                            ourErrMsgTxt("GLCALL: newtexture: OPTS.u32rgba only available for ndims==2 uint32 texture");
+                            ourErrMsgTxt("GLCALL: texture: OPTS.u32rgba only available for ndims==2 uint32 texture");
                         }
 
                         type = GL_UNSIGNED_BYTE;
@@ -1895,10 +1895,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (repltex)
         {
             /* we're replacing an existing texture */
-            verifyparam(NEWTEXTURE_IN_TEXNAME, "GLCALL: newtexture: TEXNAME", VP_SCALAR|VP_UINT32);
-            texname = *(uint32_t *)mxGetData(NEWTEXTURE_IN_TEXNAME);
+            verifyparam(TEXTURE_IN_TEXNAME, "GLCALL: texture: TEXNAME", VP_SCALAR|VP_UINT32);
+            texname = *(uint32_t *)mxGetData(TEXTURE_IN_TEXNAME);
             if (!glIsTexture(texname))
-                ourErrMsgTxt("GLCALL: newtexture: TEXNAME must specify an existing texture");
+                ourErrMsgTxt("GLCALL: texture: TEXNAME must specify an existing texture");
         }
         else
         {
@@ -1927,13 +1927,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (tmpwidth==0)
         {
             glDeleteTextures(1, &texname);
-            ourErrMsgTxt("GLCALL: newtexture: cannot accomodate texture");
+            ourErrMsgTxt("GLCALL: texture: cannot accomodate texture");
         }
         glTexImage2D(GL_TEXTURE_2D, 0, format,  width, height,
-                     0, format, type, mxGetData(NEWTEXTURE_IN_TEXAR));
+                     0, format, type, mxGetData(TEXTURE_IN_TEXAR));
 
         if (newtex)
-            NEWTEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
+            TEXTURE_OUT_TEXNAME = createScalar(mxUINT32_CLASS, &texname);
     }
     break;
 
