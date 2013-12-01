@@ -22,28 +22,38 @@ function exampleglapp(vertposns)
         '  }' 10 ...
         '}' 10];
 
+    imagetex = false;  % use image as texture?
+
     GL = glconstants(); glc = glcall();
     glex = struct();
+    glex.imagetex = imagetex;
 
-    try
-        OCTAVE_VERSION;
-        im = uint8(100*randn(256,256,3));
-    catch
+    if (imagetex)
+        %    try
+        %        OCTAVE_VERSION;
+        %        im = uint8(100*randn(256,256,3));
+        %    catch
         % Reading this particular JPG crashes Octave at exit when run under gdb
         % as of 2012-09-23.
         im = imread('../connectivity_visualization/brain_area.jpg');
+        %    end
+
+        if (mod(size(im,1),2)==1)
+            im(end+1, :, :) = im(end, :, :);
+        end
+        if (mod(size(im,2),2)==1)
+            im(:, end+1, :) = im(:, end, :);
+        end
+        glex.im = permute(im, [3 2 1]);  % swap x/y, make rgb consecutive in mem
+        glex.imwh = [size(glex.im,2) size(glex.im,3)];  % width, height
+    else
+        im = zeros(20, 10, 'uint32');
+        im(2:4, 2:4) = 255*[1 1 1; 1 0 1; 1 1 1];  % a red '0'
+        im(17:19, 7:9) = 256*255*[0 1 0; 1 1 1; 0 1 0]; % a green '+'
+        glex.im = im;
+        glex.imwh = 16*size(im);
     end
 
-    if (mod(size(im,1),2)==1)
-        im(end+1, :, :) = im(end, :, :);
-    end
-    if (mod(size(im,2),2)==1)
-        im(:, end+1, :) = im(:, end, :);
-    end
-
-    glex.im = permute(im, [3 2 1]);  % swap x/y, make rgb consecutive in mem
-
-    glex.imwh = [size(glex.im,2) size(glex.im,3)];  % width, height
     glex.adjbbox = [60 40 460 440];  % adj-mat bbox, [x1 y1 x2 y2]
     glex.mxy = [0 0];
     glex.bdown = [false false false];  % which button is down: left, middle, right
@@ -94,7 +104,7 @@ function exampleglapp(vertposns)
     [glex.shaderid, glex.shaderuniforms] = glcall(glc.newfragprog, SHADERSRC);
 
     % XXX: treat errors between newwindow and entermainloop properly
-    glex.tex = glcall(glc.newtexture, glex.im);
+    glex.tex = glcall(glc.newtexture, glex.im, struct('u32rgba',~imagetex));
     glcall(glc.colormap, uint8(jet(256)' * 255));
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
     glcall(glc.setcallback, glc.cb_display, 'ex_display');
@@ -146,6 +156,12 @@ function ex_display()
 
     glcall(glc.clear, 1-[0 0 0]);
 
+    % draw window corner markers
+    glcall(glc.draw, GL.LINE_STRIP, [1 1 10; 10 1 1], ...
+           struct('colors',[1 0 0]));  % lower left
+    glcall(glc.draw, GL.LINE_STRIP, [w-10 w w; h h h-10], ...
+           struct('colors',[0 0 1]));  % upper right
+
     % scissor test
     glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
     glcall(glc.scissor, int32([64 64 128 128]));
@@ -175,9 +191,14 @@ function ex_display()
     %% grid lines
     glc_draw_grid(glex.adjbbox, numchans+1);
 
-    %% brain image
-    texcoords = [1 0 0 1; ...
-                 1 1 0 0];
+    %% image
+    if (glex.imagetex)
+        texcoords = [1 0 0 1; ...
+                     1 1 0 0];
+    else
+        texcoords = [0 1 1 0; ...
+                     0 0 1 1];
+    end
     verts = [0 glex.imwh(1) glex.imwh(1) 0; ...
              0 0 glex.imwh(2) glex.imwh(2)];
 
@@ -220,7 +241,7 @@ function ex_display()
     end
 %}
 
-    glcall(glc.text, [64 460], 18, 'ABrainiac0123456789!@#$%^&*()_+', struct('colors',[0 0 1]));
+    glcall(glc.text, [64 460], 18, 'TicTacToe0123456789!@#$%^&*()_+', struct('colors',[0 0 1]));
 
     for ang=0:30:180
         glcall(glc.push, GL.MODELVIEW);
@@ -246,7 +267,7 @@ function ex_display()
     glc_axes_finish([0 0 0]);  % }}}
 
     ocz_xy = tmpxywh(1:2)+[2 tmpxywh(4)-16];
-    tmpargs = { ocz_xy, 14, 'OCz', struct('xgap',1) };
+    tmpargs = { ocz_xy, 14, 'noise', struct('xgap',1) };
 
     len = glcall(glc.text, tmpargs{:});  % get length of text
     glc_drawrect(ocz_xy+[-1 -2], ocz_xy+[len+2 14+2], struct('colors',[.6 .6 .6]));
@@ -303,11 +324,17 @@ function ex_motion(buttonsdown, x, y)
 
     if (buttonsdown)
         % texture reuploading
-        ov = (glex.im==245);
-        glex.im = glex.im+1;
-        glex.im(ov) = 0;
+        if (glex.imagetex)
+            ov = (glex.im==245);
+            glex.im = glex.im+1;
+            glex.im(ov) = 0;
+        else
+            ov = (glex.im >= 1 & glex.im <= 255);
+            glex.im(ov) = glex.im(ov)+1;
+            glex.im(glex.im == 256) = 128;
+        end
 
-        glcall(glc.newtexture, glex.im, glex.tex);
+        glcall(glc.newtexture, glex.im, glex.tex, struct('u32rgba',~glex.imagetex));
     else
         glex.mxy = [x y];
         glex.mxy(2) = glex.wh(2)-glex.mxy(2);
