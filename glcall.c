@@ -1865,6 +1865,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 minfilt = minmagptr[0];
                 magfilt = (nel==1) ? minfilt : minmagptr[1];
             }
+
+            {
+                /* Bonus option: A width-by-height uint32 matrix as RGBA. */
+
+                const mxArray *u32rgbaAr = mxGetField(NEWTEXTURE_IN_OPTS, 0, "u32rgba");
+                if (u32rgbaAr)
+                {
+                    verifyparam(u32rgbaAr, "GLCALL: newtexture: OPTS.u32rgba", VP_SCALAR|VP_LOGICAL);
+                    const int8_t u32rgba = *(int8_t *)mxGetData(u32rgbaAr);
+
+                    if (u32rgba)
+                    {
+                        if (type != GL_UNSIGNED_INT || format != GL_LUMINANCE)
+                        {
+                            ourErrMsgTxt("GLCALL: newtexture: OPTS.u32rgba only available for ndims==2 uint32 texture");
+                        }
+
+                        type = GL_UNSIGNED_BYTE;
+                        format = GL_RGBA;  /* XXX: assumes little-endian machine */
+                        alignment = 1;
+                    }
+                }
+            }
         }
 
         if (repltex)
