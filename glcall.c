@@ -364,6 +364,9 @@ static const char *class_names[] = {
     "int64", "uint64",
 };
 
+GLC_STATIC_ASSERT(ARRAY_SIZE(class_ids) == ARRAY_SIZE(class_names));
+
+
 #define GLC_MEX_ERROR_VP_(Text, ...) GLC_MEX_ERROR_(GL_TRUE, Text, ## __VA_ARGS__)
 
 static int32_t arIsVector(const mxArray *ar, int32_t emptyok)
@@ -1314,7 +1317,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         /* QUESTIONS/TODO:
          *  When passing color array with 4 components, enable blending temporarily?
-         *  When passing a texture, make the default color white?
          *  Some easy means of specifying a rect? (using glRect)
          *  When a lot of data will need to be drawn: Buffer Objects...  */
 
@@ -1960,7 +1962,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const mxArray *xyalignAr=NULL, *optsAr=NULL;
 
         if (nlhs > 1 || !(nrhs >= 4 && nrhs <= 6))
-            ourErrMsgTxt("Usage: [textlen] = GLCALL(glc.text, [x y [z]], height, text [, xyalign [, opts]])");
+            ourErrMsgTxt("Usage: [textlen] = GLCALL(glc.text, [x y [z]], height, text [, xyalign] [, opts])");
 
         verifyparam(TEXT_IN_POS, "GLC: text: POS", VP_VECTOR|VP_DOUBLE);
         /* Not using VP_VECLEN_SHIFT above because we need vector length later. */
@@ -2040,8 +2042,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(TEXT_IN_TEXT, "GLC: text: TEXT", VP_VECTOR|VP_CHAR);
         text = mxArrayToString(TEXT_IN_TEXT);
 
-        if (!text)
-            ourErrMsgTxt("GLCALL: text: Out of memory!");
+        if (text == NULL)
+            ourErrMsgTxt("GLCALL: text: OUT OF MEMORY 1");
 
         {
             mwSize slen = strlen(text);
@@ -2056,7 +2058,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (slen >= maxslen)
             {
                 maxslen = slen;
+                /* XXX: Could this dynamic allocation be the cause for the
+                 * 'clear all' crashes under MATLAB? */
                 spaceidxs = realloc(spaceidxs, slen*sizeof(*spaceidxs));
+                if (spaceidxs == NULL)
+                    ourErrMsgTxt("GLCALL: text: OUT OF MEMORY 2");
             }
 
             for (i=0; i<slen; i++)
@@ -2421,7 +2427,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(SET_IN_VALUE, "GLCALL: set GL.POINT_SIZE: SIZE", VP_SCALAR|VP_DOUBLE);
             value_d = *mxGetPr(SET_IN_VALUE);
 
-            /* XXX: potential undefined behavoiur when downcasting */
             glPointSize((GLfloat)value_d);
             break;
         }
@@ -2433,7 +2438,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             verifyparam(SET_IN_VALUE, "GLCALL: set GL.LINE_WIDTH: WIDTH", VP_SCALAR|VP_DOUBLE);
             value_d = *mxGetPr(SET_IN_VALUE);
 
-            /* XXX: potential undefined behavoiur when downcasting */
             glLineWidth((GLfloat)value_d);
             break;
         }
