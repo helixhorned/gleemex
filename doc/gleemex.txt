@@ -61,10 +61,11 @@ Installation
 :FreeGLUT: http://freeglut.sourceforge.net/
 :GLEW: http://glew.sourceforge.net/
 
-The Gleemex core is implemented in a single MEX file, `glcall.c`. On a
-supported combination of OS, architecture and M-language implementation,
-running `mkglcall` usually suffices to build from it a dynamically loaded
-library that can be used with the given setup.
+The Gleemex core is implemented in a single source file, `glcall.c`. On a
+supported combination of OS, architecture and M-language implementation, and
+assuming a compatible C compiler is installed (see ``++help mex++''), running
+`mkglcall` usually suffices to build a dynamically loaded MEX library that can
+be used with the given setup.
 
 Gleemex depends on {FreeGLUT}[FreeGLUT] and {GLEW}[GLEW]. For convenience, on
 Windows, GLEW is packaged together with Gleemex and does not need to be
@@ -102,7 +103,12 @@ This struct should be stored in a global named `glc`.
 
 Another function, `glconstants`, returns a struct containing mappings for
 OpenGL and FreeGLUT constants, together with some auxiliary definitions. By
-convention, it is stored into a global `GL`.
+convention, it is stored into a global `GL`.footnote:[Conceptually, one does
+not _need_ to use the names ```glc`'' and ```GL`''. However, currently Gleemex
+references these named globals in M-file auxiliary functions ``behind a user's
+back'' without first assigning to them. In the future, the restriction to use
+these particular names may be lifted by substituting the numerical values for
+these references.]
 
 Thus, in the ``main'' function of an application, one usually initializes these
 two globals for future use as follows:
@@ -352,7 +358,7 @@ Toggles the {glEnable}[enable] state of various server-side GL capabilities.
 :glPushMatrix: http://www.opengl.org/sdk/docs/man2/xhtml/glPushMatrix.xml
 :glPushAttrib: http://www.opengl.org/sdk/docs/man2/xhtml/glPushAttrib.xml
 
-Push or pop the {glPushMatrix}[matrix] or {glPushAttrib}[server attribute]
+Pushes or pops the {glPushMatrix}[matrix] or {glPushAttrib}[server attribute]
 stack. `WHAT` is a vector of constants denoting what to push or pop: allowed
 values are
 
@@ -361,9 +367,62 @@ values are
   {glPushAttrib}[`glPushAttrib`]
 
 [float]
-==== `glcall(glc.set, WHAT, VALUE)` and `VALUE = glcall(glc.get, WHAT)`
+==== `glcall(glc.set, WHAT, VALUE)`
 
-*TODO*
+:glPointSize: http://www.opengl.org/sdk/docs/man2/xhtml/glPointSize.xml
+:glLineWidth: http://www.opengl.org/sdk/docs/man2/xhtml/glLineWidth.xml
+:glLineStipple: http://www.opengl.org/sdk/docs/man2/xhtml/glLineStipple.xml
+
+:glBlendEquation: http://www.opengl.org/sdk/docs/man2/xhtml/glBlendEquation.xml
+:glDepthFunc: http://www.opengl.org/sdk/docs/man2/xhtml/glDepthFunc.xml
+:glDepthMask: http://www.opengl.org/sdk/docs/man2/xhtml/glDepthMask.xml
+
+Sets the GL and FreeGLUT state variable denoted by `WHAT` to a new
+value. `WHAT` can be one of the following named Gleemex constants:
+
+* `GL.MENU_ENABLE`: `VALUE` is a scalar logical of whether to enable
+  the menu in the current window.
+
+* `GL.MOUSE_POS`: `VALUE` is a 2-vector of type `double` whose
+  elements are passed to `glutWarpPointer`. The values must be greater or equal
+  0 and less that or equal to the width/height of the window.
+
+* `GL.WINDOW_ID`: TODO
+* `GL.WINDOW_SIZE`: TODO
+
+* `GL.POINT_SIZE`: `VALUE` is a `double`-typed scalar passed to
+  {glPointSize}[`glPointSize`].
+
+* `GL.LINE_WIDTH`: `VALUE` is a `double`-typed scalar passed to
+  {glLineWidth}[`glLineWidth`].
+
+* `GL.LINE_STIPPLE_PATTERN`: `VALUE` is a `uint16`-typed scalar passed as the
+  _pattern_ to {glLineStipple}[`glLineStipple`]. For the _factor_ argument, 1
+  is passed.
+
+* `GL.BLEND_EQUATION`: `VALUE` is a GL constant permissible to
+  {glBlendEquation}[`glBlendEquation`]: `GL.MIN`, `GL.MAX`, `GL.FUNC_ADD`,
+  `GL.FUNC_SUBTRACT` or `GL.FUNC_REVERSE_SUBTRACT`.
+
+* `GL.DEPTH_FUNC`: `VALUE` is a GL constant permissible to
+  {glDepthFunc}[`glDepthFunc`]: `GL.NEVER`, `GL.LESS`, `GL.EQUAL`,
+  `GL.LEQUAL`, `GL.GREATER`, `GL.NOTEQUAL`, `GL.GEQUAL` or `GL.ALWAYS`.
+
+* `GL.DEPTH_WRITEMASK`: `VALUE` is a scalar logical, whose corresponding GL
+  value (`GL.TRUE` or `GL.FALSE`) is passed to {glDepthMask}[`glDepthMask`].
+
+[float]
+==== `VALUE = glcall(glc.get, WHAT)`
+
+Gets the current value of the GL or FreeGLUT state variable denoted by `WHAT`.
+
+* `GL.WINDOW_ID`: see `glc.set`
+* `GL.WINDOW_SIZE`: see `glc.set`
+* `GL.WINDOW_POS`: TODO
+
+* `GL.PROJECTION_MATRIX`, `GL.MODELVIEW_MATRIX`: `VALUE` is a 4-by-4
+  `double`-typed matrix.
+
 
 [float]
 [[glc_setmatrix]]
