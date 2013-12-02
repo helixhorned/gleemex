@@ -1,4 +1,4 @@
-% GLC_AXES_FINISH(VIEWPORT_XYWH)
+% GLC_AXES_FINISH([BORDERCOLOR])
 %
 %
 function glc_axes_finish(bordercolor)

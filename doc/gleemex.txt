@@ -225,6 +225,7 @@ open at the same time (currently, 32). The identifiers of windows that have
 been closed may subsequently be reused.
 
 [float]
+[[glc_closewindow]]
 ==== `glcall(glc.closewindow [, WINID])`
 
 Closes the window given by the Gleemex identifier `WINID`, or the current
@@ -296,13 +297,14 @@ loop is active is a no-op.
 
 Instructs FreeGLUT to stop executing the main loop. This will close *all*
 Gleemex windows and return to the prompt of the M-language implementation.
-In most cases, `glc.closewindow` should be preferred.
+In most cases, <<glc_closewindow,`glc.closewindow`>> should be preferred.
 
 
 Commands that change or query OpenGL state
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 [float]
+[[glc_viewport]]
 ==== `glcall(glc.viewport, XYWH)`
 
 :glViewport: http://www.opengl.org/sdk/docs/man2/xhtml/glViewport.xml
@@ -364,6 +366,24 @@ values are
 *TODO*
 
 [float]
+[[glc_setmatrix]]
+==== `glcall(glc.setmatrix, WHICH, M)`
+
+:glLoadMatrix: http://www.opengl.org/sdk/docs/man2/xhtml/glLoadMatrix.xml
+:glOrtho: http://www.opengl.org/sdk/docs/man2/xhtml/glOrtho.xml
+:gluPerspective: http://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
+
+Sets the `GL.PROJECTION` or `GL.MODELVIEW` matrix (given by `WHICH`) to `M`,
+which must be a `double`-typed matrix and can be one of the following:
+
+* An empty array `[]` is interpreted to reset the respective matrix to the
+  identity matrix.
+* A 4-by-4 matrix is passed unmodified to {glLoadMatrix}[`glLoadMatrixd`].
+* For `GL.PROJECTION`, it is possible to pass a vector of length 4 or 6.
+** The elements of a 4-vector are passed to {gluPerspective}[`gluPerspective`].
+** The elements of a 6-vector are passed to {glOrtho}[`glOrtho`].
+
+[float]
 ==== `glcall(glc.fog, FOG_MODE, FOG_PARAM, FOG_COLOR)`
 
 :glFog: http://www.opengl.org/sdk/docs/man2/xhtml/glFog.xml
@@ -400,7 +420,7 @@ Passes vertex data to OpenGL, instructing it to draw them as primitives of
 `PRIMITIVE_TYPE` and optionally providing face indices, colors and/or texture
 coordinates.
 
-* `PRIMITIVE_TYPE`: The kind of geometric {glBegin}[primitive] to pass, one of +
+* `PRIMITIVE_TYPE`: The kind of geometric {glBegin}[primitive] to draw, one of +
   `GL.POINTS`, `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP`, `GL.TRIANGLES`,
   `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN`, `GL.QUADS`, `GL.QUAD_STRIP` or
   `GL.POLYGON`. +
@@ -525,4 +545,33 @@ Sets up the viewport and projection matrix suitable for 2D drawing in a window
 of size `WIDTH` and `HEIGHT`, and resets the modelview matrix to the identity
 matrix.  In the so constructed view, position (1, 1) denotes the center of the
 leftmost and bottommost pixel. +
-`ZRANGE`: *TODO*
+
+NOTE: `glc_setup2d` achieves the above-mentioned convention by calling
+<<glc_setmatrix,`glc.setmatrix`>>/`GL.PROJECTION` with a 6-vector, where the
+first four values are 0, `WIDTH`, 0 and `HEIGHT`, to all of which 0.5 is added.
+The last two values are those given by `ZRANGE`, or `[-1 1]` by default.
+
+[float]
+==== `glc_axes_setup(VIEWPORT_XYWH, PROJECTION [, ADDITIONAL_BITS])` -> `true`
+
+Sets up an ``axes'' as a rectangular region of the current window given by
+`VIEWPORT_XYWH`, which should be a 4-vector permissible to
+<<glc_viewport,`glc.viewport`>>. Drawing commands between a call to
+`glc_axes_setup` and a closing `glc_axes_finish` will never draw outside this
+region. The `PROJECTION` argument can be anything permissible to
+<<glc_setmatrix,`glc.setmatrix`>>; the modelview matrix is reset to the
+identity matrix.
+
+Always returns `true`.
+
+NOTE: `glc_axes_setup` pushes the following matrices and server-side attribute
+bits: `GL.PROJECTION`, `GL.MODELVIEW`,
+`GL.VIEWPORT_BIT+GL.SCISSOR_BIT+GL.ENABLE_BIT`. Additional attribute bits may
+be pushed by passing `ADDITIONAL_BITS`.
+
+[float]
+==== `glc_axes_finish()`
+
+// TODO: document BORDERCOLOR?
+Restores the matrices and server attributes pushed by `glc_axes_setup`.
+
