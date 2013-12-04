@@ -1875,9 +1875,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 if (u32rgbaAr)
                 {
                     verifyparam(u32rgbaAr, "GLCALL: texture: OPTS.u32rgba", VP_SCALAR|VP_LOGICAL);
-                    const int8_t u32rgba = *(int8_t *)mxGetData(u32rgbaAr);
 
-                    if (u32rgba)
+                    if (*(int8_t *)mxGetData(u32rgbaAr))
                     {
                         if (type != GL_UNSIGNED_INT || format != GL_LUMINANCE)
                         {
