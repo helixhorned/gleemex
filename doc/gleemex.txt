@@ -305,6 +305,36 @@ Instructs FreeGLUT to stop executing the main loop. This will close *all*
 Gleemex windows and return to the prompt of the M-language implementation.
 In most cases, <<glc_closewindow,`glc.closewindow`>> should be preferred.
 
+[float]
+==== `[STR1, STR2, EX] = glcall(glc.geterrstr)` {nbsp} [MATLAB only]
+
+Returns information about the last error.
+
+Currently, on Octave, when an error happens, Gleemex immediately issues
+`mexErrMsgText` and thus effectively does non-local control flow back to the
+prompt. *TODO*: it is not clear by itself that this is correct, i.e. doesn't
+leak resources (or worse).
+
+On MATLAB, issuing `mexErrMsgText` while the FreeGLUT main loop is active has
+been found to produce crashes, which is why a different approach is taken: the
+error message is backed up in persistent variables, and control is returned to
+the prompt by normally returning from all active Gleemex functions and
+terminating the FreeGLUT main loop.
+
+The `glc.geterrstr` command can be used to query the messages of the last error
+(`STR1` and `STR2`) as well as obtain the `MException` associated with it,
+`EX`, from the MATLAB prompt. Thus, after your Gleemex app terminates
+abnormally, you'd usually issue
+
+[source]
+----------
+global glc
+[a,b,c] = glcall(glc.geterrstr);
+c.getReport()
+----------
+
+to pretty-print the error together with a backtrace.
+
 
 Commands that change or query OpenGL state
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -512,8 +542,9 @@ coordinates.
    has to be done every `glc.draw` call, so providing a large amount of indices
    may be expensive.
 
-** `tex`: The OpenGL ``texture name'' (a non-zero `uint32` number) with which
-   the primitives are to be textured.
+** `tex`: The OpenGL _texture name_ (a non-zero `uint32` number as returned by
+   <<glc_newtexture,`glc.newtexture`>>) with which the primitives are to be
+   textured.
 
 ** `texcoords`: The s and t texture coordinates at each vertex. Must be a `(2,
    NumTotalVerts)` matrix of floating numeric type. Must be passed whenever
@@ -547,11 +578,34 @@ not contain newlines.
 
 ** `mono`: a scalar logical of whether to use the monospaced Roman font
 
+[float]
+==== `glcall(glc.redisplay [, NOW])`
+
+:glutPostRedisplay: http://www.opengl.org/documentation/specs/glut/spec3/node20.html#SECTION00055000000000000000
+:glutSwapBuffers: http://www.opengl.org/documentation/specs/glut/spec3/node21.html#SECTION00056000000000000000
+
+With no additional arguments, issues {glutPostRedisplay}[`glutPostRedisplay`].
+If `NOW` is passed, it should be a scalar logical; if `NOW` is true,
+{glutSwapBuffers}[`glutSwapBuffers`] is issued instead.
+
+[float]
+==== `PIXELS = glcall(glc.readpixels [, XYWH])`
+
+:glReadPixels: http://www.opengl.org/sdk/docs/man2/xhtml/glReadPixels.xml
+
+{glReadPixels}[Reads] a block of pixels from the framebuffer. If `XYWH` is
+passed (which must be a `double`-typed 4-vector), its elements are passed to
+the _x_, _y_, _width_ and _height_ arguments of `glReadPixels`. Otherwise, the
+default is to grab the whole window.
+
+`PIXELS` is returned as a 3-by-_width_-by-_height_ `uint8` array.
+
 
 Resource definition commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 [float]
+[[glc_texture]]
 ==== `TEXID = glcall(glc.texture, TEXIMG [, OPTS])` or `glcall(glc.texture, TEXIMG, TEXID [, OPTS])`
 
 :glTexImage2D: http://www.opengl.org/sdk/docs/man2/xhtml/glTexImage2D.xml
@@ -587,7 +641,124 @@ various properties of `TEXIMG`:
   mode. The default is `GL.LINEAR`.
 
 Currently, there is no way to set the texture's wrapping mode: it is always set
-to `GL_CLAMP_TO_EDGE`.
+to `GL_CLAMP_TO_EDGE`. Uploading mipmaps is not supported, either.
+
+[float]
+==== `glcall(glc.deletetextures, TEXIDS)`
+
+:glDeleteTextures: http://www.opengl.org/sdk/docs/man2/xhtml/glDeleteTextures.xml
+
+{glDeleteTextures}[Deletes] the textures named by the elements of the vector
+`TEXIDS`.
+
+[float]
+[[glc_colormap]]
+==== `glcall(glc.colormap, COLORMAP)`
+
+Uploads a colormap texture and binds it as a one-dimensional texture to a
+texture unit different from `GL_TEXTURE0`. The texture is set to linear
+filtering and `GL_CLAMP_TO_EDGE` wrapping.
+
+* `COLORMAP`: must be a 3-by-256 `uint8` matrix of (R, B, G) colors.
+
+This command allows using the so registered colormap from fragment shaders. See
+the notes labeled [red]#COLORMAP_DEF# below.
+
+
+Fragment shader commands
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+[float]
+[[glc_newfragprog]]
+==== `PROGID [, UNIFORMS] = glcall(glc.newfragprog, FRAGSHADERSRC)`
+
+:glCompileShader: http://www.opengl.org/sdk/docs/man2/xhtml/glCompileShader.xml
+:glAttachShader: http://www.opengl.org/sdk/docs/man2/xhtml/glAttachShader.xml
+:glLinkProgram: http://www.opengl.org/sdk/docs/man2/xhtml/glLinkProgram.xml
+
+:glGetActiveUniform: http://www.opengl.org/sdk/docs/man2/xhtml/glGetActiveUniform.xml
+
+{glCompileShader}[Compiles] a single fragment shader given in the source
+`FRAGSHADERSRC` and {glLinkProgram}[links] a fragment program containing it as
+the only {glAttachShader}[attached] shader. If either the creation of a shader
+or program object failed, or there was an error with compilation or linking, an
+M error is issued.
+
+[red]#COLORMAP_DEF#: If the fragment shader contains a uniform variable named
+`cmap`, it must be declared with `uniform sampler1D` type. In the shader, you
+can sample the colormap texture, for example
+
+[source,glsl]
+----------
+uniform sampler1D cmap;
+int main(void) {
+  // ...
+  float val = /* (some value in [0 .. 1] */;
+  vec3 rgb = texture1D(cmap, val).rgb;  // get the RGB triplet for 'val'
+  // ...
+}
+----------
+
+On success, returns
+
+* `PROGID`: an identifier by which the created fragment program can be
+  referenced. The fragment program is *not* enabled by creating it, use
+  <<glc_fragprog,`glc.usefragprog`>> for this.
+
+* `UNIFORMS`: optionally, a mapping of {glGetActiveUniform}[active uniform]
+  variable names that are also valid MATLAB identifiers to Gleemex-specific
+  handles permissible to <<glc_setuniform,`glc.setuniform`>>. Only names of
+  user-defined uniform variables with the following types are listed (the
+  variables may be either scalars or arrays of these _base types_):
+
+** base scalars: `GL_BOOL`, `GL_FLOAT`, `GL_INT`
+** base vectors: `GL_{BOOL,INT,FLOAT}_VEC{2,3,4}`
+
+[float]
+[[glc_fragprog]]
+==== `glcall(glc.usefragprog [, PROGID])`
+
+:glUseProgram: http://www.opengl.org/sdk/docs/man2/xhtml/glUseProgram.xml
+{glUseProgram}[Enables] usage of the fragment program `PROGID` (if passed) or
+disables any fragment program and revert to OpenGL fixed functionality (if
+`PROGID` is omitted).
+
+[red]#COLORMAP_DEF#: If the fragment shader containes a `cmap` uniform
+variable, it it set to the texture unit to which the texture uploaded with
+<<glc_colormap,`glc.colormap`>> binds.
+
+[float]
+[[glc_setuniform]]
+==== `glcall(glc.setuniform, UNIFORMHANDLE, VAL)`
+
+:glUniform: http://www.opengl.org/sdk/docs/man2/xhtml/glUniform.xml
+
+{glUniform}[Sets] the value of a uniform variable in the currently active
+fragment program.
+
+* `UNIFORMHANDLE`: The Gleemex handle denoting a uniform variable as returned
+  as one of the keys of the `UNIFORMS` mapping from
+  <<glc_newfragprog,`glc.newfragprog`>>.
+
+* `VAL`: A value consistent with the type and size of the corresponding uniform
+  variable.
+
+** For `GL_FLOAT`-typed uniforms, values of M type `single` are expected. For
+  uniforms of type `GL_BOOL` or `GL_INT`, values of M type `int32` should be
+  passed.
+
+** For scalar uniforms, `VAL` should contain as many elements as suggested by
+   the _base type_: a single element for `GL_{BOOL,FLOAT,INT}` and 2, 3 or 4
+   for `GL_*_VEC{2,3,4}` (respectively).
+
+** For array uniforms, `VAL` should have length equal to the length of the
+   array, times the base element count as described with the previous point.
+
+// XXX: ^^ ^^ 'scalar' may be confusing since it's used in a different sense than
+// 'base scalar' above.
+
+// TODO: ^^ actually, the implementation for array uniforms is less strict (can
+// set prefix of array, I think). Use case?
 
 
 Auxiliary functions
