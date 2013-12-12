@@ -11,7 +11,7 @@ function simpleplot(data)
     global simpl GL glc
 
     glc = glcall();
-    GL = getglconsts();
+    GL = glconstants();
 
     simpl = struct();
 
@@ -58,7 +58,7 @@ function sp_keyboard(key, x, y, mods)
 
     % ...
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function sp_motion(buttonsdown, x, y)
@@ -69,7 +69,7 @@ function sp_motion(buttonsdown, x, y)
 
     % ...
 
-    glcall(glc.postredisplay);
+    glcall(glc.redisplay);
 end
 
 function sp_mouse(button, downp, x, y, mods)
