@@ -25,7 +25,11 @@ function glc_textlines(liststring, numlines, xrange, yorigin, opts)
     if (nargin >= 4)
         if (isfield(opts, 'colors'))
             colors = opts.colors;
-            assert(isnumeric(colors) && isequal(size(colors), [numvals 3]));
+            assert(isnumeric(colors));
+            if (numel(colors)==3)
+                colors = [colors(:)'; zeros(numvals-1, 3)];
+            end
+            assert(isequal(size(colors), [numvals 3]));
         end
         if (isfield(opts, 'lineheight'))
             lineheight = opts.lineheight;
@@ -39,6 +43,10 @@ function glc_textlines(liststring, numlines, xrange, yorigin, opts)
             xmargin = opts.xmargin;
             assert(isnumeric(lineheight) && numel(lineheight)==1);
         end
+    end
+
+    if (isempty(colors))
+        colors = ones(numvals, 3);
     end
 
     for runi=1:2
