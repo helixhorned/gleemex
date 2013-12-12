@@ -176,6 +176,13 @@ GL.KEY_HOME = 65536+106;
 GL.KEY_END = 65536+107;
 GL.KEY_INSERT = 65536+108;
 
+% Gleemex key names
+GL.KEY_BACKSPACE = 8;
+GL.KEY_TAB = 9;
+GL.KEY_ENTER = 13;
+GL.KEY_SPACE = 32;
+GL.KEY_DELETE = 127;
+
 % Should be really in GLAux or something?
 GL.TYPEFUNC_TEXTURE = @uint32;
 GL.INVALID_TEXTURE = uint32(0);
