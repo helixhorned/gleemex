@@ -4,7 +4,12 @@
 % DATA: 3 x numverts
 % IDXS: zero-based, 3 x numfaces, matrix of triangle indices
 function simpleplot(data, idxs, colors, keycb, displaycb, ud)
-    global simpl GL glc
+    % 'simpleplot' can be run with both classdef-enabled M-implementations or those
+    % that don't have classdef.
+    %  For classdef: 'simpl' is a cell array: {winid} -> GLCSimplePlotData handle
+    %  For legacy: 'simpl' is a struct, making the plot a singleton
+
+    global GL glc
 
     if (nargin < 1)
         % IDXS is 3 x #tris
@@ -54,17 +59,28 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     glc = glcall();
     GL = glconstants();
 
-
-    simpl = struct();
+    if (simpl_have_classdef())
+        simpl = GLCSimplePlotData();
+        va = { simpl };
+    else
+        global simpl
+        simpl = struct();
+        va = {};
+    end
 
     %% data-data
-    simpl_setup_data(data, true, idxs, colors);
+    simpl_setup_data(data, true, idxs, colors, va{:});
 
     %% app data
     simpl.omx = -1;  % old mouse-x position, -1: invalid
     simpl.mxy = [0 0];
     simpl.wh = [1100 800];
-    sp_setup_axes_rect();
+
+%    sp_setup_axes_rect();
+    % XXX: CODEDUP ^ v
+    simpl.axxywh = [20 20 simpl.wh-40];
+    simpl.axxywh(3:4) = max(simpl.axxywh(3:4), [400 300]);  % minimum 400 x 300 axes
+
 
     simpl.zoom = 1;
     simpl.ang = 0;  % angle around y axis in degrees
@@ -91,12 +107,18 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     % create the window!
     winid = glcall(glc.newwindow, [20 20], simpl.wh, 'Simple plot');
 
+    if (simpl_have_classdef())
+        simpl_ = simpl;
+        clear simpl;
 
-    % Initialization requiring a GL context goes here...
+        global simpl
+        if (isempty(simpl))
+            simpl = {};
+        end
 
-    % e.g.
-%    glcall(glc.colormap, uint8(jet(256)' * 255));
-
+        assert(isequal(winid, simpl_getwin()), 'INTERNAL ERROR');
+        simpl{winid} = simpl_;
+    end
 
     glcall(glc.setcallback, glc.cb_reshape, 'sp_reshape');
     glcall(glc.setcallback, glc.cb_display, 'sp_display');
@@ -108,7 +130,11 @@ end
 
 
 function sp_setup_axes_rect()
-    global simpl
+    if (simpl_have_classdef())
+        simpl = simpl_getobj();
+    else
+        global simpl
+    end
 
     % [x y w h]
     simpl.axxywh = [20 20 simpl.wh-40];
@@ -116,7 +142,13 @@ function sp_setup_axes_rect()
 end
 
 function sp_reshape(w, h)
-    global simpl GL glc
+    global GL glc
+
+    if (simpl_have_classdef())
+        simpl = simpl_getobj();
+    else
+        global simpl
+    end
 
     simpl.wh = [w h];
     sp_setup_axes_rect();
@@ -125,7 +157,13 @@ function sp_reshape(w, h)
 end
 
 function sp_display()
-    global simpl GL glc
+    global GL glc
+
+    if (simpl_have_classdef())
+        simpl = simpl_getobj();
+    else
+        global simpl
+    end
 
     glcall(glc.clear, 1-[0 0 0]);
 
@@ -207,7 +245,13 @@ function cval = sp_clamp(val, themin, themax)
 end
 
 function sp_keyboard(key, x, y, mods)
-    global simpl GL glc
+    global GL glc
+
+    if (simpl_have_classdef())
+        simpl = simpl_getobj();
+    else
+        global simpl
+    end
 
     % Common
     if (key==double('f'))
@@ -232,7 +276,13 @@ function sp_keyboard(key, x, y, mods)
 end
 
 function sp_motion(buttonsdown, x, y)
-    global simpl GL glc
+    global GL glc
+
+    if (simpl_have_classdef())
+        simpl = simpl_getobj();
+    else
+        global simpl
+    end
 
     % invert y
     simpl.mxy = [x simpl.wh(2)-y];
@@ -256,7 +306,13 @@ function sp_motion(buttonsdown, x, y)
 end
 
 function sp_mouse(button, downp, x, y, mods)
-    global simpl GL glc
+    global GL glc
+
+    if (simpl_have_classdef())
+        simpl = simpl_getobj();
+    else
+        global simpl
+    end
 
     if (downp)
         switch button

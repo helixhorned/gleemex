@@ -1,8 +1,11 @@
-function simpl_setup_data(data, firsttime, idxs, colors)
-    global simpl
-
-    if (nargin < 2)
-        firsttime = false;
+% XXX: FIRSTTIME unused
+function simpl_setup_data(data, firsttime, idxs, colors, maybe_simpl)
+    if (nargin < 5)
+        % Legacy
+        global simpl
+    else
+        % classdef-enabled simpleplot
+        simpl = maybe_simpl;
     end
 
     %% validation
