@@ -462,8 +462,8 @@ Gets the current value of the GL or FreeGLUT state variable denoted by `WHAT`.
 :glOrtho: http://www.opengl.org/sdk/docs/man2/xhtml/glOrtho.xml
 :gluPerspective: http://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
 
-Sets the `GL.PROJECTION` or `GL.MODELVIEW` matrix (given by `WHICH`) to `M`,
-which must be a `double`-typed matrix and can be one of the following:
+Sets the `GL.PROJECTION` or `GL.MODELVIEW` matrix (selected by `WHICH`) to `M`,
+which must be a `double`-typed array and can be one of the following:
 
 * An empty array `[]` is interpreted to reset the respective matrix to the
   identity matrix.
@@ -471,6 +471,21 @@ which must be a `double`-typed matrix and can be one of the following:
 * For `GL.PROJECTION`, it is possible to pass a vector of length 4 or 6.
 ** The elements of a 4-vector are passed to {gluPerspective}[`gluPerspective`].
 ** The elements of a 6-vector are passed to {glOrtho}[`glOrtho`].
+
+[float]
+[[glc_mulmatrix]]
+==== `glcall(glc.mulmatrix, WHICH, M)`
+
+:glMultMatrix: http://www.opengl.org/sdk/docs/man2/xhtml/glMultMatrix.xml
+:glTranslate: http://www.opengl.org/sdk/docs/man2/xhtml/glTranslate.xml
+:glRotate: http://www.opengl.org/sdk/docs/man2/xhtml/glRotate.xml
+
+Multiplies the `GL.PROJECTION` or `GL.MODELVIEW` matrix (selected by `WHICH`)
+with `M`, which must be a `double`-typed array and can be one of the following:
+
+* A 4-by-4 matrix is passed unmodified to {glMultMatrix}[`glMultMatrixd`].
+* The elements of a 3-vector are passed to {glTranslate}[`glTranslated`].
+* The elements of a 4-vector are passed to {glRotate}[`glRotated`].
 
 [float]
 ==== `glcall(glc.fog, FOG_MODE, FOG_PARAM, FOG_COLOR)`
