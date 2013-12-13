@@ -266,9 +266,11 @@ static int8_t g_ourwinidx[MAXLIFETIMEWINDOWS];
 static char callback_funcname[MAXACTIVEWINDOWS][NUM_CALLBACKS][MAXCBNAMELEN+1];
 static int numentered = 0;  /* entermainloop entered? */
 
+static int32_t g_buttons;
+
 static struct windata_
 {
-    int32_t height, buttons;
+    int32_t height;
     mxArray *menus;  /* persistent */
     int32_t menubutton, menuid;
 } win[MAXACTIVEWINDOWS];
@@ -688,9 +690,9 @@ static void mouse_cb(int button, int state, int x, int y)
 #endif
         /* Save which buttons are pressed or released for the mouse motion events. */
         if (state==GLUT_DOWN)
-            win[g_curourwidx].buttons |= (1<<button);
+            g_buttons |= (1<<button);
         else
-            win[g_curourwidx].buttons &= ~(1<<button);
+            g_buttons &= ~(1<<button);
     }
 
     if (havecb)
@@ -705,13 +707,13 @@ static void motion_cb(int x, int y)
 {
     if (check_callback(CB_MOTION))
     {
-        int args[MAX_CB_ARGS] = {win[g_curourwidx].buttons, x, y};
+        int args[MAX_CB_ARGS] = {g_buttons, x, y};
 
-        if (win[g_curourwidx].buttons==0)
+        if (g_buttons==0)
         {
             /* We hit an inconsistency: we're in the motion event whereas
              * win[].buttons tells us that none is pressed. */
-            printf("window %d motion_cb: win[].buttons==0\n", g_curourwidx);
+            printf("window %d motion_cb: g_buttons==0\n", g_curourwidx+1);
             args[0] = 1<<GLUT_LEFT_BUTTON;  /* guess that it's the left button, ugh */
         }
 
@@ -725,13 +727,13 @@ static void passivemotion_cb(int x, int y)
     {
         int args[MAX_CB_ARGS] = {0, x, y};
 
-        if (win[g_curourwidx].buttons!=0)
+        if (g_buttons != 0)
         {
             /* We hit an inconsistency: we're in the passive motion event
-             * whereas win[].buttons tells us that one is pressed. */
-            printf("window %d passivemotion_cb: win[].buttons==%d\n",
-                   g_curourwidx, win[g_curourwidx].buttons);
-            win[g_curourwidx].buttons = 0;
+             * whereas g_buttons tells us that one is pressed. */
+            printf("window %d passivemotion_cb: g_buttons==%d\n",
+                   g_curourwidx+1, g_buttons);
+            g_buttons = 0;
         }
 
         call_mfile_callback(CB_MOTION, 3, args);
