@@ -48,7 +48,11 @@ function sh_keyboard(key, x, y, mods)
 
     doquit = glcsh.el.handleKey(key, mods);
     if (doquit)
-        glcall(glc.closewindow);
+        if (doquit == 1)
+            glcall(glc.closewindow);
+        else
+            glcall(glc.leavemainloop);
+        end
         return
     end
 

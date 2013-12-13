@@ -79,8 +79,8 @@ classdef GLCEditableLine < handle
                 return
             end
 
-            if (any(strcmp(cmd, {'quit', 'exit'})))
-                doquit = true;
+            if (any(strcmp(cmd, {'quit', 'exit', 'quit!', 'exit!'})))
+                doquit = 1 + (numel(cmd)==5);
                 return
             end
 
