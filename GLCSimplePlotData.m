@@ -15,7 +15,6 @@ classdef GLCSimplePlotData < handle
 
         numsamples
         data
-        lineidxs
         numdims
         idxs
         colors

@@ -1,7 +1,7 @@
 function have = simpl_have_classdef()
-    % TODO: test on MATLAB
-    persistent have
-    if (~isempty(have))
+    persistent havep
+    if (~isempty(havep))
+        have = havep;
         return
     end
 
@@ -12,4 +12,6 @@ function have = simpl_have_classdef()
     catch
         have = false;
     end
+
+    havep = have;
 end
