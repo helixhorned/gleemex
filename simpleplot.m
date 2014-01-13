@@ -299,7 +299,7 @@ function sp_motion(buttonsdown, x, y)
             simpl.ang = mod(simpl.ang, 360);
         end
     else
-        simple.omx = -1;
+        simpl.omx = -1;
     end
 
     glcall(glc.redisplay);
