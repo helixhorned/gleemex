@@ -124,7 +124,8 @@
 #define COLORMAP_IN_COLORMAP (prhs[1])
 
 /* newfragprog */
-#define NEWFRAGPROG_IN_SHADERSRC (prhs[1])
+#define NEWFRAGPROG_IN_FRAG_SRC (prhs[1])
+#define NEWFRAGPROG_IN_VERT_SRC (prhs[2])
 #define NEWFRAGPROG_OUT_PROGID (plhs[0])
 #define NEWFRAGPROG_OUT_UNIFORMS (plhs[1])
 
@@ -1056,6 +1057,39 @@ static int check_matlab_var_name(char *name)
 
     return (name[j] == 0);
 }
+
+/* Returns:
+ * - on failure, error message. If it is "", glCreateShader() failed.
+ * - on success, NULL */
+const char *compile_and_attach_shader(const mxArray *source_ar, GLenum shadertype, GLuint progId)
+{
+    const char *shaderSrc;
+    GLuint shaderId = glCreateShader(shadertype);
+    GLint status;
+
+    if (!shaderId)
+        return "";
+
+    shaderSrc = mxArrayToString(source_ar);
+    glShaderSource(shaderId, 1, &shaderSrc, NULL);
+    mxFree((char *)shaderSrc);
+
+    glCompileShader(shaderId);
+    glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE)
+    {
+        /* shader compilation failed */
+        memcpy(errstr, shadertype==GL_FRAGMENT_SHADER ? "FR: " : "VR: ", 4);
+        glGetShaderInfoLog(shaderId, sizeof(errstr)-4, NULL, errstr+4);
+
+        return errstr;
+    }
+
+    glAttachShader(progId, shaderId);
+
+    return NULL;
+}
+
 
 /**************** THE MAIN MEX FUNCTION ****************/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
@@ -2588,50 +2622,51 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     case GLC_NEWFRAGPROG:
     {
-        GLuint progId, fragshaderId;
-        const char *fragshaderSrc;
+        GLuint progId;
         GLint status;
 
-        if ((nlhs != 1 && nlhs != 2) || nrhs != 2)
-            ourErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newfragprog, FRAGSHADERSRC)");
+        int havefrag, havevert;
+
+        if ((nlhs != 1 && nlhs != 2) || (nrhs != 2 && nrhs != 3))
+            ourErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newfragprog, FRAGSHADERSRC [, VERTSHADERSRC]");
 
         if (!GLEW_VERSION_2_0)
             ourErrMsgTxt("GLCALL: newfragprog: OpenGL 2.0 required!");
 
-        verifyparam(NEWFRAGPROG_IN_SHADERSRC, "GLCALL: newfragprog: FRAGSHADERSRC", VP_VECTOR|VP_CHAR);
+        verifyparam(NEWFRAGPROG_IN_FRAG_SRC, "GLCALL: newfragprog: FRAG_SRC", VP_VECTOR|VP_EMPTY_OK|VP_CHAR);
+        if (nrhs >= 3)
+            verifyparam(NEWFRAGPROG_IN_VERT_SRC, "GLCALL: newfragprog: VERT_SRC", VP_VECTOR|VP_EMPTY_OK|VP_CHAR);
+
+        havefrag = (mxGetNumberOfElements(NEWFRAGPROG_IN_FRAG_SRC) != 0);
+        havevert = (nrhs >= 3 && mxGetNumberOfElements(NEWFRAGPROG_IN_VERT_SRC) != 0);
+
+        if (!havefrag && !havevert)
+            ourErrMsgTxt("GLCALL: newfragprog: must provide fragment or vertex shader source");
 
         progId = glCreateProgram();
         if (!progId)
             ourErrMsgTxt("GLCALL: newfragprog: Error creating program object");
 
-        fragshaderId = glCreateShader(GL_FRAGMENT_SHADER);
-        if (!fragshaderId)
-            ourErrMsgTxt("GLCALL: newfragprog: Error creating fragment shader object");
-
-        fragshaderSrc = mxArrayToString(NEWFRAGPROG_IN_SHADERSRC);
-        glShaderSource(fragshaderId, 1, &fragshaderSrc, NULL);
-        mxFree((char *)fragshaderSrc);
-        fragshaderSrc = NULL;
-
-        glCompileShader(fragshaderId);
-        glGetShaderiv(fragshaderId, GL_COMPILE_STATUS, &status);
-        if (status != GL_TRUE)
+        if (havefrag)
         {
-            /* shader compilation failed */
-            memcpy(errstr, "SH: ", 4);
-            glGetShaderInfoLog(fragshaderId, sizeof(errstr)-4, NULL, errstr+4);
-
-            ourErrMsgTxt(errstr);
+            const char *errmsg = compile_and_attach_shader(NEWFRAGPROG_IN_FRAG_SRC, GL_FRAGMENT_SHADER, progId);
+            if (errmsg)
+                ourErrMsgTxt(errmsg[0]==0 ? "GLCALL: newfragprog: Error creating fragment shader object" : errmsg);
         }
 
-        glAttachShader(progId, fragshaderId);
+        if (havevert)
+        {
+            const char *errmsg = compile_and_attach_shader(NEWFRAGPROG_IN_VERT_SRC, GL_VERTEX_SHADER, progId);
+            if (errmsg)
+                ourErrMsgTxt(errmsg[0]==0 ? "GLCALL: newfragprog: Error creating vertex shader object" : errmsg);
+        }
 
         glLinkProgram(progId);
         glGetProgramiv(progId, GL_LINK_STATUS, &status);
         if (status != GL_TRUE)
         {
             /* program linking failed */
-            memcpy(errstr, "PR: ", 4);
+            memcpy(errstr, "LN: ", 4);
             glGetProgramInfoLog(progId, sizeof(errstr)-4, NULL, errstr+4);
 
             ourErrMsgTxt(errstr);
