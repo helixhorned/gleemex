@@ -1366,6 +1366,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         GLuint texname = 0;
         GLenum vertdatatype, indicestype=0 /* compiler-happy */;
 
+        const mxArray *normalar = NULL;
+
         if (nlhs != 0 || (nrhs != 3 && nrhs != 4))
             ourErrMsgTxt("Usage: GLCALL(glc.draw, GL.<PRIMITIVE_TYPE>, VERTEXDATA [, OPTSTRUCT])");
 
@@ -1429,12 +1431,32 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 glEnableClientState(GL_TEXTURE_COORD_ARRAY);
                 glTexCoordPointer(2, tcdatatype, 0, mxGetData(texcoordsar));
             }
+
+            normalar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "normals");
+            if (normalar)
+            {
+                GLenum datatype = verifyparam_ret(
+                    normalar, "GLCALL: draw: OPTSTRUCT.normals", VP_MATRIX|VP_FP_TYPE);
+#ifndef HAVE_OCTAVE
+                if (datatype == GL_TRUE)
+                    return;
+#endif
+                if (mxGetM(normalar) != 2 || mxGetN(normalar) != (unsigned long)numtotalverts)
+                    ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.normals must have "
+                                 "3 rows and size(VERTEXDATA,2) columns");
+
+                glEnableClientState(GL_NORMAL_ARRAY);
+                glNormalPointer(datatype, 0, mxGetData(normalar));
+            }
         }
 
         if (doline)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         else
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        if (!normalar)
+            glDisableClientState(GL_NORMAL_ARRAY);
 
         if (!texname)
         {
