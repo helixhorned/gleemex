@@ -282,12 +282,17 @@ Invoked with five arguments `(button, downp, x, y, mods)` when a mouse button
 is pressed (`downp` is true) or released (`downp` is false). The `button`
 arguments can be checked against the `GL.BUTTON_*` and `GL.MWHEEL_*` bit
 constants, `mods` are the pressed modifier keys as with the keyboard callback.
++
+NOTE: The reported position has the origin at the origin at the *topmost* and
+leftmost pixel. Thus, it's incongruent with <<glc_setup2d,`glc_setup2d`>> in
+the y screen dimension.
 
 `glc.cb_motion`, [`glutMotionFunc`, `glutPassiveMotionFunc`]::
 
 Invoked with three arguments `(buttons, x, y)` when the mouse is moved. The
 `buttons` argument has the `GL.BUTTON_*` bits set which are depressed at the
-time the movement happens.
+time the movement happens. The `(x, y)` position is reported like for the
+`cb_mouse` callback.
 +
 NOTE: Currently, `buttons` may not be entirely reliable in multi-window
 scenarios.

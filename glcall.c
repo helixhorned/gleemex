@@ -1023,6 +1023,39 @@ static GLenum createmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t
     return GL_FALSE;
 }
 
+/* Returns whether the name of a 'uniform' GLSL variable is OK as a MATLAB
+ * variable name. If it has an "array part", modifies <name> to only contain
+ * the base name before it. */
+static int check_matlab_var_name(char *name)
+{
+    int32_t j;
+    char c = name[0];
+
+    if (!(c>='A' && c<='Z') && !(c>='a' && c<='z'))
+        return 0;  /* not a valid MATLAB variable/field name */
+
+    for (j=1; (c=name[j]); j++)
+        if (!(c>='A' && c<='Z') && !(c>='a' && c<='z') && c!='_' && !(c>='0' && c<='9'))
+        {
+            if (c=='[')
+            {
+                int32_t k;
+
+                for (k=j+1; name[k]; k++)
+                {
+                    if (!(name[k]>='0' && name[k]<='9'))
+                        break;
+                }
+
+                if (name[k]==']' && name[k+1]==0)
+                    name[j] = 0;  /* only use the part without the [<number>] as the name */
+            }
+
+            break;
+        }
+
+    return (name[j] == 0);
+}
 
 /**************** THE MAIN MEX FUNCTION ****************/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
@@ -2587,9 +2620,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs > 1)
         {
             GLint i, numActiveUniforms, uniformLocation;
-            char name[64], c;
+            char name[64];
             mxArray *uniformStructAr;
-            int32_t j, k, fieldnum;
+            int32_t j, fieldnum;
             uint32_t floatp, vecn, uniformHandle;
 
             GLint size;
@@ -2620,30 +2653,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 floatp = (j <= 3);
                 vecn = j&3;
 
-                c = name[0];
-                if (!(c>='A' && c<='Z') && !(c>='a' && c<='z'))
-                    continue;  /* not a valid MATLAB variable/field name */
-
-                for (j=1; (c=name[j]); j++)
-                    if (!(c>='A' && c<='Z') && !(c>='a' && c<='z') && c!='_' && !(c>='0' && c<='9'))
-                    {
-                        if (c=='[')
-                        {
-                            k = j;
-                            for (k=j+1; name[k]; k++)
-                            {
-                                if (!(name[k]>='0' && name[k]<='9'))
-                                    break;
-                            }
-
-                            if (name[k]==']' && name[k+1]==0)
-                                name[j] = 0;  /* only use the part without the [<number>] as the name */
-                        }
-
-                        break;
-                    }
-                if (name[j])
-                    continue;  /* not a valid MATLAB variable/field name */
+                if (!check_matlab_var_name(name))
+                    continue;
 
                 fieldnum = mxAddField(uniformStructAr, name);
                 if (fieldnum == -1)
