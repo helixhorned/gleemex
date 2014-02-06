@@ -123,14 +123,14 @@
 /* colormap */
 #define COLORMAP_IN_COLORMAP (prhs[1])
 
-/* newfragprog */
-#define NEWFRAGPROG_IN_FRAG_SRC (prhs[1])
-#define NEWFRAGPROG_IN_VERT_SRC (prhs[2])
-#define NEWFRAGPROG_OUT_PROGID (plhs[0])
-#define NEWFRAGPROG_OUT_UNIFORMS (plhs[1])
+/* newprogram */
+#define NEWPROGRAM_IN_FRAG_SRC (prhs[1])
+#define NEWPROGRAM_IN_VERT_SRC (prhs[2])
+#define NEWPROGRAM_OUT_PROGID (plhs[0])
+#define NEWPROGRAM_OUT_UNIFORMS (plhs[1])
 
-/* usefragprog */
-#define USEFRAGPROG_IN_PROGID (prhs[1])
+/* useprogram */
+#define USEPROGRAM_IN_PROGID (prhs[1])
 
 /* setuniform */
 #define SETUNIFORM_IN_UNIFORMHANDLE (prhs[1])
@@ -207,8 +207,8 @@ enum glcalls_
     GLC_GET,
     GLC_SET,
     GLC_COLORMAP,
-    GLC_NEWFRAGPROG,
-    GLC_USEFRAGPROG,
+    GLC_NEWPROGRAM,
+    GLC_USEPROGRAM,
     GLC_SETUNIFORM,
     GLC_LEAVEMAINLOOP,
     GLC_CLOSEWINDOW,
@@ -239,8 +239,8 @@ const char *glcall_names[] =
     "get",
     "set",
     "colormap",
-    "newfragprog",
-    "usefragprog",
+    "newprogram",
+    "useprogram",
     "setuniform",
     "leavemainloop",
     "closewindow",
@@ -2620,7 +2620,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     break;
 
-    case GLC_NEWFRAGPROG:
+    case GLC_NEWPROGRAM:
     {
         GLuint progId;
         GLint status;
@@ -2628,37 +2628,37 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int havefrag, havevert;
 
         if ((nlhs != 1 && nlhs != 2) || (nrhs != 2 && nrhs != 3))
-            ourErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newfragprog, FRAGSHADERSRC [, VERTSHADERSRC]");
+            ourErrMsgTxt("Usage: PROGID [, UNIFORMS] = GLCALL(glc.newprogram, FRAGSHADERSRC [, VERTSHADERSRC]");
 
         if (!GLEW_VERSION_2_0)
-            ourErrMsgTxt("GLCALL: newfragprog: OpenGL 2.0 required!");
+            ourErrMsgTxt("GLCALL: newprogram: OpenGL 2.0 required!");
 
-        verifyparam(NEWFRAGPROG_IN_FRAG_SRC, "GLCALL: newfragprog: FRAG_SRC", VP_VECTOR|VP_EMPTY_OK|VP_CHAR);
+        verifyparam(NEWPROGRAM_IN_FRAG_SRC, "GLCALL: newprogram: FRAG_SRC", VP_VECTOR|VP_EMPTY_OK|VP_CHAR);
         if (nrhs >= 3)
-            verifyparam(NEWFRAGPROG_IN_VERT_SRC, "GLCALL: newfragprog: VERT_SRC", VP_VECTOR|VP_EMPTY_OK|VP_CHAR);
+            verifyparam(NEWPROGRAM_IN_VERT_SRC, "GLCALL: newprogram: VERT_SRC", VP_VECTOR|VP_EMPTY_OK|VP_CHAR);
 
-        havefrag = (mxGetNumberOfElements(NEWFRAGPROG_IN_FRAG_SRC) != 0);
-        havevert = (nrhs >= 3 && mxGetNumberOfElements(NEWFRAGPROG_IN_VERT_SRC) != 0);
+        havefrag = (mxGetNumberOfElements(NEWPROGRAM_IN_FRAG_SRC) != 0);
+        havevert = (nrhs >= 3 && mxGetNumberOfElements(NEWPROGRAM_IN_VERT_SRC) != 0);
 
         if (!havefrag && !havevert)
-            ourErrMsgTxt("GLCALL: newfragprog: must provide fragment or vertex shader source");
+            ourErrMsgTxt("GLCALL: newprogram: must provide fragment or vertex shader source");
 
         progId = glCreateProgram();
         if (!progId)
-            ourErrMsgTxt("GLCALL: newfragprog: Error creating program object");
+            ourErrMsgTxt("GLCALL: newprogram: Error creating program object");
 
         if (havefrag)
         {
-            const char *errmsg = compile_and_attach_shader(NEWFRAGPROG_IN_FRAG_SRC, GL_FRAGMENT_SHADER, progId);
+            const char *errmsg = compile_and_attach_shader(NEWPROGRAM_IN_FRAG_SRC, GL_FRAGMENT_SHADER, progId);
             if (errmsg)
-                ourErrMsgTxt(errmsg[0]==0 ? "GLCALL: newfragprog: Error creating fragment shader object" : errmsg);
+                ourErrMsgTxt(errmsg[0]==0 ? "GLCALL: newprogram: Error creating fragment shader object" : errmsg);
         }
 
         if (havevert)
         {
-            const char *errmsg = compile_and_attach_shader(NEWFRAGPROG_IN_VERT_SRC, GL_VERTEX_SHADER, progId);
+            const char *errmsg = compile_and_attach_shader(NEWPROGRAM_IN_VERT_SRC, GL_VERTEX_SHADER, progId);
             if (errmsg)
-                ourErrMsgTxt(errmsg[0]==0 ? "GLCALL: newfragprog: Error creating vertex shader object" : errmsg);
+                ourErrMsgTxt(errmsg[0]==0 ? "GLCALL: newprogram: Error creating vertex shader object" : errmsg);
         }
 
         glLinkProgram(progId);
@@ -2672,7 +2672,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourErrMsgTxt(errstr);
         }
 
-        NEWFRAGPROG_OUT_PROGID = createScalar(mxUINT32_CLASS, &progId);
+        NEWPROGRAM_OUT_PROGID = createScalar(mxUINT32_CLASS, &progId);
 
         if (nlhs > 1)
         {
@@ -2725,19 +2725,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 mxSetFieldByNumber(uniformStructAr, 0, fieldnum,
                                    createScalar(mxUINT32_CLASS, &uniformHandle));
 
-                NEWFRAGPROG_OUT_UNIFORMS = uniformStructAr;
+                NEWPROGRAM_OUT_UNIFORMS = uniformStructAr;
             }
         }
     }
     break;
 
-    case GLC_USEFRAGPROG:
+    case GLC_USEPROGRAM:
     {
         GLuint progId;
         GLint cmap_uniform;
 
         if (nlhs != 0 || (nrhs != 2 && nrhs != 1))
-            ourErrMsgTxt("Usage: GLCALL(glc.usefragprog [, PROGID])");
+            ourErrMsgTxt("Usage: GLCALL(glc.useprogram [, PROGID])");
 
         if (nrhs == 1)
         {
@@ -2746,9 +2746,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
-        verifyparam(USEFRAGPROG_IN_PROGID, "GLCALL: usefragprog: PROGID", VP_SCALAR|VP_UINT32);
+        verifyparam(USEPROGRAM_IN_PROGID, "GLCALL: useprogram: PROGID", VP_SCALAR|VP_UINT32);
 
-        progId = *(uint32_t *)mxGetData(USEFRAGPROG_IN_PROGID);
+        progId = *(uint32_t *)mxGetData(USEPROGRAM_IN_PROGID);
 
         glUseProgram(progId);
         /* proginuse = progId; */

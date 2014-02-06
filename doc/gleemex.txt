@@ -689,8 +689,8 @@ Shader commands
 ~~~~~~~~~~~~~~~
 
 [float]
-[[glc_newfragprog]]
-==== `PROGID [, UNIFORMS] = glcall(glc.newfragprog, FRAGSHADERSRC [, VERTSHADERSRC])`
+[[glc_newprogram]]
+==== `PROGID [, UNIFORMS] = glcall(glc.newprogram, FRAGSHADERSRC [, VERTSHADERSRC])`
 
 :glCompileShader: http://www.opengl.org/sdk/docs/man2/xhtml/glCompileShader.xml
 :glAttachShader: http://www.opengl.org/sdk/docs/man2/xhtml/glAttachShader.xml
@@ -735,7 +735,7 @@ On success, returns
 
 * `PROGID`: an identifier by which the created fragment program can be
   referenced. The fragment program is *not* enabled by creating it, use
-  <<glc_fragprog,`glc.usefragprog`>> for this.
+  <<glc_useprogram,`glc.useprogram`>> for this.
 
 * `UNIFORMS`: optionally, a mapping of {glGetActiveUniform}[active uniform]
   variable names that are also valid MATLAB identifiers to Gleemex-specific
@@ -747,13 +747,13 @@ On success, returns
 ** base vectors: `GL_{BOOL,INT,FLOAT}_VEC{2,3,4}`
 
 [float]
-[[glc_fragprog]]
-==== `glcall(glc.usefragprog [, PROGID])`
+[[glc_useprogram]]
+==== `glcall(glc.useprogram [, PROGID])`
 
 :glUseProgram: http://www.opengl.org/sdk/docs/man2/xhtml/glUseProgram.xml
 
 If `PROGID` is passed, {glUseProgram}[enables] usage of that program previously
-created with `glc.newfragprog`. If `PROGID` is omitted, disables any program
+created with `glc.newprogram`. If `PROGID` is omitted, disables any program
 for the programmable processors and reverts to OpenGL fixed functionality for
 both vertex and fragment processing.
 
@@ -772,7 +772,7 @@ program.
 
 * `UNIFORMHANDLE`: The Gleemex handle denoting a uniform variable as returned
   as one of the keys of the `UNIFORMS` mapping from
-  <<glc_newfragprog,`glc.newfragprog`>>.
+  <<glc_newprogram,`glc.newprogram`>>.
 
 * `VAL`: A value consistent with the type and size of the corresponding uniform
   variable.
