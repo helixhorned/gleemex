@@ -207,7 +207,12 @@ function sp_display()
             end
             glcall(glc.draw, GL.TRIANGLES+16, simpl.data, opts);
         else
-            glcall(glc.draw, GL.POINTS, simpl.data);
+            if (~isempty(simpl.colors))
+                va = { struct('colors', simpl.colors) };
+            else
+                va = {};
+            end
+            glcall(glc.draw, GL.POINTS, simpl.data, va{:});
         end
     end
 
