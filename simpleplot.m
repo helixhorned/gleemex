@@ -226,8 +226,8 @@ function sp_display()
            sprintf('means: %s | mins: %s | maxs: %s | fog: %d', pretty(simpl.mean), ...
                    pretty(simpl.min), pretty(simpl.max), simpl.fog));
     glcall(glc.text, [28 top-14-(8+14)], 14, ...
-           sprintf('[%d  %d..%d  %d], zoom=%.02f', 1, simpl.lineidxs(1), simpl.lineidxs(2), ...
-                   simpl.numsamples, simpl.zoom));
+           sprintf('[%d  %d..%d  %d], zoom=%.02f, ang=%.02f', 1, simpl.lineidxs(1), simpl.lineidxs(2), ...
+                   simpl.numsamples, simpl.zoom, simpl.ang));
     glcall(glc.text, [28 top-14-2*(8+14)], 14, simpl.moretext);
 
     [yes, fracs] = glc_pointinxywh(simpl.mxy, simpl.axxywh);
@@ -292,16 +292,27 @@ function sp_motion(buttonsdown, x, y)
     % invert y
     simpl.mxy = [x simpl.wh(2)-y];
 
-    if (simpl.numdims==3 && buttonsdown==GL.BUTTON_LEFT)
+    if (simpl.numdims==3 && bitand(buttonsdown, GL.BUTTON_LEFT))
         if (simpl.omx == -1)
             simpl.omx = simpl.mxy(1);
         else
             dx = simpl.omx - simpl.mxy(1);
-            simpl.omx = simpl.mxy(1);
+            newang = simpl.ang - dx/6;
 
-            simpl.ang = simpl.ang - dx/6;
+            if (bitand(buttonsdown, GL.BUTTON_RIGHT))
+                % RMB: rotate by whole degrees
+                ok = round(simpl.ang) ~= round(newang);
+                if (ok)
+                    newang = round(newang);
+                end
+            else
+                ok = true;
+            end
 
-            simpl.ang = mod(simpl.ang, 360);
+            if (ok)
+                simpl.omx = simpl.mxy(1);
+                simpl.ang = mod(newang, 360);
+            end
         end
     else
         simpl.omx = -1;
