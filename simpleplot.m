@@ -1,7 +1,7 @@
 % SIMPLEPLOT(DATA [, IDXS [, COLORS [, KEYCB [, DISPLAYCB [, UD]]]]])
 % Simple interactive plot.
 %
-% DATA: 3 x numverts
+% DATA: 3 x numverts or length-#datasets cell with 3-by-numverts_i arrays each
 % IDXS: zero-based, 3 x numfaces, matrix of triangle indices
 function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     % 'simpleplot' can be run with both classdef-enabled M-implementations or those
@@ -36,8 +36,8 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         colors = zeros(3, 0);
     else
         if (~isempty(colors))
-            if (~strcmp(class(colors), 'double'))
-                error('COLORS must have class double')
+            if (~strcmp(class(colors), 'double') && ~iscell(colors))
+                error('COLORS must have class double or be a cell')
             end
 
             % size check: left to glcall
@@ -66,6 +66,28 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         global simpl
         simpl = struct();
         va = {};
+    end
+
+    %% Argument pre-processing (convenience calling conventions)
+    if (iscell(data))
+        assert(isvector(data), 'Cell DATA must be a vector');
+
+        if (iscell(colors))
+            assert(isvector(colors), 'Cell COLORS must be a vector');
+            assert(numel(data) == numel(colors), '#DATA must macht #COLORS');
+
+            if (isvector(colors{1}))
+                cc = cell(1, numel(colors));
+                for i=1:numel(colors)
+                    cc{i} = repmat(colors{i}(:), 1, size(data{i}, 2));
+                end
+                colors = [cc{:}];
+            else
+                colors = [colors{:}];
+            end
+        end
+
+        data = [data{:}];
     end
 
     %% data-data
