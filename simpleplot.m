@@ -2,7 +2,8 @@
 % Simple interactive plot.
 %
 % DATA: 3 x numverts or length-#datasets cell with 3-by-numverts_i arrays each
-% IDXS: zero-based, 3 x numfaces, matrix of triangle indices
+% IDXS: zero-based, 3 x numfaces, matrix of triangle indices. If IDXS(1) is
+%  negative, -IDXS is taken as a permutation on the dimensions of the data else.
 function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     % 'simpleplot' can be run with both classdef-enabled M-implementations or those
     % that don't have classdef.
@@ -18,16 +19,23 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         return
     end
 
+    data_dims_perm = [];
+
     if (nargin < 2)
         idxs = zeros(3,0,'uint32');
     else
         if (~isempty(idxs))
-            if (~strcmp(class(idxs), 'uint32') && ~strcmp(class(idxs), 'uint8'))
-                error('IDXS must have class uint32 or uint8')
-            end
+            if (idxs(1) < 0)
+                data_dims_perm = -idxs;
+                idxs = zeros(3,0,'uint32');
+            else
+                if (~strcmp(class(idxs), 'uint32') && ~strcmp(class(idxs), 'uint8'))
+                    error('IDXS must have class uint32 or uint8')
+                end
 
-            if (size(idxs, 1)~=3)
-                error('IDXS must have 3 rows')
+                if (size(idxs, 1)~=3)
+                    error('IDXS must have 3 rows')
+                end
             end
         end
     end
@@ -88,6 +96,13 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         end
 
         data = [data{:}];
+    end
+
+    if (~isempty(data_dims_perm))
+        if (numel(data_dims_perm) ~= size(data, 1))
+            error('DATA_DIMS_PERM (negated IDXS) must have as many elements as DATA has rows (2 or 3)')
+        end
+        data = data(data_dims_perm, :);
     end
 
     %% data-data
