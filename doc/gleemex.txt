@@ -685,12 +685,12 @@ This command allows using the so registered colormap from fragment shaders. See
 the notes labeled [red]#COLORMAP_DEF# below.
 
 
-Fragment shader commands
-~~~~~~~~~~~~~~~~~~~~~~~~
+Shader commands
+~~~~~~~~~~~~~~~
 
 [float]
 [[glc_newfragprog]]
-==== `PROGID [, UNIFORMS] = glcall(glc.newfragprog, FRAGSHADERSRC)`
+==== `PROGID [, UNIFORMS] = glcall(glc.newfragprog, FRAGSHADERSRC [, VERTSHADERSRC])`
 
 :glCompileShader: http://www.opengl.org/sdk/docs/man2/xhtml/glCompileShader.xml
 :glAttachShader: http://www.opengl.org/sdk/docs/man2/xhtml/glAttachShader.xml
@@ -698,15 +698,27 @@ Fragment shader commands
 
 :glGetActiveUniform: http://www.opengl.org/sdk/docs/man2/xhtml/glGetActiveUniform.xml
 
-{glCompileShader}[Compiles] a single fragment shader given in the source
-`FRAGSHADERSRC` and {glLinkProgram}[links] a fragment program containing it as
-the only {glAttachShader}[attached] shader. If either the creation of a shader
-or program object failed, or there was an error with compilation or linking, an
-M error is issued.
+:GLSL_1_20: http://www.opengl.org/registry/doc/GLSLangSpec.Full.1.20.8.pdf
+:GLSL_newer: http://www.opengl.org/documentation/glsl/
+
+Creates a program object to be run on the programmable vertex and/or fragment
+processor of the graphics processing unit. The program can have at most one
+vertex shader and at most one fragment shader {glAttachShader}[attached]. Their
+sources are provided in `FRAGSHADERSRC` and `VERTSHADERSRC`, respectively,
+where passing an empty string means that the particular shader should not be
+{glCompileShader}[compiled] as part of the program.
+
+Vertex and fragment shaders are written in the OpenGL Shading Language. See the
+{GLSL_1_20}[1.20] specification for an easier introduction, or the
+{GLSL_newer}[newer versions] for a more complete overview.
+
+If either the creation of a shader or program object failed, or there was an
+error with compilation or {glLinkProgram}[linking], an M error is issued.
 
 [red]#COLORMAP_DEF#: If the fragment shader contains a uniform variable named
-`cmap`, it must be declared with `uniform sampler1D` type. In the shader, you
-can sample the colormap texture, for example
+`cmap`, it must be declared with `uniform sampler1D` type. The vertex shader
+must not contain a variable with that name. In the shader, you can sample the
+colormap texture, for example
 
 [source,glsl]
 ----------
@@ -739,13 +751,15 @@ On success, returns
 ==== `glcall(glc.usefragprog [, PROGID])`
 
 :glUseProgram: http://www.opengl.org/sdk/docs/man2/xhtml/glUseProgram.xml
-{glUseProgram}[Enables] usage of the fragment program `PROGID` (if passed) or
-disables any fragment program and revert to OpenGL fixed functionality (if
-`PROGID` is omitted).
 
-[red]#COLORMAP_DEF#: If the fragment shader containes a `cmap` uniform
-variable, it it set to the texture unit to which the texture uploaded with
-<<glc_colormap,`glc.colormap`>> binds.
+If `PROGID` is passed, {glUseProgram}[enables] usage of that program previously
+created with `glc.newfragprog`. If `PROGID` is omitted, disables any program
+for the programmable processors and reverts to OpenGL fixed functionality for
+both vertex and fragment processing.
+
+[red]#COLORMAP_DEF#: When enabling a program, if the fragment shader containes
+a `cmap` uniform variable, it it set to the texture unit to which the texture
+uploaded with <<glc_colormap,`glc.colormap`>> binds.
 
 [float]
 [[glc_setuniform]]
@@ -754,7 +768,7 @@ variable, it it set to the texture unit to which the texture uploaded with
 :glUniform: http://www.opengl.org/sdk/docs/man2/xhtml/glUniform.xml
 
 {glUniform}[Sets] the value of a uniform variable in the currently active
-fragment program.
+program.
 
 * `UNIFORMHANDLE`: The Gleemex handle denoting a uniform variable as returned
   as one of the keys of the `UNIFORMS` mapping from
