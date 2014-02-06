@@ -563,7 +563,7 @@ coordinates.
    may be expensive.
 
 ** `tex`: The OpenGL _texture name_ (a non-zero `uint32` number as returned by
-   <<glc_newtexture,`glc.newtexture`>>) with which the primitives are to be
+   <<glc_texture,`glc.texture`>>) with which the primitives are to be
    textured.
 
 ** `texcoords`: The s and t texture coordinates at each vertex. Must be a `(2,
@@ -576,9 +576,9 @@ coordinates.
 Renders a line of text using a FreeGLUT's roman stroke font.
 
 Assuming that <<glc_setup2d,`glc_setup2d`>> has been used to set up a 2D view,
-the string `TEXT` is drawn at pixel position `POS` and height `HEIGHT` (which
-should be a `double`-typed 2-vector and scalar, respectively). `TEXT` should
-not contain newlines.
+the string `TEXT` is drawn at pixel position `POS` and with height `HEIGHT`
+(which should be a `double`-typed 2-vector and scalar, respectively). `TEXT`
+should not contain newlines.
 
 * `XYALIGN`: an optional `double`-typed 2-vector `[xalign yalign]` specifying
   the horizontal and vertical alignment of the text.

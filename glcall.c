@@ -1475,7 +1475,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 if (datatype == GL_TRUE)
                     return;
 #endif
-                if (mxGetM(normalar) != 2 || mxGetN(normalar) != (unsigned long)numtotalverts)
+                if (mxGetM(normalar) != 3 || mxGetN(normalar) != (unsigned long)numtotalverts)
                     ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.normals must have "
                                  "3 rows and size(VERTEXDATA,2) columns");
 
