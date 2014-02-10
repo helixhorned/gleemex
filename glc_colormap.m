@@ -1,18 +1,21 @@
-% CMAPTEXNAME = GLC_COLORMAP(CMAPTEXNAME, CMAP_OR_FUNC)
+% CMAPTEXNAME = GLC_COLORMAP(CMAP_OR_FUNC [, CMAPTEXNAME])
 %
 % Sets the GLCALL internal colormap and uploads its 2D RBG texture
-% (width 2 x height 256) if CMAPTEXNAME is 0
+% (width 2 x height 256).
 %
 % CMAP_OR_FUNC should be either
 %  - a 3xN or Nx3 double (0..1) or uint8 (0..255) array
 %  - a handle to a colormap function, e.g. @hot
-function cmaptexname = glc_colormap(cmaptexname, cmap_or_func)
+function cmaptexname = glc_colormap(cmap_or_func, cmaptexname)
     global glc
 
-    if (nargout ~= 1 || nargin ~= 2)
-        error('Usage: CMAPTEXNAME = GLC_COLORMAP(CMAPTEXNAME, CMAP_OR_FUNC)');
+    if (~(nargout <= 1 && nargin == 2 || nargout == 1 && nargin == 1))
+        error('Usage: CMAPTEXNAME = GLC_COLORMAP(CMAP_OR_FUNC [, CMAPTEXNAME])');
     end
-    % unchecked: whether cmaptexname mxArray pointers are equal
+
+    if (nargin < 2)
+        cmaptexname = 0;
+    end
 
     if (isa(cmap_or_func, 'uint8'))
         cmap_img = cmap_or_func;
