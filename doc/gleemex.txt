@@ -552,7 +552,9 @@ coordinates.
    NumTotalVerts)` matrix, specifying a separate color for each vertex. Must
    have type `double`. +
    If no colors are passed, the default one is white when a texture is
-   provided, and (0.5, 0.5, 0.5) otherwise.
+   provided, and (0.5, 0.5, 0.5) otherwise. +
+   As a special convenience feature, if a 5-tuple `[R G B A true]` is passed,
+   then blending is enabled temporarily.
 
 ** `indices`: Zero-based indices into the columns of `VERTEXDATA` used to
    construct the primitives. See {glDrawElements}[`glDrawElements`]. Must have

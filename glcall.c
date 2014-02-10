@@ -1386,6 +1386,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         /* QUESTIONS/TODO:
          *  When passing color array with 4 components, enable blending temporarily?
+            No, make it a 5-vector: [r g b a, true] (5th values other than true reserved)
          *  Some easy means of specifying a rect? (using glRect)
          *  When a lot of data will need to be drawn: Buffer Objects...  */
 
@@ -1510,7 +1511,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             sz[1] = mxGetN(colorsar);
             szprod = sz[0]*sz[1];
 
-            if (szprod == 3 || szprod==4)
+            if (szprod >= 3 && szprod <= 5)
                 colorsz = szprod;
             else
             {
@@ -1556,7 +1557,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             glDisableClientState(GL_COLOR_ARRAY);
             if (colorsz==3)
                 glColor3dv(colors);
-            else if (colorsz==4)
+            else if (colorsz==4 || colorsz == 5)
                 glColor4dv(colors);
             else if (texname)
                 glColor3f(1.0f, 1.0f, 1.0f);
@@ -1572,10 +1573,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(numdims, vertdatatype, 0, mxGetPr(DRAW_IN_VERTEXDATA));
 
-        if (!indicesar)
-            glDrawArrays(primitivetype, 0, numverts);
-        else
-            glDrawElements(primitivetype, numverts, indicestype, indices);
+        {
+            /* Convenience functionality: 'colors', [r g b, a, true] enabled blending. */
+            int enabledBlend = (colorsz == 5 && !glIsEnabled(GL_BLEND) && (glEnable(GL_BLEND), 1));
+
+            if (!indicesar)
+                glDrawArrays(primitivetype, 0, numverts);
+            else
+                glDrawElements(primitivetype, numverts, indicestype, indices);
+
+            if (enabledBlend)
+                glDisable(GL_BLEND);
+        }
     }
     break;
 
