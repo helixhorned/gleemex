@@ -1440,6 +1440,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (texar)
             {
                 GLenum tcdatatype;
+                mwSize numcoords;
 
                 verifyparam(texar, "GLCALL: draw: OPTSTRUCT.tex", VP_SCALAR|VP_UINT32);
 
@@ -1456,15 +1457,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 if (tcdatatype == GL_TRUE)
                     return;
 #endif
-                if (mxGetM(texcoordsar) != 2 || mxGetN(texcoordsar) != (unsigned long)numtotalverts)
+                numcoords = mxGetM(texcoordsar);
+
+                if (!(numcoords >= 1 && numcoords <= 2) || mxGetN(texcoordsar) != (unsigned long)numtotalverts)
                     ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.texcoords must have "
-                                 "2 rows and size(VERTEXDATA,2) columns");
+                                 "1 or 2 rows and size(VERTEXDATA,2) columns");
 
                 glEnable(GL_TEXTURE_2D);
                 glBindTexture(GL_TEXTURE_2D, texname);
 
                 glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-                glTexCoordPointer(2, tcdatatype, 0, mxGetData(texcoordsar));
+                glTexCoordPointer(numcoords, tcdatatype, 0, mxGetData(texcoordsar));
             }
 
             normalar = mxGetField(DRAW_IN_OPTSTRUCT, 0, "normals");

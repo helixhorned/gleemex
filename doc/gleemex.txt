@@ -568,9 +568,9 @@ coordinates.
    <<glc_texture,`glc.texture`>>) with which the primitives are to be
    textured.
 
-** `texcoords`: The s and t texture coordinates at each vertex. Must be a `(2,
-   NumTotalVerts)` matrix of floating numeric type. Must be passed whenever
-   `tex` is passed.
+** `texcoords`: The s and optionally t texture coordinates at each vertex. Must
+   be a `(1 or 2, NumTotalVerts)` matrix of floating numeric type. Must be
+   passed whenever `tex` is passed.
 
 [float]
 ==== `glcall(glc.text, POS, HEIGHT, TEXT [, XYALIGN] [, OPTS])`
