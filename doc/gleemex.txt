@@ -167,6 +167,7 @@ Initialization, setup and teardown commands
 :FGAPI: http://freeglut.sourceforge.net/docs/api.php
 
 [float]
+[[glc_newwindow]]
 ==== `WINID = glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
 
 :glutCreateSubWindow: http://www.opengl.org/documentation/specs/glut/spec3/node17.html#SECTION00052000000000000000
@@ -238,6 +239,7 @@ Closes the window given by the Gleemex identifier `WINID`, or the current
 window if `WINID` is omitted.
 
 [float]
+[[glc_setcallback]]
 ==== `glcall(glc.setcallback, CALLBACK_KIND, CBFUNC_NAME)`
 
 :FGWindowCallback: http://freeglut.sourceforge.net/docs/api.php#WindowCallback
@@ -252,6 +254,7 @@ registration functions.
 Invoked with no arguments when the windows is about to be redrawn. At the end,
 Gleemex always issues a `glutSwapBuffers()`.
 
+[[cb_reshape]]
 `glc.cb_reshape`, [`glutReshapeFunc`]::
 
 Invoked with two arguments `(width, height)` when the window has been resized,
@@ -276,6 +279,7 @@ against the `GL.MOD_*` bit constants.
 NOTE: For ``key chords'' such as `Ctrl`+`a`, FreeGLUT may pass different
 combinations of `key` and `mods` on different platforms.
 
+[[cb_mouse]]
 `glc.cb_mouse`, [`glutMouseFunc`]::
 
 Invoked with five arguments `(button, downp, x, y, mods)` when a mouse button
@@ -447,6 +451,7 @@ value. `WHAT` can be one of the following named Gleemex constants:
   value (`GL.TRUE` or `GL.FALSE`) is passed to {glDepthMask}[`glDepthMask`].
 
 [float]
+[[glc_get]]
 ==== `VALUE = glcall(glc.get, WHAT)`
 
 Gets the current value of the GL or FreeGLUT state variable denoted by `WHAT`.
@@ -841,3 +846,75 @@ be pushed by passing `ADDITIONAL_BITS`.
 // TODO: document BORDERCOLOR?
 Restores the matrices and server attributes pushed by `glc_axes_setup`.
 
+
+Creating applications
+---------------------
+
+Using the `GLCApplicationData` handle class provided by Gleemex, it is possible
+to create Gleemex applications that may be present in multiple instances at the
+same time. For a particular application, the user creates a class derived from
+`GLCApplicationData` and populates it with the desired application-specific
+functionality.
+
+In the following, assume that `MyApplicationData` is a classdef class derived
+from `GLCApplicationData`.
+
+[float]
+==== `ad = MyApplicationData()`
+
+Creates an object of `MyApplicationData`; each object is supposed to represent
+an instance of a particular application, similar to the relation of a process
+to one particular program at the OS level.
+
+The `GLCApplicationData` constructor initializes some of its members to default
+values:
+
+* `ad.mxy = [1 1]` {nbsp} [gray]#% current mouse position#
+* `ad.wh = [800 600]` {nbsp} [gray]#% width and height of the app window#
+
+CAUTION: These members may become private in the future.
+
+=== Static methods and functions
+
+[float]
+==== `GLCApplicationData.register(winid, obj)`
+
+Registers an object `obj` of a class derived from `GLCApplicationData` with the
+window identifier `winid`, as returned by
+<<glc_newwindow,`glc_newwindow`>>. This association is not cleared until
+another call of `GLCApplicationData.register` with the same `winid` -- for
+example, it persists after closing the app's window.
+
+[float]
+==== `obj = GLCApplicationData.getSuspended(className)`
+
+Retrieves an object `obj` of the class named `className` -- for example,
+`'MyApplicationData'` -- previously registered with
+`GLCApplicationData.register`. If no such object is found, an error is
+issued. In case there are multiple ones, it is unspecified which one is
+returned.
+
+[float]
+==== `obj = glc_appdata()`
+
+Retrieves the object `obj` previously registered with
+`GLCApplicationData.register` for the current window, as obtained with
+`glcall(glc.get, GL.WINDOW_ID)`. If no application data was registered with the
+current window, the behavior is undefined.
+
+=== Instance methods
+
+[float]
+==== `ad.updateWindowPos(self, w, h [, setup2d])`
+
+Updates the window position with the new width `w` and height `h`, as obtained
+from the <<bc_reshape,reshape callback>>. If `setup2d` is passed, it must be a
+scalar logical; in case it is true, <<glc_setup2d,`glc_setup2d`>>`(w, h)` is also called.
+
+[float]
+==== `ad.updateMousePos(self, x, y)`
+
+Updates the current mouse pointer position with the new coordinates (`x`, `y`),
+as obtained from the <<cb_mouse,mouse motion callback>>. Internally, `x` is
+stored as obtained, but the stored y is the difference of the current window
+width and the passed `y`.
