@@ -895,6 +895,16 @@ issued. In case there are multiple ones, it is unspecified which one is
 returned.
 
 [float]
+==== `GLCApplicationData.setCallbacks(prefix [, suffix])`
+
+Registers callbacks for the current window. For every string in the list
+`{'display', 'reshape', 'keyboard', 'mouse', 'motion', 'position'}`, a
+potential function name is constructed by concatenating it in between `prefix`
+(which must be non-empty) and `suffix` (which is empty by default). Then, if a
+file existence check for this name suffixed with `'.m'` yields a positive
+result, the corresponding callback function is <<glc_setcallback,registered>>.
+
+[float]
 ==== `obj = glc_appdata()`
 
 Retrieves the object `obj` previously registered with

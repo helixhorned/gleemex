@@ -77,6 +77,34 @@ classdef GLCApplicationData < handle
             end
             error('Didn''t find a previously suspended %s session', name)
         end
+
+        function nset = setCallbacks(prefix, varargin)
+            if (~ischar(prefix) || ~isvector(prefix))
+                error('PREFIX must be a nonempty string')
+            end
+
+            if (~isempty(varargin))
+                suffix = varargin{1};
+
+                if (~ischar(suffix) || ~(isvector(suffix) || isempty(suffix)))
+                    error('SUFFIX must be a string')
+                end
+            else
+                suffix = '';
+            end
+
+            nset = 0;
+            glc = glcall();
+            cbnames = { 'display', 'reshape', 'keyboard', 'mouse', 'motion', 'position' };
+
+            for i=1:numel(cbnames)
+                funcname = [prefix cbnames{i} suffix];
+                if (exist([funcname '.m'], 'file'))
+                    glcall(glc.setcallback, glc.(['cb_' cbnames{i}]), funcname);
+                    nset = nset+1;
+                end
+            end
+        end
     end
 
     methods (Static, Access=private)
