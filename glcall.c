@@ -158,6 +158,7 @@
 #define GLC__MOUSE_POS (-102)  /* SET only */
 #define GLC__MENU_ENABLE (-103)  /* SET only */
 #define GLC__WINDOW_POS (-104)
+#define GLC__POLYGON_OFFSET (-105)  /* SET only */
 
 
 enum glcalls_setcallback_
@@ -2251,6 +2252,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         static const GLenum accessible_enables[] = {
             GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH,
             GL_LINE_STIPPLE, GL_POLYGON_SMOOTH, GL_FOG,
+            GL_POLYGON_OFFSET_POINT, GL_POLYGON_OFFSET_LINE, GL_POLYGON_OFFSET_FILL,
         };
 
         if (nlhs != 0 || nrhs != 2)
@@ -2588,6 +2590,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             verifyparam(SET_IN_VALUE, "GLCALL: set GL.LINE_STIPPLE_PATTERN: PATTERN", VP_SCALAR|VP_UINT16);
             glLineStipple(1, *(uint16_t *)mxGetData(SET_IN_VALUE));
+            break;
+        }
+
+        case GLC__POLYGON_OFFSET:
+        {
+            const float *ptr;
+            verifyparam(SET_IN_VALUE, "GLCALL: set GL.POLYGON_OFFSET: FU",
+                        VP_VECTOR|VP_SINGLE|(2<<VP_VECLEN_SHIFT));
+            ptr = (float *)mxGetData(SET_IN_VALUE);
+            glPolygonOffset(ptr[0], ptr[1]);
             break;
         }
 

@@ -58,6 +58,9 @@ GL.LINE_WIDTH = int32(2849);  % 0x0B21
 
 %% Polygons
 GL.POLYGON_SMOOTH = int32(2881);  % 0x0B41
+GL.POLYGON_OFFSET_POINT = int32(10753);  % 0x2A01
+GL.POLYGON_OFFSET_LINE = int32(10754);  % 0x2A02
+GL.POLYGON_OFFSET_FILL = int32(32823);  % 0x8037
 
 %% glPush/PopAttrib bits
 GL.CURRENT_BIT = uint32(1);
@@ -132,6 +135,7 @@ GL.WINDOW_SIZE = int32(-101);
 GL.MOUSE_POS = int32(-102);  % SET only
 GL.MENU_ENABLE = int32(-103);  % SET only
 GL.WINDOW_POS = int32(-104);
+GL.POLYGON_OFFSET = int32(-105);  % SET only
 
 
 %% GLUT stuff follows

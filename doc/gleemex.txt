@@ -379,7 +379,9 @@ Toggles the {glEnable}[enable] state of various server-side GL capabilities.
 
 ** `KEY`: An allowed GL constant denoting the capability: one of
    `GL.DEPTH_TEST`, `GL.SCISSOR_TEST`, `GL.BLEND`, `GL.POINT_SMOOTH`,
-   `GL.LINE_SMOOTH`, `GL.LINE_STIPPLE`, `GL.POLYGON_SMOOTH` or `GL.FOG`.
+   `GL.LINE_SMOOTH`, `GL.LINE_STIPPLE`, `GL.POLYGON_SMOOTH`,
+   `GL.POLYGON_OFFSET_POINT`, `GL.POLYGON_OFFSET_LINE`, `GL.POLYGON_OFFSET_FILL`,
+   `GL.FOG`.
 
 ** `VALUE`: 1 for enabling the capability, 0 for disabling it, or -1 for
    flipping its enable state.
@@ -415,6 +417,7 @@ values are
 :glBlendEquation: http://www.opengl.org/sdk/docs/man2/xhtml/glBlendEquation.xml
 :glDepthFunc: http://www.opengl.org/sdk/docs/man2/xhtml/glDepthFunc.xml
 :glDepthMask: http://www.opengl.org/sdk/docs/man2/xhtml/glDepthMask.xml
+:glPolygonOffset: http://www.opengl.org/sdk/docs/man2/xhtml/glPolygonOffset.xml
 
 Sets the GL and FreeGLUT state variable denoted by `WHAT` to a new
 value. `WHAT` can be one of the following named Gleemex constants:
@@ -449,6 +452,10 @@ value. `WHAT` can be one of the following named Gleemex constants:
 
 * `GL.DEPTH_WRITEMASK`: `VALUE` is a scalar logical, whose corresponding GL
   value (`GL.TRUE` or `GL.FALSE`) is passed to {glDepthMask}[`glDepthMask`].
+
+* `GL.POLYGON_OFFSET`: `VALUE` is a pair of `single`-typed values, which are
+  passed as the two arguments _factor_ and _units_ of
+  {glPolygonOffset}[`glPolygonOffset`].
 
 [float]
 [[glc_get]]
