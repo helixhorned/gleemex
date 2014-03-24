@@ -1,14 +1,21 @@
-% EXTRACTSECFUNCS(FILENAME [, NUMSPACE [, THEDIR [, ASKP]]]) Extract secondary
-% functions from an M-file into separate M-files.
+% FNAMES = EXTRACTSECFUNCS(FILENAME [, NUMSPACE [, THEDIR [, ASKP]]]) Extract
+% secondary functions from an M-file into separate M-files.
 %
+% NUMSPACE: TODO. default 0
+% THEDIR: the directory in which to extract the files
 % ASKP - if true (the default), ask for confirmation when creating files.
-function extractsecfuncs(filename, numspace, thedir, askp)
+%  if ==2, then no files are created, but FNAMES is returned.
+%
+% FNAMES: a cell array of length #secfuncs, each element containing the
+%  secondary function's name. If ASKP is true, only if user confirmed, else {}.
+function fnames = extractsecfuncs(filename, numspace, thedir, askp)
     if (~exist('numspace', 'var'))
         numspace = 0;
     else
         if (ischar(numspace))
             numspace = str2double(numspace);
         end
+        assert(isnumeric(numspace) && numel(numspace)==1, 'NUMSPACE must be a numeric scalar')
     end
 
     if (numspace <= 0)
@@ -19,16 +26,23 @@ function extractsecfuncs(filename, numspace, thedir, askp)
 
     if (~exist('thedir', 'var'))
         thedir = '.';
+    else
+        assert(ischar(thedir) && isvector(thedir), 'THEDIR must be a nonempty string')
     end
 
     if (~exist('askp', 'var'))
         askp = true;
+    else
+        if (~(isscalar(askp) && (islogical(askp) || isequal(askp, 2))))
+            error('ASKP must be one of false, true, or 2')
+        end
     end
 
     %%
     str = readfilestr(filename);
     if (isequal(str, -1))
         fprintf('coudn''t read ''%s''\n', filename);
+        fnames = {};
         return;
     end
 
@@ -41,12 +55,7 @@ function extractsecfuncs(filename, numspace, thedir, askp)
 
     [tmpdir, tmpfn] = fileparts(filename);  % tmpfn strips extension
 
-    try
-        badi = zeros(1,length(tokens), 'logical');
-    catch
-        % MATLAB can't do the above
-        badi = (zeros(1,length(tokens), 'uint8')~=0);
-    end
+    badi = false(1, length(tokens));
 
     for i=1:length(tokens)
         if (strcmpi(tmpfn, tokens{i}))
@@ -66,12 +75,16 @@ function extractsecfuncs(filename, numspace, thedir, askp)
         end
     end
 
+    fnames = tokens;
+
+    if (isequal(askp, 2))
+        return
+    end
+
     if (isempty(tokens))
         disp('No functions extracted.');
         return;
     end
-
-    fnames = tokens;
 
     prompt = sprintf('Create the following files? (y/[n])\n');
     for i=1:length(tokens)
@@ -102,6 +115,8 @@ function extractsecfuncs(filename, numspace, thedir, askp)
             fwrite(fid, sprintf('%s\n', match{i}), 'char');
             fclose(fid);
         end
+    else
+        fnames = {};
     end
 
     if (~askp)

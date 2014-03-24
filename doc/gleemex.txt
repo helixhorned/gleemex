@@ -853,6 +853,11 @@ be pushed by passing `ADDITIONAL_BITS`.
 // TODO: document BORDERCOLOR?
 Restores the matrices and server attributes pushed by `glc_axes_setup`.
 
+[float]
+==== `glc_checkextract()`
+
+TODO
+
 
 Creating applications
 ---------------------
