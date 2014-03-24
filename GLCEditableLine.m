@@ -10,13 +10,19 @@ classdef GLCEditableLine < handle
     end
 
     methods
-        % SELF = GLCEditableLine(DOHIST)
+        % SELF = GLCEditableLine([DOHIST])
         %
         % Constructor.
-        %  DOHIST: scalar logical, enable history?
-        function self = GLCEditableLine(dohist)
-            if (~(isscalar(dohist) && islogical(dohist)))
-                error('DOHIST must be a scalar logical')
+        %  DOHIST: scalar logical, enable history? (default: false)
+        function self = GLCEditableLine(varargin)
+            if (nargin == 0)
+                dohist = false;
+            else
+                dohist = varargin{1};
+
+                if (~(isscalar(dohist) && islogical(dohist)))
+                    error('DOHIST must be a scalar logical')
+                end
             end
 
             self.dohist = dohist;
@@ -64,8 +70,10 @@ classdef GLCEditableLine < handle
                 return
             elseif (key == GL.KEY_ENTER)
                 enter = true;
-                self.stopHistory();
-                self.saveLine();
+                if (self.dohist)
+                    self.stopHistory();
+                    self.saveLine();
+                end
                 return
             end
 
@@ -140,10 +148,6 @@ classdef GLCEditableLine < handle
         end
 
         function saveLine(self)
-            if (~self.dohist)
-                return
-            end
-
             curline = self.getLine();
             if (isempty(self.linehist) || ~strcmp(self.linehist{end}, curline))
                 self.linehist{end+1} = curline;
