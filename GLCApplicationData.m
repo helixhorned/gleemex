@@ -61,6 +61,7 @@ classdef GLCApplicationData < handle
         %
         function obj = getSuspended(className)
             global glc_appdata
+            assert(isvarname(className), 'CLASSNAME must be a valid class name')
 
             % NOTE: also handles the case of glc_appdata empty (not initialized)
             for i=1:numel(glc_appdata)
@@ -76,6 +77,31 @@ classdef GLCApplicationData < handle
                 name(end-3:end) = [];
             end
             error('Didn''t find a previously suspended %s session', name)
+        end
+
+        % [OBJS, WINIDS] = GLCApplicationData.getAllActive(CLASSNAME)
+        function [objs, winids] = getAllActive(className)
+            global glc_appdata
+            assert(isvarname(className), 'CLASSNAME must be a valid class name')
+
+            objs = {};
+            winids = int32([]);
+
+            glc = glcall();
+            GL = glconstants();
+
+            for i=1:numel(glc_appdata)
+                if (isa(glc_appdata{i}, className))
+                    try
+                        glcall(glc.set, GL.WINDOW_ID, int32(i));
+
+                        objs{end+1} = glc_appdata{i};
+                        winids(end+1) = int32(i);
+                    catch
+                        disp(lasterr)
+                    end
+                end
+            end
         end
 
         function nset = setCallbacks(prefix, varargin)
