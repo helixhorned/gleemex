@@ -98,7 +98,7 @@ classdef GLCApplicationData < handle
             cbnames = { 'display', 'reshape', 'keyboard', 'mouse', 'motion', 'position' };
 
             for i=1:numel(cbnames)
-                funcname = [prefix cbnames{i} suffix]
+                funcname = [prefix cbnames{i} suffix];
                 if (~isvarname(funcname))
                     error('Constructed function names must be valid');
                 end

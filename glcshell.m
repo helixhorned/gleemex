@@ -1,41 +1,34 @@
 % Gleemex shell.
 %
 function glcshell(data)
-    global glcsh GL glc
+    global GL glc
 
     glc = glcall();
     GL = glconstants();
 
-    glcsh = struct();
-
-    glcsh.mxy = [0 0];
-    glcsh.wh = [400 600];
-
-    % App data
-    glcsh.el = GLCEditableLine(true);
+    glcsh = GLCShellData();
 
     % create the window!
     winid = glcall(glc.newwindow, [20 20], glcsh.wh, 'Gleemex shell');
 
-    glcall(glc.setcallback, glc.cb_reshape, 'sh_reshape');
-    glcall(glc.setcallback, glc.cb_display, 'sh_display');
-    glcall(glc.setcallback, glc.cb_keyboard, 'sh_keyboard');
-    glcall(glc.setcallback, glc.cb_motion, 'sh_motion');
-    glcall(glc.setcallback, glc.cb_mouse, 'sh_mouse');
+    GLCApplicationData.register(winid, glcsh);
+    nset = GLCApplicationData.setCallbacks('sh_');
+    assert(nset == 4);
+
     glcall(glc.entermainloop);
 end
 
 
 function sh_reshape(w, h)
-    global glcsh GL glc
+    global GL glc
+    glcsh = glc_appdata();
 
-    glcsh.wh = [w h];
-
-    glc_setup2d(w, h);
+    glcsh.updateWindowPos(w, h, true);
 end
 
 function sh_display()
-    global glcsh GL glc
+    global GL glc
+    glcsh = glc_appdata();
 
     glcall(glc.clear, 1-[0 0 0]);
 
@@ -44,7 +37,8 @@ function sh_display()
 end
 
 function sh_keyboard(key, x, y, mods)
-    global glcsh GL glc
+    global GL glc
+    glcsh = glc_appdata();
 
     doquit = glcsh.el.handleKey(key, mods);
     if (doquit)
@@ -60,18 +54,18 @@ function sh_keyboard(key, x, y, mods)
 end
 
 function sh_motion(buttonsdown, x, y)
-    global glcsh GL glc
+    global GL glc
+    glcsh = glc_appdata();
 
-    % invert y
-    glcsh.mxy = [x glcsh.wh(2)-y];
-
-    % ...
+    glcsh.updateMousePos(x, y);
 
     glcall(glc.redisplay);
 end
 
+%{
 function sh_mouse(button, downp, x, y, mods)
     global glcsh GL glc
 
     % ...
 end
+%}
