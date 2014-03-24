@@ -24,3 +24,4 @@ function str=readfilestr(filename, readas)
     % ...and read it into a string
     str = fread(fid, inf, readas)';
     fclose(fid);
+end
