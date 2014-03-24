@@ -527,7 +527,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
     if (asc==GL.KEY_LEFT || asc==GL.KEY_RIGHT)
         if (isstruct(cd) && cd(find(glc_ld(w).selected)).type==TYPE.TOGBTN)
             % left/right arrows --> toggle boolean value
-            asc = 13;
+            asc = GL.KEY_ENTER;
         end
     end
 
@@ -541,7 +541,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
             end
         end
 
-      case 13,  % enter
+      case GL.KEY_ENTER,
         if (glc_ld(w).selmode_edit)
             assert(isstruct(cd));
 
@@ -587,7 +587,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
             end
         end
 
-      case 27,  % escape
+      case GL.KEY_ESCAPE,
         if (glc_ld(w).selmode_edit)
             if (eidx > 0)
                 % canceling typing
