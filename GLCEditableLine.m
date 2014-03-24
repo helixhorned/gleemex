@@ -37,17 +37,30 @@ classdef GLCEditableLine < handle
             glc_textlines({self.curline}, 1, xrange, yorigin, opts);
         end
 
-        function doquit = handleKey(self, key, mods)
+        % .clearLine()
+        % Clears command line.
+        function clearLine(self)
+            self.curi = 1;
+            self.curline = '|';
+        end
+
+        % STR = .getLine()
+        % Returns the entered line (without pipe symbol) as a string STR.
+        function str = getLine(self)
+            str = self.curline([1:self.curi-1 self.curi+1:end]);
+        end
+
+        function enter = handleKey(self, key, mods)
             global GL glc
 
-            doquit = false;
+            enter = false;
 
             if (key >= 32 && key < 127)
                 % printable char
                 self.curins(key);
                 return
             elseif (key == GL.KEY_ENTER)
-                doquit = self.issueCommand();
+                enter = true;
                 return
             end
 
@@ -71,29 +84,6 @@ classdef GLCEditableLine < handle
     end
 
     methods (Access=protected)
-        function doquit = issueCommand(self)
-            doquit = false;
-
-            cmd = strtrim(self.curline([1:self.curi-1 self.curi+1:end]));
-            if (isempty(cmd))
-                return
-            end
-
-            if (any(strcmp(cmd, {'quit', 'exit', 'quit!', 'exit!'})))
-                doquit = 1 + (numel(cmd)==5);
-                return
-            end
-
-            try
-                evalin('base', cmd);
-            catch
-                fprintf('%s\n', lasterr());
-            end
-
-            % clear command line
-            self.curi = 1;
-            self.curline = '|';
-        end
 
         %% Cursor movement etc.
 

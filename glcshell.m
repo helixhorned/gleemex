@@ -40,7 +40,33 @@ function sh_keyboard(key, x, y, mods)
     global GL glc
     glcsh = glc_appdata();
 
-    doquit = glcsh.el.handleKey(key, mods);
+    doquit = false;
+    enter = glcsh.el.handleKey(key, mods);
+
+    while (enter)  % if, really
+        enter = false;
+
+        % Issue entered command.
+
+        cmd = strtrim(glcsh.el.getLine());
+        if (isempty(cmd))
+            break
+        end
+
+        if (any(strcmp(cmd, {'quit', 'exit', 'quit!', 'exit!'})))
+            doquit = 1 + (numel(cmd)==5);
+            break
+        end
+
+        try
+            evalin('base', cmd);
+        catch
+            fprintf('%s\n', lasterr());
+        end
+
+        glcsh.el.clearLine();
+    end
+
     if (doquit)
         if (doquit == 1)
             glcall(glc.closewindow);
