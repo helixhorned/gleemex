@@ -893,13 +893,20 @@ another call of `GLCApplicationData.register` with the same `winid` -- for
 example, it persists after closing the app's window.
 
 [float]
-==== `obj = GLCApplicationData.getSuspended(className)`
+==== `[objs, winids] = GLCApplicationData.getAll(className, activep)`
 
-Retrieves an object `obj` of the class named `className` -- for example,
-`'MyApplicationData'` -- previously registered with
-`GLCApplicationData.register`. If no such object is found, an error is
-issued. In case there are multiple ones, it is unspecified which one is
-returned.
+Retrieves all objects and window identifiers of the class named `className` --
+for example, `'MyApplicationData'` -- previously registered with
+`GLCApplicationData.register`.
+
+* `activep`: Should be a scalar logical telling whether active, i.e. currently
+  open windows should be considered. If false, those that are not active are
+  returned
+
+* `objs`: a cell array vector having as many elements as there are (active or
+  passive, depending on `activep`) windows of class `className`.
+* `winids`: a vector of the same length, containing the respective Gleemex
+  window identifiers
 
 [float]
 ==== `nset = GLCApplicationData.setCallbacks(prefix [, suffix])`

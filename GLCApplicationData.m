@@ -79,10 +79,11 @@ classdef GLCApplicationData < handle
             error('Didn''t find a previously suspended %s session', name)
         end
 
-        % [OBJS, WINIDS] = GLCApplicationData.getAllActive(CLASSNAME)
-        function [objs, winids] = getAllActive(className)
+        % [OBJS, WINIDS] = GLCApplicationData.getAll(CLASSNAME, ACTIVEP)
+        function [objs, winids] = getAll(className, activep)
             global glc_appdata
             assert(isvarname(className), 'CLASSNAME must be a valid class name')
+            assert(islogical(activep) && isscalar(activep), 'ACTIVEP must be a scalar logical')
 
             objs = {};
             winids = int32([]);
@@ -91,15 +92,20 @@ classdef GLCApplicationData < handle
             GL = glconstants();
 
             for i=1:numel(glc_appdata)
+                ok = false;
+
                 if (isa(glc_appdata{i}, className))
                     try
                         glcall(glc.set, GL.WINDOW_ID, int32(i));
-
-                        objs{end+1} = glc_appdata{i};
-                        winids(end+1) = int32(i);
+                        ok = activep;
                     catch
-                        disp(lasterr)
+                        ok = ~activep;
                     end
+                end
+
+                if (ok)
+                    objs{end+1} = glc_appdata{i};
+                    winids(end+1) = int32(i);
                 end
             end
         end
