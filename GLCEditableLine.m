@@ -1,7 +1,9 @@
 classdef GLCEditableLine < handle
     properties
         dohist  % enable history?
+        histi  % Current index into linehist. 0: not using it.
         linehist  % the history of formerly executed lines
+        bakline  % backup of line entered when started to use history
 
         curi  % the index of the '|' cursor in .curline
         curline  % the currently edited line
@@ -18,7 +20,9 @@ classdef GLCEditableLine < handle
             end
 
             self.dohist = dohist;
+            self.histi = 0;
             self.linehist = {};
+            self.bakline = '';
 
             self.curi = 1;
             self.curline = '|';
@@ -40,8 +44,7 @@ classdef GLCEditableLine < handle
         % .clearLine()
         % Clears command line.
         function clearLine(self)
-            self.curi = 1;
-            self.curline = '|';
+            self.setLine('');
         end
 
         % STR = .getLine()
@@ -61,6 +64,8 @@ classdef GLCEditableLine < handle
                 return
             elseif (key == GL.KEY_ENTER)
                 enter = true;
+                self.stopHistory();
+                self.saveLine();
                 return
             end
 
@@ -77,6 +82,8 @@ classdef GLCEditableLine < handle
                 self.curbeg();
               case { GL.KEY_END, 5 },  % END, Ctrl-E
                 self.curend();
+              case { GL.KEY_UP, GL.KEY_DOWN },
+                self.handleHistory(1 - 2*(key == GL.KEY_UP));
             end
 
 %            fprintf('%d\n', key);
@@ -84,6 +91,64 @@ classdef GLCEditableLine < handle
     end
 
     methods (Access=protected)
+        function setLine(self, str)
+            assert(ischar(str) && (isempty(str) || isvector(str)))
+
+            self.curline = [str '|'];
+            self.curi = numel(str)+1;
+        end
+
+        function stopHistory(self)
+            self.bakline = '';
+            self.histi = 0;
+        end
+
+        % .handleHistory(DIR)
+        % DIR: direction, -1 is backward in history, 1 is forward
+        function handleHistory(self, dir)
+            numhist = numel(self.linehist);
+
+            if (~self.dohist || numhist==0)
+                return
+            end
+
+            assert(isequal(dir, 1) || isequal(dir, -1));
+
+            hi = self.histi;
+
+            if (hi == 0 && dir == 1 || hi == 1 && dir == -1)
+                return
+            end
+
+            if (hi == 0)
+                % Starting to use history
+                self.bakline = self.getLine();
+                assert(dir == -1);
+                hi = numhist + 1;
+            elseif (hi == numhist && dir == 1)
+                % Stopping using history
+                self.setLine(self.bakline);
+                self.stopHistory();
+                return
+            end
+
+            hi = hi + dir;
+            assert(hi >= 1 && hi <= numhist);
+            self.histi = hi;
+
+            self.setLine(self.linehist{hi});
+        end
+
+        function saveLine(self)
+            if (~self.dohist)
+                return
+            end
+
+            curline = self.getLine();
+            if (isempty(self.linehist) || ~strcmp(self.linehist{end}, curline))
+                self.linehist{end+1} = curline;
+            end
+        end
 
         %% Cursor movement etc.
 

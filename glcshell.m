@@ -6,7 +6,7 @@ function glcshell(data)
     glc = glcall();
     GL = glconstants();
 
-    glcsh = GLCShellData();
+    glcsh = GLCShellData(true);
 
     % create the window!
     winid = glcall(glc.newwindow, [20 20], glcsh.wh, 'Gleemex shell');
