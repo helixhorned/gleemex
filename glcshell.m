@@ -3,10 +3,12 @@
 function glcshell(data)
     global GL glc
 
+    glc_checkextract();
+
     glc = glcall();
     GL = glconstants();
 
-    glcsh = GLCShellData(true);
+    glcsh = GLCShellData();
 
     % create the window!
     winid = glcall(glc.newwindow, [20 20], glcsh.wh, 'Gleemex shell');
@@ -87,11 +89,3 @@ function sh_motion(buttonsdown, x, y)
 
     glcall(glc.redisplay);
 end
-
-%{
-function sh_mouse(button, downp, x, y, mods)
-    global glcsh GL glc
-
-    % ...
-end
-%}
