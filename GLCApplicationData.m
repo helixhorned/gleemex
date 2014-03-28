@@ -136,7 +136,11 @@ classdef GLCApplicationData < handle
                 end
 
                 try
-                    evalin('caller', ['@' funcname ';']);
+                    if (exist('OCTAVE_VERSION','builtin'))
+                        evalin('caller', ['@' funcname ';']);
+                    else
+                        assert(exist(funcname, 'file') ~= 0);
+                    end
 
                     glcall(glc.setcallback, glc.(['cb_' cbnames{i}]), funcname);
                     nset = nset+1;
