@@ -86,20 +86,22 @@ function fnames = extractsecfuncs(filename, numspace, thedir, askp)
         return;
     end
 
-    prompt = sprintf('Create the following files? (y/[n])\n');
-    for i=1:length(tokens)
-        tokens{i} = sprintf('  %s.m\n', fullfile(thedir, tokens{i}));
-        prompt = [prompt tokens{i}];
-    end
-
-    prompt = [prompt '> '];
-
-    try
-        fflush(stdout);
-    catch
-    end
-
     if (askp)
+        prompt = sprintf('Create the following files? (y/[n])\n');
+        for i=1:length(tokens)
+            tokens{i} = sprintf('  %s.m\n', fullfile(thedir, tokens{i}));
+            prompt = [prompt tokens{i}];
+        end
+
+        prompt = [prompt '> '];
+
+        try
+            fflush(stdout);
+        catch
+        end
+
+        prompt = strrep(prompt, '\', '\\');
+
         s = input(prompt, 's');
     else
         s = 'y';
