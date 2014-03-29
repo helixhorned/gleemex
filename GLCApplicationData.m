@@ -56,29 +56,6 @@ classdef GLCApplicationData < handle
             glc_appdata{winid} = obj;
         end
 
-        % OBJ = GLCApplicationData.getSuspended(CLASSNAME)
-        %
-        %
-        function obj = getSuspended(className)
-            global glc_appdata
-            assert(isvarname(className), 'CLASSNAME must be a valid class name')
-
-            % NOTE: also handles the case of glc_appdata empty (not initialized)
-            for i=1:numel(glc_appdata)
-                if (isa(glc_appdata{i}, className))
-                    obj = glc_appdata{i};
-                    return
-                end
-            end
-
-            %% Didn't find one.
-            name = className;
-            if (numel(name) > 4 && isequal(name(end-3:end), 'Data'))
-                name(end-3:end) = [];
-            end
-            error('Didn''t find a previously suspended %s session', name)
-        end
-
         % [OBJS, WINIDS] = GLCApplicationData.getAll(CLASSNAME, ACTIVEP)
         function [objs, winids] = getAll(className, activep)
             global glc_appdata
