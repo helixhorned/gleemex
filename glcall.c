@@ -119,6 +119,7 @@
 /* set */
 #define SET_IN_WHAT (prhs[1])
 #define SET_IN_VALUE (prhs[2])
+#define SET_OUT_TRUE (plhs[0])
 
 /* colormap */
 #define COLORMAP_IN_COLORMAP (prhs[1])
@@ -2444,12 +2445,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_SET:
     {
         int32_t what;
+        const int8_t truex = 1;
 
-        if (nlhs != 0 || nrhs != 3)
+        if (nlhs > 1 || nrhs != 3)
             ourErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
 
         verifyparam(SET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(SET_IN_WHAT);
+
+        if (nlhs == 1)
+            SET_OUT_TRUE = createScalar(mxLOGICAL_CLASS, &truex);
 
         switch (what)
         {
