@@ -22,7 +22,7 @@ function t = glc_axes_setup(viewport_xywh, projection, additional_bits)
 
     % setup
     glcall(glc.viewport, viewport_xywh);
-    glcall(glc.setmatrix, GL.PROJECTION, projection);
+    glcall(glc.setmatrix, GL.PROJECTION, double(projection));
     glcall(glc.setmatrix, GL.MODELVIEW, []);
     glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
     glcall(glc.scissor, int32(viewport_xywh));
