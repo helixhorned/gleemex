@@ -1,7 +1,7 @@
 % CMAPTEXNAME = GLC_COLORMAP(CMAP_OR_FUNC [, CMAPTEXNAME])
 %
 % Sets the GLCALL internal colormap and uploads its 2D RBG texture
-% (width 2 x height 256).
+% (width 256 x height 2).
 %
 % CMAP_OR_FUNC should be either
 %  - a 3xN or Nx3 double (0..1) or uint8 (0..255) array
@@ -35,12 +35,11 @@ function cmaptexname = glc_colormap(cmap_or_func, cmaptexname)
     % make texture have dims (3x)256x2 ...
     cmap_img(:,:,2) = cmap_img(:,:,1);
 
-    % ... but upload as 2x256 (WxH)
     if (cmaptexname == 0)
         % upload first time
-        cmaptexname = glcall(glc.texture, permute(cmap_img, [1 3 2]));
+        cmaptexname = glcall(glc.texture, cmap_img);
     else
         % reupload
-        glcall(glc.texture, permute(cmap_img, [1 3 2]), cmaptexname);
+        glcall(glc.texture, cmap_img, cmaptexname);
     end
 end

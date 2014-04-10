@@ -24,7 +24,7 @@ function glc_draw_colorbar(rect, bounds, label, cmaptexname, format, numticks, t
     end
 
     glcall(glc.draw, GL.QUADS, glc_expandrect(rect), struct(...
-        'tex', cmaptexname, 'texcoords', glc_expandrect([0 1; 0 1]), 'colors',[1 1 1]));
+        'tex', cmaptexname, 'texcoords', [0 0 1 1]));
     glcall(glc.draw, GL.QUADS+16, glc_expandrect(rect));
 
     if (~isempty(label))
