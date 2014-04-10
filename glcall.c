@@ -1396,8 +1396,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize i, numdims, numtotalverts, numverts;
 
         mwSize colorsz;
+        GLenum colordatatype=0;
         const mxArray *colorsar=NULL, *indicesar=NULL;
-        const double *colors=NULL;
+        const void *colors=NULL;
 
         const void *indices=NULL;  /* uint8_t or uint32_t */
         GLuint texname = 0;
@@ -1510,7 +1511,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             mwSize sz[2], szprod;
 
-            verifyparam(colorsar, "GLCALL: draw: OPTSTRUCT.colors", VP_MATRIX|VP_DOUBLE);
+            colordatatype = verifyparam_ret(colorsar, "GLCALL: draw: OPTSTRUCT.colors", VP_MATRIX|VP_FP_TYPE);
 
             sz[0] = mxGetM(colorsar);
             sz[1] = mxGetN(colorsar);
@@ -1526,7 +1527,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 colorsz = -sz[0];
             }
 
-            colors = (const double *)mxGetData(colorsar);
+            colors = mxGetData(colorsar);
         }
 
         if (indicesar)
@@ -1561,9 +1562,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             glDisableClientState(GL_COLOR_ARRAY);
             if (colorsz==3)
-                glColor3dv(colors);
+            {
+                if (colordatatype == GL_DOUBLE)
+                    glColor3dv((const double *)colors);
+                else
+                    glColor3fv((const float *)colors);
+            }
             else if (colorsz==4 || colorsz == 5)
-                glColor4dv(colors);
+            {
+                if (colordatatype == GL_DOUBLE)
+                    glColor4dv((const double *)colors);
+                else
+                    glColor4fv((const float *)colors);
+            }
             else if (texname)
                 glColor3f(1.0f, 1.0f, 1.0f);
             else
@@ -1572,7 +1583,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         else
         {
             glEnableClientState(GL_COLOR_ARRAY);
-            glColorPointer(-colorsz, GL_DOUBLE, 0, colors);
+            glColorPointer(-colorsz, colordatatype, 0, colors);
         }
 
         glEnableClientState(GL_VERTEX_ARRAY);

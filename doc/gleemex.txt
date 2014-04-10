@@ -562,7 +562,7 @@ coordinates.
 ** `colors`: The `(R, G, B [, A])` colors. Can be either a vector of length 3 or 4,
    in which case all vertices are given that color, or a `(3 or 4,
    NumTotalVerts)` matrix, specifying a separate color for each vertex. Must
-   have type `double`. +
+   have type `double` or `single`. +
    If no colors are passed, the default one is white when a texture is
    provided, and (0.5, 0.5, 0.5) otherwise. +
    As a special convenience feature, if a 5-tuple `[R G B A true]` is passed,
