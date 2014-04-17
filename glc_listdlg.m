@@ -614,7 +614,7 @@ function glc_listdlg_keyboard(asc, x, y, mods)
                 didmove = true;
             end
         end
-        if (~didmove && offset > 0 || uppermost==offset)
+        if (~didmove && offset > 0 || numel(uppermost)==1 && uppermost==offset)
             glc_ld(w).ofs = offset-1;
         end
 
