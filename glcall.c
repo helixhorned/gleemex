@@ -1510,8 +1510,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (colorsar)
         {
             mwSize sz[2], szprod;
+            mxClassID colorclassid;
 
-            colordatatype = verifyparam_ret(colorsar, "GLCALL: draw: OPTSTRUCT.colors", VP_MATRIX|VP_FP_TYPE);
+            static const GLenum mClassToGLType[] = {
+                [mxDOUBLE_CLASS] = GL_DOUBLE,
+                [mxSINGLE_CLASS] = GL_FLOAT,
+                [mxUINT8_CLASS] = GL_UNSIGNED_BYTE,
+            };
+
+            if (mxGetNumberOfDimensions(colorsar) != 2)
+                ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must be a matrix");
+
+            colorclassid = mxGetClassID(colorsar);
+            if ((unsigned)colorclassid >= ARRAY_SIZE(mClassToGLType))
+                ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must have double, single or uint8 type");
+
+            colordatatype = mClassToGLType[colorclassid];
 
             sz[0] = mxGetM(colorsar);
             sz[1] = mxGetN(colorsar);
@@ -1565,15 +1579,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             {
                 if (colordatatype == GL_DOUBLE)
                     glColor3dv((const double *)colors);
-                else
+                else if (colordatatype == GL_FLOAT)
                     glColor3fv((const float *)colors);
+                else
+                    glColor3ubv((const uint8_t *)colors);
             }
             else if (colorsz==4 || colorsz == 5)
             {
                 if (colordatatype == GL_DOUBLE)
                     glColor4dv((const double *)colors);
-                else
+                else if (colordatatype == GL_FLOAT)
                     glColor4fv((const float *)colors);
+                else
+                    glColor4ubv((const uint8_t *)colors);
             }
             else if (texname)
                 glColor3f(1.0f, 1.0f, 1.0f);

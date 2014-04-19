@@ -176,6 +176,9 @@ Creates a new (sub-)window with the given properties and a separate, new OpenGL
 context. To make the window do something useful, it needs to have callbacks
 attached afterwards.
 
+CAUTION: Gleemex windows and MATLAB handle grahics figures should never be open
+at the same time. Mixing them may entail crashes or other undesired behavior.
+
 * `WINDOWNAME`: the name of the window, to be shown in the top bar
 
 * `POS`: the initial (x, y) position of the window, must be of type `double`
@@ -562,7 +565,7 @@ coordinates.
 ** `colors`: The `(R, G, B [, A])` colors. Can be either a vector of length 3 or 4,
    in which case all vertices are given that color, or a `(3 or 4,
    NumTotalVerts)` matrix, specifying a separate color for each vertex. Must
-   have type `double` or `single`. +
+   have type `double`, `single` or `uint8`. +
    If no colors are passed, the default one is white when a texture is
    provided, and (0.5, 0.5, 0.5) otherwise. +
    As a special convenience feature, if a 5-tuple `[R G B A true]` is passed,
@@ -627,10 +630,10 @@ If `NOW` is passed, it should be a scalar logical; if `NOW` is true,
 
 :glReadPixels: http://www.opengl.org/sdk/docs/man2/xhtml/glReadPixels.xml
 
-{glReadPixels}[Reads] a block of pixels from the framebuffer. If `XYWH` is
-passed (which must be a `double`-typed 4-vector), its elements are passed to
-the _x_, _y_, _width_ and _height_ arguments of `glReadPixels`. Otherwise, the
-default is to grab the whole window.
+{glReadPixels}[Reads] a block of pixels from the framebuffer using the `GL_RGB`
+format. If `XYWH` is passed (which must be a `double`-typed 4-vector), its
+elements are passed to the _x_, _y_, _width_ and _height_ arguments of
+`glReadPixels`. Otherwise, the default is to grab the whole window.
 
 `PIXELS` is returned as a 3-by-_width_-by-_height_ `uint8` array.
 
@@ -852,6 +855,16 @@ be pushed by passing `ADDITIONAL_BITS`.
 
 // TODO: document BORDERCOLOR?
 Restores the matrices and server attributes pushed by `glc_axes_setup`.
+
+[float]
+==== `CMAPTEXNAME = glc_colormap(CMAP_OR_FUNC [, CMAPTEXNAME])`
+
+TODO
+
+[float]
+==== `glc_draw_colorbar(RECT, BOUNDS, LABEL, CMAPTEXNAME [, FORMAT [, NUMTICKS [, TEXTHEIGHT]]])`
+
+TODO
 
 [float]
 ==== `glc_checkextract()`
