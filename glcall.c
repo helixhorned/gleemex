@@ -1546,7 +1546,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         if (indicesar)
         {
-            indicestype = verifyparam_ret(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_VECTOR|VP_INDEX_TYPE);
+            indicestype = verifyparam_ret(indicesar, "GLCALL: draw: OPTSTRUCT.indices", VP_MATRIX|VP_INDEX_TYPE);
 
             numverts = mxGetNumberOfElements(indicesar);
             indices = mxGetData(indicesar);

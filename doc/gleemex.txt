@@ -574,10 +574,11 @@ coordinates.
 ** `indices`: Zero-based indices into the columns of `VERTEXDATA` used to
    construct the primitives. See {glDrawElements}[`glDrawElements`]. Must have
    _index type_ (`uint8` or `uint32`). +
-   When `indices` are passed, the number of drawn vertices is thus its length,
-   and each of its elements must be less than `NumTotalVerts`. This bound check
-   has to be done every `glc.draw` call, so providing a large amount of indices
-   may be expensive.
+   When `indices` are passed, the number of drawn vertices equals the number of
+   elements in `indices` (the dimensions don't matter), and each of its
+   elements must be less than `NumTotalVerts`. This bound check has to be done
+   every `glc.draw` call, so providing a large amount of indices may be
+   expensive.
 
 ** `tex`: The OpenGL _texture name_ (a non-zero `uint32` number as returned by
    <<glc_texture,`glc.texture`>>) with which the primitives are to be
