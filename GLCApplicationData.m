@@ -5,6 +5,9 @@ classdef GLCApplicationData < handle
 
         % a 2-vector of the mouse's [x, y]
         mxy
+
+        % a bitfield of GL.BUTTON_* values
+        mbutton
     end
 
     methods
@@ -12,6 +15,7 @@ classdef GLCApplicationData < handle
         function self = GLCApplicationData()
             self.wh = [800 600];  % arbitrary sensible default
             self.mxy = [1 1];
+            self.mbutton = 0;
         end
 
         % .updateWindowPos(W, H [, SETUP2D])
@@ -30,9 +34,10 @@ classdef GLCApplicationData < handle
 
         % .updateMousePos(X, Y)
         % To be called from the mouse callback of the application.
-        function updateMousePos(self, x, y)
+        function updateMousePos(self, mbutton, x, y)
             % NOTE: invert y
             self.mxy = [x self.wh(2)-y];
+            self.mbutton = mbutton;
         end
     end
 

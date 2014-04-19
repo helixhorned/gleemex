@@ -85,7 +85,7 @@ function sh_motion(buttonsdown, x, y)
     global GL glc
     glcsh = glc_appdata();
 
-    glcsh.updateMousePos(x, y);
+    glcsh.updateMousePos(buttonsdown, x, y);
 
     glcall(glc.redisplay);
 end

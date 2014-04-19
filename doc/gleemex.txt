@@ -257,8 +257,7 @@ registration functions.
 Invoked with no arguments when the windows is about to be redrawn. At the end,
 Gleemex always issues a `glutSwapBuffers()`.
 
-[[cb_reshape]]
-`glc.cb_reshape`, [`glutReshapeFunc`]::
+[[cb_reshape]] `glc.cb_reshape`, [`glutReshapeFunc`]::
 
 Invoked with two arguments `(width, height)` when the window has been resized,
 and on initialization. Thus, it is possible to e.g. set up a projection matrix
@@ -282,8 +281,7 @@ against the `GL.MOD_*` bit constants.
 NOTE: For ``key chords'' such as `Ctrl`+`a`, FreeGLUT may pass different
 combinations of `key` and `mods` on different platforms.
 
-[[cb_mouse]]
-`glc.cb_mouse`, [`glutMouseFunc`]::
+[[cb_mouse]] `glc.cb_mouse`, [`glutMouseFunc`]::
 
 Invoked with five arguments `(button, downp, x, y, mods)` when a mouse button
 is pressed (`downp` is true) or released (`downp` is false). The `button`
@@ -294,7 +292,7 @@ NOTE: The reported position has the origin at the origin at the *topmost* and
 leftmost pixel. Thus, it's incongruent with <<glc_setup2d,`glc_setup2d`>> in
 the y screen dimension.
 
-`glc.cb_motion`, [`glutMotionFunc`, `glutPassiveMotionFunc`]::
+[[cb_motion]] `glc.cb_motion`, [`glutMotionFunc`, `glutPassiveMotionFunc`]::
 
 Invoked with three arguments `(buttons, x, y)` when the mouse is moved. The
 `buttons` argument has the `GL.BUTTON_*` bits set which are depressed at the
@@ -896,6 +894,7 @@ The `GLCApplicationData` constructor initializes some of its members to default
 values:
 
 * `ad.mxy = [1 1]` {nbsp} [gray]#% current mouse position#
+* `ad.mbutton = 0` {nbsp} [gray]#% currently pressed mouse buttons#
 * `ad.wh = [800 600]` {nbsp} [gray]#% width and height of the app window#
 
 CAUTION: These members may become private in the future.
@@ -953,13 +952,13 @@ current window, the behavior is undefined.
 ==== `ad.updateWindowPos(self, w, h [, setup2d])`
 
 Updates the window position with the new width `w` and height `h`, as obtained
-from the <<bc_reshape,reshape callback>>. If `setup2d` is passed, it must be a
+from the <<cb_reshape,reshape callback>>. If `setup2d` is passed, it must be a
 scalar logical; in case it is true, <<glc_setup2d,`glc_setup2d`>>`(w, h)` is also called.
 
 [float]
-==== `ad.updateMousePos(self, x, y)`
+==== `ad.updateMousePos(self, buttons, x, y)`
 
-Updates the current mouse pointer position with the new coordinates (`x`, `y`),
-as obtained from the <<cb_mouse,mouse motion callback>>. Internally, `x` is
-stored as obtained, but the stored y is the difference of the current window
-width and the passed `y`.
+Updates the current mouse pointer position with the new mouse button state
+`buttons` and coordinates (`x`, `y`), as obtained from the <<cb_motion,mouse
+motion callback>>. Internally, `x` is stored as obtained, but the stored y is
+the difference of the current window width and the passed `y`.
