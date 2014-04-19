@@ -1,6 +1,16 @@
-% GLC_CHECKEXTRACT()
-function glc_checkextract()
+% GLC_CHECKEXTRACT([FORCE])
+function glc_checkextract(force)
     % XXX: CODEDUP addabspaths.m
+
+    if (nargin < 1)
+        force = false;
+    else
+        assert(islogical(force) && numel(force)==1, 'FORCE must be a logical scalar')
+    end
+
+    if (~force && exist('OCTAVE_VERSION','builtin'))
+        return
+    end
 
     st = dbstack('-completenames');
     if (numel(st) < 2)
