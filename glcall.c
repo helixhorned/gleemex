@@ -935,6 +935,8 @@ static GLenum walk_menu_struct(const mxArray *menuar, int32_t *numleaves,
 static const mxArray *menulabelar;
 static char menucbfname[MAXCBNAMELEN+1];
 
+#define mymax(x,y) ((x) > (y) ? (x) : (y));
+
 static GLenum callmenu_perentry(const mxArray *labelar, int32_t leafp, int32_t k, const mxArray *cbfunc)
 {
     if (leafp)
@@ -1511,21 +1513,32 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             mwSize sz[2], szprod;
             mxClassID colorclassid;
-
+#if __STDC_VERSION__ >= 199901L
             static const GLenum mClassToGLType[] = {
                 [mxDOUBLE_CLASS] = GL_DOUBLE,
                 [mxSINGLE_CLASS] = GL_FLOAT,
                 [mxUINT8_CLASS] = GL_UNSIGNED_BYTE,
             };
-
+#else
+            static int mClassToGLType_Initialized = 0;
+            static GLenum mClassToGLType[max(max(mxDOUBLE_CLASS, mxSINGLE_CLASS), mxUINT8_CLASS)+1];
+            if (!mClassToGLType_Initialized)
+            {
+                mClassToGLType_Initialized = 1;
+                mClassToGLType[mxDOUBLE_CLASS] = GL_DOUBLE;
+                mClassToGLType[mxSINGLE_CLASS] = GL_FLOAT;
+                mClassToGLType[mxUINT8_CLASS] = GL_UNSIGNED_BYTE;
+            }
+#endif
             if (mxGetNumberOfDimensions(colorsar) != 2)
                 ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must be a matrix");
 
             colorclassid = mxGetClassID(colorsar);
-            if ((unsigned)colorclassid >= ARRAY_SIZE(mClassToGLType))
-                ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must have double, single or uint8 type");
+            if ((unsigned)colorclassid < ARRAY_SIZE(mClassToGLType))
+                colordatatype = mClassToGLType[colorclassid];
 
-            colordatatype = mClassToGLType[colorclassid];
+            if (colordatatype == 0)
+                ourErrMsgTxt("GLCALL: draw: OPTSTRUCT.colors must have double, single or uint8 type");
 
             sz[0] = mxGetM(colorsar);
             sz[1] = mxGetN(colorsar);
