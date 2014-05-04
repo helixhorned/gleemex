@@ -18,11 +18,12 @@ function glc_checkextract(force)
     end
 
     [callerdir, fn, ext] = fileparts(st(2).file);
-    filename = [fn ext];
+    filename = st(2).file;
 
     fnames = extractsecfuncs(filename, 0, callerdir, 2);
 
     d = dir(filename);
+    assert(numel(d) == 1);
     modtime = d.datenum;
 
     needupdate = false;
