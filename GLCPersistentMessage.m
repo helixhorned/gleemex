@@ -2,6 +2,7 @@ classdef GLCPersistentMessage < handle
     properties
         lastmsg
         keepuntil
+        once
 
         duration  % default duration in seconds
     end
@@ -11,6 +12,7 @@ classdef GLCPersistentMessage < handle
         function self = GLCPersistentMessage(varargin)
             self.lastmsg = '';
             self.keepuntil = 0;
+            self.once = false;
 
             if (nargin > 0)
                 duration = varargin{1};
@@ -23,9 +25,20 @@ classdef GLCPersistentMessage < handle
         end
 
         % .tmessage(DURATION, FMT, ...)
+        %
+        % Stores a "timed message" for display up to DURATION seconds from now.
         function tmessage(self, duration, fmt, varargin)
             self.lastmsg = sprintf(fmt, varargin{:});
             self.keepuntil = now() + duration/(24*3600);
+            self.once = false;
+        end
+
+        % .onceMessage(FMT, ...)
+        %
+        % Stores a message that is to be retrieved only once.
+        function onceMessage(self, fmt, varargin)
+            self.lastmsg = sprintf(fmt, varargin{:});
+            self.once = true;
         end
 
         % .message(FMT, ...)
@@ -40,8 +53,9 @@ classdef GLCPersistentMessage < handle
         end
 
         function msg = getMessage(self)
-            if (now() < self.keepuntil)
+            if (self.once || now() < self.keepuntil)
                 msg = self.lastmsg;
+                self.once = false;
             else
                 msg = '';
             end
