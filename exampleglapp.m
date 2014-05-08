@@ -101,7 +101,7 @@ function exampleglapp(vertposns)
     winid = glcall(glc.newwindow, [20 20], glex.wh, 'GLCALL test 1', ...
                    struct('menus',menus));
 
-    [glex.shaderid, glex.shaderuniforms] = glcall(glc.newfragprog, SHADERSRC);
+    [glex.shaderid, glex.shaderuniforms] = glcall(glc.newprogram, SHADERSRC);
 
     % XXX: treat errors between newwindow and entermainloop properly
     glex.tex = glcall(glc.texture, glex.im, struct('u32rgba',~imagetex));
@@ -206,7 +206,7 @@ function ex_display()
     verts(2, :) = verts(2, :) + glex.adjbbox(4) + 40;
 
     if (glex.togbtnstate)
-        glcall(glc.usefragprog, glex.shaderid);
+        glcall(glc.useprogram, glex.shaderid);
         glcall(glc.setuniform, glex.shaderuniforms.bounds, glex.bounds);
     end
 
@@ -214,7 +214,7 @@ function ex_display()
         'colors',[1 1 1], 'tex',glex.tex, 'texcoords',texcoords));
 
     if (glex.togbtnstate)
-        glcall(glc.usefragprog);
+        glcall(glc.useprogram);
     end
 
     %% vertex points
