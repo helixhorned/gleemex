@@ -276,6 +276,19 @@ function ex_display()
     glcall(glc.text, ocz_xy-[0 16], 14, 'A monospaced text', ...
            struct('mono',true, 'xgap',0));
 
+    %% Tick marks test
+    tmpxywh(1:2) = tmpxywh(1:2) + [0 -10];
+    xyxy = [tmpxywh(1:2) tmpxywh(1:2)+[tmpxywh(3) 0]];
+    ticklims = [-5, 5];
+    tickvals = -5 + 10*rand(1, 10);
+    glc_drawticks(xyxy, ticklims, tickvals, 6);
+
+    tmpxywh(1:2) = tmpxywh(1:2) + [-10 10];
+    xyxy = [tmpxywh(1:2) tmpxywh(1:2)+[0 tmpxywh(4)]];
+    ticklims = [-5, 5];
+    tickvals = -5 + 10*rand(1, 10);
+    glc_drawticks(xyxy, ticklims, tickvals, 6);
+
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
     
