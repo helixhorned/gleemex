@@ -246,9 +246,11 @@ function ex_display()
     for ang=0:30:180
         glcall(glc.push, GL.MODELVIEW);
         %    glcall(glc.mulmatrix, GL.MODELVIEW, [90, 0 0 1]);
-        glcall(glc.mulmatrix, GL.MODELVIEW, [560 310 0]);  % translate text origin (lower left) to screen coords
+        glcall(glc.mulmatrix, GL.MODELVIEW, [800 200 0]);  % translate text origin (lower left) to screen coords
         glcall(glc.mulmatrix, GL.MODELVIEW, [ang, 0 0 1]);  % rotate wrt origin
-        glcall(glc.text, [20 0], 8+8*ang/180, sprintf('bounds: [%.01f %.01f]', glex.bounds(1), glex.bounds(2)));
+        glcall(glc.text, [20 0], 8+8*ang/180, ...
+               sprintf('bounds: [%.01f %.01f] ang:%d', ...
+                       glex.bounds(1), glex.bounds(2), ang));
         glcall(glc.pop, GL.MODELVIEW);
     end
 
@@ -280,14 +282,14 @@ function ex_display()
     tmpxywh(1:2) = tmpxywh(1:2) + [0 -10];
     xyxy = [tmpxywh(1:2) tmpxywh(1:2)+[tmpxywh(3) 0]];
     ticklims = [-5, 5];
-    tickvals = -5 + 10*rand(1, 10);
-    glc_drawticks(xyxy, ticklims, tickvals, 6);
+    tickvals = -5 + 10*rand(1, 4);
+    glc_drawticks(xyxy, ticklims, tickvals, 6, 8);
 
     tmpxywh(1:2) = tmpxywh(1:2) + [-10 10];
     xyxy = [tmpxywh(1:2) tmpxywh(1:2)+[0 tmpxywh(4)]];
     ticklims = [-5, 5];
-    tickvals = -5 + 10*rand(1, 10);
-    glc_drawticks(xyxy, ticklims, tickvals, 6);
+    tickvals = -5 + 10*rand(1, 4);
+    glc_drawticks(xyxy, ticklims, tickvals, -6, 8);
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));

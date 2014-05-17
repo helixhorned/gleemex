@@ -1,5 +1,5 @@
-% glc_drawticks(XYXY, LIMS, VALS [, TICKLEN [, TICKFACTORS]])
-function glc_drawticks(xyxy, lims, vals, ticklen, tickfactors)
+% glc_drawticks(XYXY, LIMS, VALS [, TICKLEN [, TEXTSIZE [, TICKFACTORS]]])
+function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors)
     assert(isnumeric(xyxy) && numel(xyxy)==4, 'XYXY must be a numeric 4-array')
     assert(isnumeric(lims) && numel(lims)==2, 'LIMS must be a numeric pair')
     assert(isnumeric(vals) && isvector(vals) && numel(vals) >= 2, ...
@@ -15,6 +15,12 @@ function glc_drawticks(xyxy, lims, vals, ticklen, tickfactors)
     numvals = numel(vals);
 
     if (nargin < 5)
+        textsize = 0;
+    else
+        assert(isnumeric(textsize) && numel(textsize)==1, 'TEXTSIZE must be a numeric scalar')
+    end
+
+    if (nargin < 6)
         tickfactors = ones(1, numvals);
     else
         assert(isnumeric(tickfactors) && isvector(tickfactors) && numel(tickfactors)==numvals, ...
@@ -41,4 +47,27 @@ function glc_drawticks(xyxy, lims, vals, ticklen, tickfactors)
     tickposns(3:4, :) = tickposns + repmat(rotvecn, 1, numvals).*repmat(tickfactors, 2, 1);
 
     glcall(glc.draw, GL.LINES, reshape(tickposns, 2, []), opts);
+
+    if (textsize == 0)
+        return
+    end
+
+    s = sign(textsize);
+    textsize = abs(textsize);
+    ofs = [abs(ticklen)*max(abs(tickfactors)) + 2, 0];
+    ang = (180/pi)*atan2(s*rotvecn(2), s*rotvecn(1));
+
+    if (ang == 180)
+        % TODO: handle range (90, 270)?
+        ang = 0;
+        xalign = 1;
+        ofs = -ofs;
+    else
+        xalign = -1;
+    end
+
+    for i=1:numvals
+        str = sprintf('%.3f', vals(i));
+        glc_rotatetext(tickposns(1:2, i), ang, ofs, textsize, str, [xalign 0]);
+    end
 end
