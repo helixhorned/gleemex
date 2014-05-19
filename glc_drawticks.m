@@ -1,5 +1,5 @@
-% glc_drawticks(XYXY, LIMS, VALS [, TICKLEN [, TEXTSIZE [, TICKFACTORS]]])
-function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors)
+% glc_drawticks(XYXY, LIMS, VALS [, TICKLEN [, TEXTSIZE [, TICKFACTORS [, OPTS_DATA]]]])
+function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors, opts_data)
     assert(isnumeric(xyxy) && numel(xyxy)==4, 'XYXY must be a numeric 4-array')
     assert(isnumeric(lims) && numel(lims)==2, 'LIMS must be a numeric pair')
     assert(isnumeric(vals) && isvector(vals) && numel(vals) >= 2, ...
@@ -28,15 +28,18 @@ function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors)
         tickfactors = tickfactors(:).';
     end
 
+    opts_line = struct('colors', [.1 .1 .1]);
+    if (nargin < 7)
+        opts_data = opts_line;
+    else
+        assert(isstruct(opts_data) && numel(opts_data)==1, 'OPTS_DATA must be a scalar struct')
+    end
+
     %% ----------
     global glc GL
 
     xyxy = reshape(xyxy, 2, 2);
     vals = vals(:).';
-
-    opts = struct('colors', [.1 .1 .1]);
-
-    glcall(glc.draw, GL.LINES, xyxy, opts);
 
     p1 = xyxy(1:2).';  % col vec
     vec = xyxy(3:4).'-p1;
@@ -46,7 +49,8 @@ function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors)
     tickposns = repmat(p1, 1, numvals) + repmat(ff, 2, 1).*repmat(vec, 1, numvals);
     tickposns(3:4, :) = tickposns + repmat(rotvecn, 1, numvals).*repmat(tickfactors, 2, 1);
 
-    glcall(glc.draw, GL.LINES, reshape(tickposns, 2, []), opts);
+    glcall(glc.draw, GL.LINES, reshape(tickposns, 2, []), opts_data);
+    glcall(glc.draw, GL.LINES, xyxy, opts_line);
 
     if (textsize == 0)
         return
