@@ -47,10 +47,10 @@ classdef GLCApplicationData < handle
             global glc_appdata
 
             if (~isobject(obj))
-                error('OBJ must be an OO-sense object')
+                error('OBJ must be an classdef object')
             end
 
-            if (~GLCApplicationData.isclass(obj, 'GLCApplicationData'))
+            if (~(metaclass(obj) <= ?GLCApplicationData))
                 error('OBJ must be derived from GLCApplicationData')
             end
 
@@ -128,28 +128,6 @@ classdef GLCApplicationData < handle
                     nset = nset+1;
                 end
             end
-        end
-    end
-
-    methods (Static, Access=private)
-        % IS = GLCApplicationData.isclass(OBJ, CLASSNAME)
-        function is = isclass(obj, classname)
-            if (isa(obj, classname))
-                is = true;
-                return
-            end
-
-            mo = metaclass(obj);
-            superClasses = mo.SuperClasses;
-
-            for i=1:numel(superClasses)
-                if (isequal(superClasses{i}.Name, classname))
-                    is = true;
-                    return
-                end
-            end
-
-            is = false;
         end
     end
 end
