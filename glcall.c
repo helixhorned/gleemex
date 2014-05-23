@@ -1887,12 +1887,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (numentered)
             ourErrMsgTxt("GLCALL.geterrstr should only be called after an error from the prompt");
 
-        if (nlhs != 3 || nrhs != 1)
-            return;
-
-        plhs[0] = mxCreateString(errstrptr ? errstrptr : "<empty>");
-        plhs[1] = mxCreateString(errstr);
-        plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
+        if (nlhs >= 1)
+            plhs[0] = mxCreateString(errstrptr ? errstrptr : "<empty>");
+        if (nlhs >= 2)
+            plhs[1] = mxCreateString(errstr);
+        if (nlhs >= 3)
+            plhs[2] = exceptionar ? exceptionar : mxCreateDoubleScalar(0);
 #endif
     }
     return;
