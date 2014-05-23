@@ -291,19 +291,14 @@ static char *errstrptr;
 
 /* In MATLAB, we never jump out of the mex file via mexErrMsgTxt() because that
  * leaves windows hanging around or causes crashes. */
-# define ourErrMsgTxt_(msg, retwhat) do { \
+# define ourErrMsgTxt_(msg, retwhat)            \
+    do {                                        \
+        if (errstrptr)                          \
+            free(errstrptr);                    \
+        errstrptr = strdup(msg);                \
         if (numentered)                         \
-        {                                       \
-            if (errstrptr)                      \
-                free(errstrptr);                \
-            errstrptr = strdup(msg);            \
             glutLeaveMainLoop();                \
-            /*mexErrMsgTxt(msg);*/              \
-            return (retwhat);                   \
-        }                                       \
-        else                                    \
-            return (retwhat);                   \
-            /*mexErrMsgTxt(msg);*/              \
+        return (retwhat);                       \
     } while (0);
 # define ourErrMsgTxt(msg) ourErrMsgTxt_(msg, (void)0)
 #else
