@@ -119,7 +119,7 @@
 /* set */
 #define SET_IN_WHAT (prhs[1])
 #define SET_IN_VALUE (prhs[2])
-#define SET_OUT_TRUE (plhs[0])
+#define SET_OUT_STATUS (plhs[0])
 
 /* colormap */
 #define COLORMAP_IN_COLORMAP (prhs[1])
@@ -1137,7 +1137,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     cmd = *(int32_t *)mxGetData(IN_COMMAND);
 
     /* XXX: GLUT functions may be called with uninited freeglut when passing GLC_GET. */
-    if (!inited && !(cmd == GLC_NEWWINDOW || cmd == GLC_GET
+    if (!inited && !(cmd == GLC_NEWWINDOW || cmd == GLC_GET || cmd == GLC_SET
 #ifndef HAVE_OCTAVE
                      || cmd == GLC_GETERRSTR
 #endif
@@ -2482,7 +2482,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case GLC_SET:
     {
         int32_t what;
-        const int8_t truex = 1;
+        const int8_t falsex = 0, truex = 1;
 
         if (nlhs > 1 || nrhs != 3)
             ourErrMsgTxt("Usage: GLCALL(glc.set, WHAT, VALUE)");
@@ -2490,8 +2490,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(SET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(SET_IN_WHAT);
 
-        if (nlhs == 1)
-            SET_OUT_TRUE = createScalar(mxLOGICAL_CLASS, &truex);
+        if (!inited && what != GLC__WINDOW_ID)
+            ourErrMsgTxt("GLCALL: set: Only GL.WINDOW_ID supported when not initialized");
+
+        if (nlhs > 0)
+            SET_OUT_STATUS = createScalar(mxLOGICAL_CLASS, &falsex);
 
         switch (what)
         {
@@ -2556,12 +2559,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             ourwidx = *(int32_t *)mxGetData(SET_IN_VALUE);
             ourwidx--;
 
-            if ((unsigned)ourwidx >= MAXACTIVEWINDOWS || (glutwidx=g_glutwinidx[ourwidx])==0)
-                ourErrMsgTxt("GLCALL: set GL.WINDOW_ID: window index invalid or nonexistent window");
+            if ((unsigned)ourwidx >= MAXACTIVEWINDOWS)
+                ourErrMsgTxt("GLCALL: set GL.WINDOW_ID: invalid window index");
+
+            if (!inited || (glutwidx=g_glutwinidx[ourwidx])==0)
+                return;
 
             glutSetWindow(glutwidx);
-            /* glutSetWindow might still come up empty; in that case following commands
-             * will probably bring the program to its fall. */
+
+            /* glutSetWindow might still come up empty (for example because the
+             * window was closed by the user but was still present with our
+             * g_glutwinidx[]). Check whether the new one is valid now. */
+            if (nlhs > 0 && glutGetWindow() == glutwidx)
+                SET_OUT_STATUS = createScalar(mxLOGICAL_CLASS, &truex);  /* all fine */
 
             return;
         }

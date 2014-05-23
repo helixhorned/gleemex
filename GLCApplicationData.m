@@ -79,12 +79,7 @@ classdef GLCApplicationData < handle
                 ok = false;
 
                 if (isa(glc_appdata{i}, className))
-                    try
-                        t = glcall(glc.set, GL.WINDOW_ID, int32(i));
-                        ok = activep;
-                    catch
-                        ok = ~activep;
-                    end
+                    ok = (glcall(glc.set, GL.WINDOW_ID, int32(i)) == activep);
                 end
 
                 if (ok)
