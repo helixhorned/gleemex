@@ -62,6 +62,8 @@ classdef GLCApplicationData < handle
         end
 
         % [OBJS, WINIDS] = GLCApplicationData.getAll(CLASSNAME, ACTIVEP)
+        %
+        % WINIDS only valid if ACTIVEP is true.
         function [objs, winids] = getAll(className, activep)
             global glc_appdata
             assert(isvarname(className), 'CLASSNAME must be a valid class name')
@@ -87,7 +89,9 @@ classdef GLCApplicationData < handle
 
                 if (ok)
                     objs{end+1} = glc_appdata{i};
-                    winids(end+1) = int32(i);
+                    if (activep)
+                        winids(end+1) = int32(i);
+                    end
                 end
             end
         end

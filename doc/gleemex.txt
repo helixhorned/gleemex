@@ -923,8 +923,8 @@ for example, `'MyApplicationData'` -- previously registered with
 
 * `objs`: a cell array vector having as many elements as there are (active or
   passive, depending on `activep`) windows of class `className`.
-* `winids`: a vector of the same length, containing the respective Gleemex
-  window identifiers
+* `winids`: in the case of `activep` being *true*, a vector of the same length,
+  containing the respective Gleemex window identifiers
 
 [float]
 ==== `nset = GLCApplicationData.setCallbacks(prefix [, suffix])`
