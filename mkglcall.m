@@ -30,7 +30,7 @@ function mkglcall(build_release, use_release)
 
         if (ispc)
             % Windows
-            args = {'-g', '-Iourinclude', '-Llib64', '-lfreeglutd', 'glcall.c'};
+            args = {'-g', '-Iourinclude', '-L.', '-lfreeglutd', 'glcall.c'};
             if (use_release)
                 args{4} = '-lfreeglut';
             end
