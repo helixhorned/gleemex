@@ -5,7 +5,10 @@ glc_listdlg_*.m
 initrepo.sh
 *.o
 # git-owl BEGIN: DO NOT EDIT!
+freeglut.dll
+freeglut.lib
 freeglutd.dll
+freeglutd.lib
 freeglutd.pdb
 glcall.mexw64
 glcall.mexw64.pdb
