@@ -2473,6 +2473,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             return;
         }
 
+        case GL_POINT_SIZE:
+        {
+            double pointSize;
+
+            glGetDoublev(GL_POINT_SIZE, &pointSize);
+
+            GET_OUT_VALUE = createScalar(mxDOUBLE_CLASS, &pointSize);
+            return;
+        }
+
         default:
             ourErrMsgTxt("GLCALL: get: WHAT token unknown");
         }
