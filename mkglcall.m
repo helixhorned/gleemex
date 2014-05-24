@@ -25,10 +25,9 @@ function mkglcall(build_release, use_release)
         use_release = false;
     end
 
-    try
-        OCTAVE_VERSION;
-    catch
+    if (~exist('OCTAVE_VERSION', 'builtin'))
         % MATLAB
+
         if (ispc)
             % Windows
             args = {'-g', '-Iourinclude', '-Llib64', '-lfreeglutd', 'glcall.c'};
@@ -49,6 +48,7 @@ function mkglcall(build_release, use_release)
         else
             mex -lGL -lGLU -lGLEW -lglut glcall.c
         end
+
         return
     end
 
