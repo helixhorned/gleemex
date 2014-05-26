@@ -929,8 +929,8 @@ for example, `'MyApplicationData'` -- previously registered with
 [float]
 ==== `nset = GLCApplicationData.setCallbacks(prefix [, suffix])`
 
-Registers callbacks for the current window. For every string in the list
-`{'display', 'reshape', 'keyboard', 'mouse', 'motion', 'position'}`, a
+Registers callbacks for the current window. For each of the strings
+`'display'`, `'reshape'`, `'keyboard'`, `'mouse'`, `'motion'` and `'position'`, a
 potential function name is constructed by concatenating it in between `prefix`
 (which must be non-empty) and `suffix` (which is empty by default). Then, if a
 file existence check for this name suffixed with `'.m'` yields a positive
