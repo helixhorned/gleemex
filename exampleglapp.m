@@ -161,6 +161,7 @@ function ex_display()
            struct('colors',[1 0 0]));  % lower left
     glcall(glc.draw, GL.LINE_STRIP, [w-10 w w; h h h-10], ...
            struct('colors',[0 0 1]));  % upper right
+    glcall(glc.text, [w h]-4, 12, '(w, h)', [1 1]);
 
     % scissor test
     glcall(glc.toggle, [GL.SCISSOR_TEST 1]);
@@ -281,15 +282,23 @@ function ex_display()
     %% Tick marks test
     tmpxywh(1:2) = tmpxywh(1:2) + [0 -10];
     xyxy = [tmpxywh(1:2) tmpxywh(1:2)+[tmpxywh(3) 0]];
-    ticklims = [-5, 5];
-    tickvals = -5 + 10*rand(1, 4);
-    glc_drawticks(xyxy, ticklims, tickvals, 6, 8);
+    xticklims = [-5, 5];
+    xtickvals = -5 + 10*rand(1, 4);
+    glc_drawticks(xyxy, xticklims, xtickvals, 6, 8);
 
     tmpxywh(1:2) = tmpxywh(1:2) + [-10 10];
     xyxy = [tmpxywh(1:2) tmpxywh(1:2)+[0 tmpxywh(4)]];
-    ticklims = [-5, 5];
-    tickvals = -5 + 10*rand(1, 4);
-    glc_drawticks(xyxy, ticklims, tickvals, -6, 8);
+    yticklims = [-5, 5];
+    ytickvals = -5 + 10*rand(1, 4);
+    glc_drawticks(xyxy, yticklims, ytickvals, -6, 8);
+
+    %% Scatter plot
+
+    tmpxywh(1:2) = tmpxywh(1:2) + [10 0];  % reset the previous two tweaks
+    tmpxywh(1) = tmpxywh(1) + 240;
+
+    glc_drawscatter(tmpxywh, [xticklims, yticklims], [xtickvals; ytickvals], 4, ...
+                    struct('colors', [0.5 0.5 0.5, 1, true]));
 
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
