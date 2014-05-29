@@ -82,7 +82,9 @@ function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors, opts_da
     vec = xyxy(3:4).'-p1;
     rotvecn = ticklen.*[vec(2); -vec(1)] ./ hypot(vec(1), vec(2));
 
-    ff = (vals - lims(1)) ./ (lims(2) - lims(1));
+    % double(): don't let 'single' class of vals propagate further (assuming
+    % everting else is 'double')
+    ff = double((vals - lims(1)) ./ (lims(2) - lims(1)));
     tickposns = repmat(p1, 1, numvals) + repmat(ff, 2, 1).*repmat(vec, 1, numvals);
     tickposns(3:4, :) = tickposns + repmat(rotvecn, 1, numvals).*repmat(tickfactors, 2, 1);
 
