@@ -10,6 +10,11 @@ classdef GLCApplicationData < handle
         mbutton
     end
 
+    properties (Access=private)
+        windowID
+        glutWindowID
+    end
+
     methods
         % Constructor
         function self = GLCApplicationData()
@@ -38,6 +43,23 @@ classdef GLCApplicationData < handle
             % NOTE: invert y
             self.mxy = [x self.wh(2)-y];
             self.mbutton = mbutton;
+        end
+
+        % WINID = .attachNewWindow(POS, NAME, ...)
+        function winid = attachNewWindow(self, pos, name, varargin)
+            global glc
+            [self.windowID, self.glutWindowID] = glcall(...
+                glc.newwindow, pos, self.wh, name, varargin{:});
+            winid = self.windowID;
+        end
+
+        % [OK, OLDWINID] = .makeCurrent()
+        % Tries to make the window of this GLCApplicationData object current.
+        function [ok, oldwinid] = makeCurrent(self)
+            global glc GL
+            assert(~isempty(self.windowID), 'Must have called .attachNewWindow()')
+            oldwinid = glcall(glc.get, GL.WINDOW_ID);
+            ok = glcall(glc.set, GL.WINDOW_ID, self.windowID, self.glutWindowID);
         end
     end
 

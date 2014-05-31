@@ -168,7 +168,7 @@ Initialization, setup and teardown commands
 
 [float]
 [[glc_newwindow]]
-==== `WINID = glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
+==== `[WINID, GLUTWINID] = glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
 
 :glutCreateSubWindow: http://www.opengl.org/documentation/specs/glut/spec3/node17.html#SECTION00052000000000000000
 
@@ -233,6 +233,10 @@ specific to Gleemex. Its values are in the range
 [1{nbsp}..{nbsp}`MAXACTIVEWINDOWS`], where at most `MAXACTIVEWINDOWS` can be
 open at the same time (currently, 32). The identifiers of windows that have
 been closed may subsequently be reused.
+
+The FreeGLUT window index can be obtained in the second output argument
+`GLUTWINID`. Currently, the only place where Gleemex accepts a FreeGLUT window
+index is with <<glc_set,`glc.set`>>/`GL.WINDOW_ID`.
 
 [float]
 [[glc_closewindow]]
@@ -413,6 +417,7 @@ values are
   {glPushAttrib}[`glPushAttrib`]
 
 [float]
+[[glc_set]]
 ==== `glcall(glc.set, WHAT, VALUE)`
 
 :glPointSize: http://www.opengl.org/sdk/docs/man2/xhtml/glPointSize.xml
@@ -890,9 +895,9 @@ from `GLCApplicationData`.
 [float]
 ==== `ad = MyApplicationData()`
 
-Creates an object of `MyApplicationData`; each object is supposed to represent
-an instance of a particular application, similar to the relation of a process
-to one particular program at the OS level.
+Creates an object of `MyApplicationData`; each object represents an instance of
+a particular application, similar to the relation of a process to one
+particular program at the OS level.
 
 The `GLCApplicationData` constructor initializes some of its members to default
 values:
@@ -966,3 +971,23 @@ Updates the current mouse pointer position with the new mouse button state
 `buttons` and coordinates (`x`, `y`), as obtained from the <<cb_motion,mouse
 motion callback>>. Internally, `x` is stored as obtained, but the stored y is
 the difference of the current window width and the passed `y`.
+
+[float]
+==== `winid = ad.attachNewWindow(pos, name [, opts])`
+
+Creates a <<glc_newwindow,new window>> and stores the Gleemex and FreeGLUT
+window indices in private fields. The former one is returned in `winid`.
+The optional input argument `opts` is passed to the `glc.newwindow` call.
+
+[float]
+==== `[ok, oldwinid] = ad.makeCurrent()`
+
+Tries to make the window of this `GLCApplicationData` object current. A call to
+the `attachNewWindow` method must have previously taken place, otherwise an
+error is issued.
+
+* `ok`: a logical of whether making the application window succeeded. Failure
+  can for example occur because the window has been destroyed.
+
+* `oldwinid`: the Gleemex window identifier of the window that was current
+  prior to the call to `ad.makeCurrent`.

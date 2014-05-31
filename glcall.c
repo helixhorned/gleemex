@@ -59,6 +59,7 @@
 #define NEWWIN_IN_NAME (prhs[3])
 #define NEWWIN_IN_OPTSTRUCT (prhs[4])
 #define NEWWIN_OUT_WINID (plhs[0])
+#define NEWWIN_OUT_GLUTWINID (plhs[1])
 
 /* draw */
 #define DRAW_IN_PRIMITIVETYPE (prhs[1])
@@ -1158,9 +1159,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         mxArray *menus = NULL;
 
-        if (nlhs > 1 || (nrhs != 4 && nrhs != 5))
-            ourErrMsgTxt("Usage: [WINID =] GLCALL(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTSTRUCT]),"
-                         " create new window.");
+        if (nlhs > 2 || (nrhs != 4 && nrhs != 5))
+            ourErrMsgTxt("Usage: [WINID, GLUTWINID] = GLCALL(glc.newwindow, "
+                         "POS, EXTENT, WINDOWNAME [, OPTSTRUCT])");
 
         verifyparam(NEWWIN_IN_POS, "GLCALL: newwindow: POS", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
         verifyparam(NEWWIN_IN_EXTENT, "GLCALL: newwindow: EXTENT", VP_VECTOR|VP_DOUBLE|(2<<VP_VECLEN_SHIFT));
@@ -1373,11 +1374,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (GLEW_VERSION_1_4)
             glFogi(GL_FOG_COORD_SRC, GL_FRAGMENT_DEPTH);
 
-        if (nlhs > 0)
+        if (nlhs >= 1)
         {
             /* +1 is a convenience for the Octave/MATLAB coder */
             int32_t ret_ourwidx = g_ourwinidx[winid]+1;
+
             NEWWIN_OUT_WINID = createScalar(mxINT32_CLASS, &ret_ourwidx);
+            if (nlhs >= 2)
+                NEWWIN_OUT_GLUTWINID = createScalar(mxINT32_CLASS, &winid);
         }
     }
     break;
@@ -2570,16 +2574,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         case GLC__WINDOW_ID:
         {
-            int32_t ourwidx, glutwidx;
+            int32_t ourwidx, glutwidx, *ptr;
+            const int32_t n = mxGetNumberOfElements(SET_IN_VALUE);
 
-            verifyparam(SET_IN_VALUE, "GLCALL: set GL.WINDOW_ID: ID", VP_SCALAR|VP_INT32);
-            ourwidx = *(int32_t *)mxGetData(SET_IN_VALUE);
+            if (!mxIsInt32(SET_IN_VALUE) || !(n == 1 || n==2))
+                ourErrMsgTxt("GLCALL: set GL.WINDOW_ID: ID must be a int32 scalar or pair");
+
+            ptr = (int32_t *)mxGetData(SET_IN_VALUE);
+            ourwidx = ptr[0];
+
+            if (ourwidx < 1 || ourwidx > MAXACTIVEWINDOWS)
+                ourErrMsgTxt("GLCALL: set GL.WINDOW_ID: invalid window index");
             ourwidx--;
 
-            if ((unsigned)ourwidx >= MAXACTIVEWINDOWS)
-                ourErrMsgTxt("GLCALL: set GL.WINDOW_ID: invalid window index");
-
             if (!inited || (glutwidx=g_glutwinidx[ourwidx])==0)
+                return;
+
+            if (n == 2 && glutwidx != ptr[1])
                 return;
 
             glutSetWindow(glutwidx);
