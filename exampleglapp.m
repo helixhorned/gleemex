@@ -29,13 +29,14 @@ function exampleglapp(vertposns)
     glex.imagetex = imagetex;
 
     gsp = GLCScatterPlot().setGaps([10 10]);  % position will be set later
-    data = randn(170, 3);
-    data(:, 3) = 0.4*data(:, 3) + 0.6*data(:,2).^2 - 1.5;
+    data = randn(170, 3, 2);
+    data(:, 3,2) = 0.4*data(:, 3,2) + 0.6*data(:,2,1).^2 - 1.5;
     gsp.setData(data);
     gsp.setColors(jet(size(data,1)).').setShowColors(true);
-    gsp.setVarNames({'SomeVar', 'Second', 'SquareOfSecond'});
+    gsp.setVarNames({'VarA', 'VarB', 'Sqr_of_VarB_DS1'});
     gsp.setLimits(-3:-1:-5, 3:5);
     gsp.setTileDirection(true);
+    gsp.setAxesDataSets([1 2]);
 
     glex.gsp = gsp;
 

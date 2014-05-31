@@ -10,15 +10,17 @@ classdef GLCScatterPlot < handle
         % or the empty array (none requested).
         varnames
 
-        % Drawing limits for each variable
+        % Drawing limits for each variable. Each a (1, NUMVARS, NUMDSETS) vector.
+        % (That is, one obtained by reducing .data along the points dimension).
         mins
         maxs
 
-        % Ticks for each variable. A cell array of length NUMVARS
+        % Ticks for each variable and data set. A cell array of size (NUMVARS,
+        % NUMDSETS).
         ticks
 
-        % A (numsamples, numvars) matrix of values, or the empty array (no data yet
-        % passed).
+        % A (NUMPOINTS, NUMVARS, NUMDSETS) matrix of values, or the empty array (no
+        % data yet passed).
         data
 
         % The size of the drawn GL.POINT primitives
@@ -32,6 +34,10 @@ classdef GLCScatterPlot < handle
 
         % Display the tiles from bottom to top?
         upwards
+
+        % Data set indices. A pair [DSX, DSY] of indices into the third dimension of
+        % .data.
+        dsi
 
         %% Colors
 
@@ -52,6 +58,7 @@ classdef GLCScatterPlot < handle
             self.setTickTextHeight(8);
             self.setVarLabelHeight(10);
             self.setColors([]);
+            self.dsi = [1 1];  % Can't use setAxesDataSets() since .data is empty
         end
 
         %% Getters/setters
@@ -114,16 +121,30 @@ classdef GLCScatterPlot < handle
             numvars = size(self.data, 2);
         end
 
+        % NUMDSETS = .getNumDataSets()
+        function numdsets = getNumDataSets(self)
+            numdsets = size(self.data, 3);
+        end
+
         % SELF = .setData(DATA)
         function self = setData(self, data)
-            glc_assert(isnumeric(data) && ndims(data)==2, 'DATA must be a numeric matrix')
+            glc_assert(isnumeric(data) && ndims(data) <= 3, 'DATA must be a numeric array with <= 3 dims')
             glc_assert(~isempty(data), 'DATA must not be empty')
-            glc_assert(size(data, 2) <= 100, 'DATA must have 100 columns or less')
+            glc_assert(size(data, 2) <= 100, 'DATA must have 100 columns (variables) or less')
 
             self.data = data;
             self.checkInvalidate();
 
             self.setPointSize(self.calcPointSize());
+        end
+
+        % SELF = .setAxesDataSets(DSI)
+        function self = setAxesDataSets(self, dsi)
+            glc_assert(isnumeric(dsi) && numel(dsi)==2, 'DSI must be a numeric pair')
+            glc_assert(all(round(dsi) == dsi), 'DSI must be integers')
+            glc_assert(all(dsi >= 1 & dsi <= self.getNumDataSets()), 'DSI must be in [1 .. NUMDSETS]')
+
+            self.dsi = dsi;
         end
 
         % SELF = .setVarNames(NAMES)
@@ -171,11 +192,15 @@ classdef GLCScatterPlot < handle
             if (nargin < 2)
                 maxticks = 7;
             end
-            numvars = self.getNumVars();
-            self.ticks = cell(1, numvars)
 
-            for i=1:numvars
-                self.ticks{i} = glc_genticks([self.mins(i) self.maxs(i)], maxticks);
+            numvars = self.getNumVars();
+            numdsets = self.getNumDataSets();
+            self.ticks = cell(numvars, numdsets);
+
+            for v=1:numvars
+                for d=1:numdsets
+                    self.ticks{v,d} = glc_genticks([self.mins(1,v,d) self.maxs(1,v,d)], maxticks);
+                end
             end
         end
 
@@ -208,18 +233,34 @@ classdef GLCScatterPlot < handle
             numvars = self.getNumVars();
             pointsz = self.pointsz;
 
+            % Data set index for x and y axes:
+            dsx = self.dsi(1);
+            dsy = self.dsi(2);
+
+            if (dsx == dsy)
+                labelofs = 0.5*self.llwh(3:4);
+                labelalign = [0 0];
+            else
+                labelofs = [0.5, 1].*self.llwh(3:4) - [0, 4];
+                labelalign = [0 1];
+            end
+
             for i=1:numvars  % x-axis variable
                 for j=1:numvars  % y-axis variable
                     xywh = self.calcPosExt(i,j);
-                    lims = [self.mins(i) self.maxs(i) self.mins(j) self.maxs(j)];
+                    lims = [self.mins(1,i,dsx) self.maxs(1,i,dsx), ...
+                            self.mins(1,j,dsy) self.maxs(1,j,dsy)];
 
-                    if (i == j)
+                    nodraw = (i == j && dsx == dsy);
+
+                    if (nodraw)
                         data = zeros(2, 0);
                     else
-                        data = self.data(:, [i j]).';
+                        data = [self.data(:, i, dsx).'; ...
+                                self.data(:, j, dsy).'];
                     end
 
-                    if (self.showcolors && self.haveColors() && i ~= j)
+                    if (self.showcolors && self.haveColors() && ~nodraw)
                         glc_drawscatter(xywh, lims, data, pointsz, self.colors);
                     else
                         glc_drawscatter(xywh, lims, data, pointsz);
@@ -227,8 +268,8 @@ classdef GLCScatterPlot < handle
 
                     if (i == j && ~isempty(self.varnames) && self.varlabelheight > 0)
                         % Draw variable label
-                        glcall(glc.text, xywh(1:2) + 0.5*xywh(3:4), ...
-                               self.varlabelheight, self.varnames{i}, [0 0]);
+                        glcall(glc.text, xywh(1:2) + labelofs, ...
+                               self.varlabelheight, self.varnames{i}, labelalign);
                     end
                 end
             end
@@ -238,7 +279,8 @@ classdef GLCScatterPlot < handle
             textheight = self.ticktextheight;
 
             for i=1:numvars
-                lims = [self.mins(i) self.maxs(i)];
+                xlims = [self.mins(1,i,dsx) self.maxs(1,i,dsx)];
+                ylims = [self.mins(1,i,dsy) self.maxs(1,i,dsy)];
 
                 if (~self.upwards)
                     top = 1;
@@ -248,7 +290,7 @@ classdef GLCScatterPlot < handle
                     bottom = 1;
                 end
 
-                % Top/bottom
+                % X axis: top/bottom
                 if (side > 0)
                     pe = self.calcPosExt(i, top);  % top
                     pe = pe + [0 pe(4), 0 -pe(4)];
@@ -256,9 +298,9 @@ classdef GLCScatterPlot < handle
                     pe = self.calcPosExt(i, bottom);  % bottom
                     pe(4) = 0;
                 end
-                glc_drawticks(glc_toxyxy(pe), lims, self.ticks{i}, side*4, -textheight);
+                glc_drawticks(glc_toxyxy(pe), xlims, self.ticks{i,dsx}, side*4, -textheight);
 
-                % Left/right
+                % Y axis: left/right
                 if (side > 0)
                     pe = self.calcPosExt(numvars, i);  % right
                     pe = pe + [pe(3) 0, -pe(3) 0];
@@ -266,7 +308,7 @@ classdef GLCScatterPlot < handle
                     pe = self.calcPosExt(1, i);  % left
                     pe(3) = 0;
                 end
-                glc_drawticks(glc_toxyxy(pe), lims, self.ticks{i}, -side*4, -textheight);
+                glc_drawticks(glc_toxyxy(pe), ylims, self.ticks{i,dsy}, -side*4, -textheight);
 
                 side = -side;
             end
@@ -289,16 +331,23 @@ classdef GLCScatterPlot < handle
         end
 
         function lim = checkLimit(self, lim, name)
-            if (~isnumeric(lim) || ~isvector(lim))
-                error([name ' must be a numeric vector']);
+            if (~isnumeric(lim) || size(lim, 1) ~= 1)
+                error([name ' must be numeric array with one row']);
             end
 
             numvars = self.getNumVars();
+            numdsets = self.getNumDataSets();
+            targetsz = [1 numvars numdsets];
 
-            if (numel(lim) == 1)
-                lim = repmat(lim, 1, numvars);
-            elseif (numel(lim) ~= numvars)
-                error([name ' must be a scalar ot have length NUMVARS'])
+            if (~isequal(size(lim), targetsz))
+                switch (size(lim))
+                  case [1 1],
+                    lim = repmat(lim, targetsz);
+                  case [1 numvars],
+                    lim = repmat(lim, [1 1 numdsets]);
+                  otherwise,
+                    error([name ' must be a scalar or have size [1, NUMVARS [, NUMDSETS]]'])
+                end
             end
         end
 
@@ -319,7 +368,7 @@ classdef GLCScatterPlot < handle
                 self.varnames = [];
             end
 
-            if (numel(self.mins) ~= numvars)
+            if (size(self.mins, 2) ~= numvars)
                 self.mins = [];
                 self.maxs = [];
             end
@@ -328,6 +377,10 @@ classdef GLCScatterPlot < handle
                 if (size(self.colors.colors, 2) ~= self.getNumPoints())
                     self.setColors([]);
                 end
+            end
+
+            if (any(self.dsi > self.getNumDataSets()))
+                self.setAxesDataSets([1 1]);
             end
         end
     end
