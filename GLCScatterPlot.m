@@ -29,12 +29,16 @@ classdef GLCScatterPlot < handle
 
         % The text height of the variable labels
         varlabelheight
+
+        % Display the tiles from bottom to top?
+        upwards
     end
 
     methods
         % Constructor.
         % GSC = GLCScatterPlot()
         function self = GLCScatterPlot()
+            self.setTileDirection(false);
             self.setTickTextHeight(8);
             self.setVarLabelHeight(10);
         end
@@ -72,6 +76,13 @@ classdef GLCScatterPlot < handle
         function self = setVarLabelHeight(self, height)
             GLCScatterPlot.checkTextHeight(height);
             self.varlabelheight = height;
+        end
+
+        % SELF = .setTileDirection(UPWARDS)
+        function self = setTileDirection(self, upwards)
+            glc_assert(islogical(upwards) && numel(upwards)==1, ...
+                       'UPWARDSP must be a logical scalar')
+            self.upwards = upwards;
         end
 
         % State variables.
@@ -128,6 +139,20 @@ classdef GLCScatterPlot < handle
             end
         end
 
+        % XYWH = .calcPosExt(I, J)
+        % Get position and extent for glc_drawscatter()'s XYWH.
+        function xywh = calcPosExt(self, i, j)
+            if (self.upwards)
+                j = self.getNumVars() - j + 1;
+            end
+
+            llwh = self.llwh;
+            xygap = self.xygap;
+
+            xywh = llwh + [(i-1)*(llwh(3)+xygap(1)), ...
+                           -(j-1)*(llwh(4)+xygap(2)), 0, 0];
+        end
+
         %% Drawing
 
         % .draw()
@@ -171,12 +196,20 @@ classdef GLCScatterPlot < handle
             for i=1:numvars
                 lims = [self.mins(i) self.maxs(i)];
 
+                if (~self.upwards)
+                    top = 1;
+                    bottom = numvars;
+                else
+                    top = numvars;
+                    bottom = 1;
+                end
+
                 % Top/bottom
                 if (side > 0)
-                    pe = self.calcPosExt(i, 1);  % top
+                    pe = self.calcPosExt(i, top);  % top
                     pe = pe + [0 pe(4), 0 -pe(4)];
                 else
-                    pe = self.calcPosExt(i, numvars);  % bottom
+                    pe = self.calcPosExt(i, bottom);  % bottom
                     pe(4) = 0;
                 end
                 glc_drawticks(glc_toxyxy(pe), lims, self.ticks{i}, side*4, -textheight);
@@ -209,15 +242,6 @@ classdef GLCScatterPlot < handle
             else
                 pointsz = 1;
             end
-        end
-
-        % Get position and extent for glc_drawscatter()'s XYWH.
-        function xywh = calcPosExt(self, i, j)
-            llwh = self.llwh;
-            xygap = self.xygap;
-
-            xywh = llwh + [(i-1)*(llwh(3)+xygap(1)), ...
-                           -(j-1)*(llwh(4)+xygap(2)), 0, 0];
         end
 
         function lim = checkLimit(self, lim, name)

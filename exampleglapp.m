@@ -34,6 +34,7 @@ function exampleglapp(vertposns)
     gsp.setData(data);
     gsp.setVarNames({'SomeVar', 'Second', 'SquareOfSecond'});
     gsp.setLimits(-3:-1:-5, 3:5);
+    gsp.setTileDirection(true);
 
     glex.gsp = gsp;
 
