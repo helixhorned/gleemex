@@ -102,6 +102,7 @@
 
 /* toggle */
 #define TOGGLE_IN_KV (prhs[1])
+#define TOGGLE_OUT_OLDSTATE (plhs[0])
 
 /* scissor */
 #define SCISSOR_IN_XYWH (prhs[1])
@@ -2274,6 +2275,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     {
         int32_t numkeys, i, j;
         const int32_t *kv;
+        int32_t *oldvals = NULL;
 
         static const GLenum accessible_enables[] = {
             GL_DEPTH_TEST, GL_SCISSOR_TEST, GL_BLEND, GL_POINT_SMOOTH, GL_LINE_SMOOTH,
@@ -2281,8 +2283,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             GL_POLYGON_OFFSET_POINT, GL_POLYGON_OFFSET_LINE, GL_POLYGON_OFFSET_FILL,
         };
 
-        if (nlhs != 0 || nrhs != 2)
-            ourErrMsgTxt("Usage: GLCALL(glc.toggle, [GL.<WHAT1> <state1> [, GL.<WHAT2> <state2>, ...]]))");
+        if (nlhs > 1 || nrhs != 2)
+            ourErrMsgTxt("Usage: OLDVALS = GLCALL(glc.toggle, [GL.<WHAT1> <state1> [, GL.<WHAT2> <state2>, ...]]))");
 
         verifyparam(TOGGLE_IN_KV, "GLCALL: toggle: KV", VP_VECTOR|VP_INT32);
         numkeys = mxGetNumberOfElements(TOGGLE_IN_KV);
@@ -2302,12 +2304,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 GLC_MEX_ERROR("GLCALL: toggle: unsupported enable at position 2*%d", i);
         }
 
+        if (nlhs > 0)
+        {
+            TOGGLE_OUT_OLDSTATE = mxCreateNumericMatrix(1, 2*numkeys, mxINT32_CLASS, mxREAL);
+            oldvals = (int32_t *)mxGetData(TOGGLE_OUT_OLDSTATE);
+        }
+
         for (i=0; i<numkeys; i++)
         {
             int32_t val = kv[2*i+1];
 
-            if (val < 0)  /* flip */
-                val = !glIsEnabled(kv[2*i]);
+            if (val < 0 || nlhs > 0)
+            {
+                int32_t oval = glIsEnabled(kv[2*i]);
+
+                if (nlhs > 0)
+                {
+                    oldvals[2*i] = kv[2*i];
+                    oldvals[2*i+1] = oval;
+                }
+
+                if (val < 0)  /* flip */
+                    val = !oval;
+            }
 
             if (val)
                 glEnable(kv[2*i]);

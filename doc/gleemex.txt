@@ -367,7 +367,7 @@ Defines a scissor box by calling {glScissor}[`glScissor`] with the elements of
 `XYWH`, which must be a 4-vector of type `int32`.
 
 [float]
-==== `glcall(glc.toggle, KV_PAIRS)`
+==== `OLDSTATE = glcall(glc.toggle, KV_PAIRS)`
 
 :glEnable: http://www.opengl.org/sdk/docs/man2/xhtml/glEnable.xml
 
@@ -386,6 +386,10 @@ Toggles the {glEnable}[enable] state of various server-side GL capabilities.
 
 ** `VALUE`: 1 for enabling the capability, 0 for disabling it, or -1 for
    flipping its enable state.
+
+* `OLDSTATE`: an `int32` vector of the same size and format as `KV_PAIRS`
+  containing the old enable state of the requested capabilities. It can be
+  passed to a later `glc.toggle` call to restore that state.
 
 .Example
 [source]
