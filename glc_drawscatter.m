@@ -27,13 +27,14 @@ function glc_drawscatter(xywh, lims_xxyy, values, pointsz, varargin)
     if (pointsz ~= 1)
         opointsz = glcall(glc.get, GL.POINT_SIZE);
         glcall(glc.set, GL.POINT_SIZE, pointsz);
-        glcall(glc.toggle, [GL.POINT_SMOOTH 1]);
+        otog = glcall(glc.toggle, [GL.POINT_SMOOTH 1, GL.BLEND 1]);
     end
 
     glcall(glc.draw, GL.POINTS, values, varargin{:});
 
     if (pointsz ~= 1)
         glcall(glc.set, GL.POINT_SIZE, opointsz);
+        glcall(glc.toggle, otog);
     end
 
     glc_axes_finish([0.2 0.2 0.2]);

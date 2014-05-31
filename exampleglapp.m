@@ -312,9 +312,7 @@ function ex_display()
     glcall(glc.set, GL.POINT_SIZE, 1);
 
     glex.gsp.setPosExt(posext);
-    glcall(glc.toggle, [GL.BLEND 1]);
     glex.gsp.draw();
-    glcall(glc.toggle, [GL.BLEND 0]);
 
 %{
     tmpxywh(1:2) = tmpxywh(1:2) + [10 0];  % reset the previous two tweaks
