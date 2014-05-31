@@ -32,6 +32,7 @@ function exampleglapp(vertposns)
     data = randn(170, 3);
     data(:, 3) = 0.4*data(:, 3) + 0.6*data(:,2).^2 - 1.5;
     gsp.setData(data);
+    gsp.setColors(jet(size(data,1)).').setShowColors(true);
     gsp.setVarNames({'SomeVar', 'Second', 'SquareOfSecond'});
     gsp.setLimits(-3:-1:-5, 3:5);
     gsp.setTileDirection(true);

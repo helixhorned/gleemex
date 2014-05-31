@@ -32,6 +32,16 @@ classdef GLCScatterPlot < handle
 
         % Display the tiles from bottom to top?
         upwards
+
+        %% Colors
+
+        % A struct('colors', COLORS), where COLORS is a
+        % a 3xNUMPOINTS matrix of class uint8, single or double.
+        % (Or the empty  if none have been registered.)
+        colors
+
+        % Show colored points?
+        showcolors
     end
 
     methods
@@ -41,6 +51,7 @@ classdef GLCScatterPlot < handle
             self.setTileDirection(false);
             self.setTickTextHeight(8);
             self.setVarLabelHeight(10);
+            self.setColors([]);
         end
 
         %% Getters/setters
@@ -81,18 +92,30 @@ classdef GLCScatterPlot < handle
         % SELF = .setTileDirection(UPWARDS)
         function self = setTileDirection(self, upwards)
             glc_assert(islogical(upwards) && numel(upwards)==1, ...
-                       'UPWARDSP must be a logical scalar')
+                       'UPWARDS must be a logical scalar')
             self.upwards = upwards;
         end
 
+        % SELF = .setShowColors(DOSHOW)
+        function self = setShowColors(self, doshow)
+            glc_assert(islogical(doshow) && numel(doshow)==1, ...
+                       'DOSHOW must be a logical scalar')
+            self.showcolors = doshow;
+        end
+
         % State variables.
+
+        function numpoints = getNumPoints(self)
+            numpoints = size(self.data, 1);
+        end
 
         % NUMVARS = .getNumVars()
         function numvars = getNumVars(self)
             numvars = size(self.data, 2);
         end
 
-        function setData(self, data)
+        % SELF = .setData(DATA)
+        function self = setData(self, data)
             glc_assert(isnumeric(data) && ndims(data)==2, 'DATA must be a numeric matrix')
             glc_assert(~isempty(data), 'DATA must not be empty')
             glc_assert(size(data, 2) <= 100, 'DATA must have 100 columns or less')
@@ -103,8 +126,8 @@ classdef GLCScatterPlot < handle
             self.setPointSize(self.calcPointSize());
         end
 
-        % .setVarNames(NAMES)
-        function setVarNames(self, names)
+        % SELF = .setVarNames(NAMES)
+        function self = setVarNames(self, names)
             glc_assert(self.getNumVars() > 0, 'Must have called setupData()')
             glc_assert(iscellstr(names) && isvector(names), 'NAMES must be a string cell vector')
             glc_assert(numel(names) == self.getNumVars(), 'NAMES must have NUMVARS elements')
@@ -112,12 +135,29 @@ classdef GLCScatterPlot < handle
             self.varnames = names;
         end
 
-        % .setLimits(MINS, MAXS)
-        function setLimits(self, mins, maxs)
+        % SELF = .setLimits(MINS, MAXS)
+        function self = setLimits(self, mins, maxs)
             self.mins = self.checkLimit(mins);
             self.maxs = self.checkLimit(maxs);
             self.calcTicks();
         end
+
+        % SELF = .setColors([COLORS])
+        function self = setColors(self, colors)
+            if (isempty(colors))
+                self.colors = [];
+            else
+                glc_assert(ndims(colors)==2 && size(colors)==[3 self.getNumPoints()], ...
+                           'COLORS must have size [3 NUMPOINTS]')
+                cls = class(colors);
+                glc_assert(any(strcmp(cls, { 'uint8', 'single', 'double' })), ...
+                           'COLORS must have class uint8, single or double')
+
+                self.colors = struct('colors', colors);
+            end
+        end
+
+        % Calculation of display state
 
         % .calcLimitsAuto()
         function calcLimitsAuto(self)
@@ -179,7 +219,11 @@ classdef GLCScatterPlot < handle
                         data = self.data(:, [i j]).';
                     end
 
-                    glc_drawscatter(xywh, lims, data, pointsz);
+                    if (self.showcolors && self.haveColors() && i ~= j)
+                        glc_drawscatter(xywh, lims, data, pointsz, self.colors);
+                    else
+                        glc_drawscatter(xywh, lims, data, pointsz);
+                    end
 
                     if (i == j && ~isempty(self.varnames) && self.varlabelheight > 0)
                         % Draw variable label
@@ -231,7 +275,7 @@ classdef GLCScatterPlot < handle
 
     methods (Access=protected)
         function pointsz = calcPointSize(self)
-            numsamples = size(self.data, 1);
+            numsamples = self.getNumPoints();
 
             if (numsamples <= 10)
                 pointsz = 4;
@@ -264,6 +308,10 @@ classdef GLCScatterPlot < handle
             glc_assert(~isempty(self.data), 'Must have registered data with setData()')
         end
 
+        function have = haveColors(self)
+            have = ~isempty(self.colors);
+        end
+
         function checkInvalidate(self)
             numvars = self.getNumVars();
 
@@ -274,6 +322,12 @@ classdef GLCScatterPlot < handle
             if (numel(self.mins) ~= numvars)
                 self.mins = [];
                 self.maxs = [];
+            end
+
+            if (self.haveColors())
+                if (size(self.colors.colors, 2) ~= self.getNumPoints())
+                    self.setColors([]);
+                end
             end
         end
     end
