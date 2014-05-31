@@ -1,4 +1,12 @@
 % glc_drawscatter(XYWH, LIMS_XXYY, VALUES [, POINTSZ [, OPTS]])
+% Draws a scatter plot in the axes defined by XYWH with given data limits.
+%
+% XYWH: a 4-vector (x,y, w,h) denoting the position and extent of the axes
+% LIMS_XXYY: data limits (x1,x2, y1,y1)
+% VALUES: a matrix of size 2-by-#values. VALUES(1,:) will be plotted on the x
+%  axis against VALUES(2,:) on the y axis as separate GL.POINTS
+% POINTSZ: the point size in pixels
+% OPTS: a struct passed to the glcall(glc.draw, ...) call for the VALUES.
 function glc_drawscatter(xywh, lims_xxyy, values, pointsz, varargin)
     global GL glc
 

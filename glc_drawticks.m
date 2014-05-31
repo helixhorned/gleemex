@@ -36,11 +36,10 @@
 function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors, opts_data)
     glc_assert(isnumeric(xyxy) && numel(xyxy)==4, 'XYXY must be a numeric 4-array')
     glc_assert(isnumeric(lims) && numel(lims)==2, 'LIMS must be a numeric pair')
-    glc_assert(isnumeric(vals) && isvector(vals) && numel(vals) >= 2, ...
-           'VALS must be a numeric vector of length at least 2')
     glc_assert(lims(1) < lims(2), 'LIMS(2) must be greater than LIMS(1)');
 
-    glc_assert(isnumeric(vals) && isvector(vals), 'VALS must be a numeric vector')
+    glc_assert(isnumeric(vals) && (isempty(vals) || isvector(vals)), ...
+               'VALS must be a numeric, potentially empty vector')
 
     numvals = numel(vals);
 
@@ -76,22 +75,27 @@ function glc_drawticks(xyxy, lims, vals, ticklen, textsize, tickfactors, opts_da
     global glc GL
 
     xyxy = reshape(xyxy, 2, 2);
-    vals = vals(:).';
 
-    p1 = xyxy(1:2).';  % col vec
-    vec = xyxy(3:4).'-p1;
-    rotvecn = ticklen.*[vec(2); -vec(1)] ./ hypot(vec(1), vec(2));
+    if (numvals ~= 0)
+        vals = vals(:).';
 
-    % double(): don't let 'single' class of vals propagate further (assuming
-    % everting else is 'double')
-    ff = double((vals - lims(1)) ./ (lims(2) - lims(1)));
-    tickposns = repmat(p1, 1, numvals) + repmat(ff, 2, 1).*repmat(vec, 1, numvals);
-    tickposns(3:4, :) = tickposns + repmat(rotvecn, 1, numvals).*repmat(tickfactors, 2, 1);
+        p1 = xyxy(1:2).';  % col vec
+        vec = xyxy(3:4).'-p1;
+        rotvecn = ticklen.*[vec(2); -vec(1)] ./ hypot(vec(1), vec(2));
 
-    glcall(glc.draw, GL.LINES, reshape(tickposns, 2, []), opts_data);
+        % double(): don't let 'single' class of vals propagate further (assuming
+        % everting else is 'double')
+        ff = double((vals - lims(1)) ./ (lims(2) - lims(1)));
+        tickposns = repmat(p1, 1, numvals) + repmat(ff, 2, 1).*repmat(vec, 1, numvals);
+        tickposns(3:4, :) = tickposns + repmat(rotvecn, 1, numvals).*repmat(tickfactors, 2, 1);
+
+        glcall(glc.draw, GL.LINES, reshape(tickposns, 2, []), opts_data);
+    end
+
+    % The "ruler line" is the only thing that's drawn if we have no values.
     glcall(glc.draw, GL.LINES, xyxy, opts_line);
 
-    if (textsize == 0)
+    if (textsize == 0 || numvals == 0)
         return
     end
 
