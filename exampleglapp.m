@@ -28,6 +28,15 @@ function exampleglapp(vertposns)
     glex = struct();
     glex.imagetex = imagetex;
 
+    gsp = GLCScatterPlot().setGaps([10 10]);  % position will be set later
+    data = randn(170, 3);
+    data(:, 3) = 0.4*data(:, 3) + 0.6*data(:,2).^2 - 1.5;
+    gsp.setData(data);
+    gsp.setVarNames({'SomeVar', 'Second', 'SquareOfSecond'});
+    gsp.setLimits(-3:-1:-5, 3:5);
+
+    glex.gsp = gsp;
+
     if (imagetex)
         %    try
         %        OCTAVE_VERSION;
@@ -226,12 +235,13 @@ function ex_display()
     nslices = 17;
     indices = uint32([ones(1,nslices); 1:nslices; 2:nslices+1]-1);
     indices = indices(:);
-
+%{
     glcall(glc.toggle, [GL.POINT_SMOOTH 1, GL.BLEND 1]);
     glcall(glc.set, GL.POINT_SIZE, 18);
     glcall(glc.draw, GL.POINTS, vertposns);
     glcall(glc.set, GL.POINT_SIZE, 1);
     glcall(glc.toggle, [GL.POINT_SMOOTH 0, GL.BLEND 0]);
+%}
 %{
     for i=1:size(vertposns,2)
         vpos = glex.circ17 * 21;
@@ -247,7 +257,7 @@ function ex_display()
     for ang=0:30:180
         glcall(glc.push, GL.MODELVIEW);
         %    glcall(glc.mulmatrix, GL.MODELVIEW, [90, 0 0 1]);
-        glcall(glc.mulmatrix, GL.MODELVIEW, [800 200 0]);  % translate text origin (lower left) to screen coords
+        glcall(glc.mulmatrix, GL.MODELVIEW, [940 550 0]);  % translate text origin (lower left) to screen coords
         glcall(glc.mulmatrix, GL.MODELVIEW, [ang, 0 0 1]);  % rotate wrt origin
         glcall(glc.text, [20 0], 8+8*ang/180, ...
                sprintf('bounds: [%.01f %.01f] ang:%d', ...
@@ -292,14 +302,26 @@ function ex_display()
     ytickvals = -5 + 10*rand(1, 4);
     glc_drawticks(xyxy, yticklims, ytickvals, -6, 8);
 
-    %% Scatter plot
+    %% Multi-scatter plot
 
+    posext = [1 1, 0.6 0.6] .* (tmpxywh + [100 -100, 0 0]);
+
+    glcall(glc.set, GL.POINT_SIZE, 18);
+    glcall(glc.draw, GL.POINTS, posext(1:2).');
+    glcall(glc.set, GL.POINT_SIZE, 1);
+
+    glex.gsp.setPosExt(posext);
+    glcall(glc.toggle, [GL.BLEND 1]);
+    glex.gsp.draw();
+    glcall(glc.toggle, [GL.BLEND 0]);
+
+%{
     tmpxywh(1:2) = tmpxywh(1:2) + [10 0];  % reset the previous two tweaks
     tmpxywh(1) = tmpxywh(1) + 240;
 
     glc_drawscatter(tmpxywh, [xticklims, yticklims], [xtickvals; ytickvals], 4, ...
                     struct('colors', [0.5 0.5 0.5, 1, true]));
-
+%}
     % torture test 1
 %    glcall(glc.draw, GL.LINES, glex.lotsofverts, struct('colors', glex.lotsofcolors));
     
