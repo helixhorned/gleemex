@@ -13,6 +13,8 @@ classdef GLCApplicationData < handle
     properties (Access=private)
         windowID
         glutWindowID
+
+        oldWindowID
     end
 
     methods
@@ -59,7 +61,27 @@ classdef GLCApplicationData < handle
             global glc GL
             assert(~isempty(self.windowID), 'Must have called .attachNewWindow()')
             oldwinid = glcall(glc.get, GL.WINDOW_ID);
-            ok = glcall(glc.set, GL.WINDOW_ID, self.windowID, self.glutWindowID);
+            ok = glcall(glc.set, GL.WINDOW_ID, [self.windowID, self.glutWindowID]);
+            if (ok)
+                self.oldWindowID = oldwinid;
+            end
+        end
+
+        % OK = .restoreOldWindow()
+        function restoreOldWindow(self)
+            global glc GL
+            glc_assert(~isempty(self.oldWindowID), 'Must have called .makeCurrent()')
+            ok = glcall(glc.set, GL.WINDOW_ID, self.oldWindowID);
+        end
+
+        % OK = .postRedisplay()
+        function ok = postRedisplay(self)
+            ok = self.makeCurrent();
+            if (ok)
+                global glc
+                glcall(glc.redisplay);
+                self.restoreOldWindow();
+            end
         end
     end
 

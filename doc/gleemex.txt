@@ -236,7 +236,8 @@ been closed may subsequently be reused.
 
 The FreeGLUT window index can be obtained in the second output argument
 `GLUTWINID`. Currently, the only place where Gleemex accepts a FreeGLUT window
-index is with <<glc_set,`glc.set`>>/`GL.WINDOW_ID`.
+index is as the second element of a pair to
+<<glc_set,`glc.set`>>/`GL.WINDOW_ID`.
 
 [float]
 [[glc_closewindow]]
@@ -624,6 +625,7 @@ should not contain newlines.
 ** `mono`: a scalar logical of whether to use the monospaced Roman font
 
 [float]
+[[glc_redisplay]]
 ==== `glcall(glc.redisplay [, NOW])`
 
 :glutPostRedisplay: http://www.opengl.org/documentation/specs/glut/spec3/node20.html#SECTION00055000000000000000
@@ -984,10 +986,26 @@ The optional input argument `opts` is passed to the `glc.newwindow` call.
 
 Tries to make the window of this `GLCApplicationData` object current. A call to
 the `attachNewWindow` method must have previously taken place, otherwise an
-error is issued.
+error is issued. Before the switch, the window index of the old current window
+is backed up in a private field, for later restoration by `restoreOldWindow`.
 
 * `ok`: a logical of whether making the application window succeeded. Failure
   can for example occur because the window has been destroyed.
 
 * `oldwinid`: the Gleemex window identifier of the window that was current
   prior to the call to `ad.makeCurrent`.
+
+[float]
+==== `ok = .restoreOldWindow()`
+
+Changes the current window to that which was current before the last call to
+the `makeCurrent` method. The output argument `ok` tells whether that
+succeeded.
+
+[float]
+==== `ok = .postRedisplay()`
+
+Calls <<glc_redisplay,`glc.redisplay`>> for this `ad`'s window (registered with
+`attachNewWindow`), but wrapping it in backup and restoration of the current
+one.  The output argument `ok` is from `ad.makeCurrent()` and tells whether
+this operation was performed.
