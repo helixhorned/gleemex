@@ -313,6 +313,12 @@ classdef GLCScatterPlot < handle
                 side = -side;
             end
         end
+
+        % HAVE = .haveFullState()
+        function have = haveFullState(self)
+            % KEEPINSYNC checkFullState()
+            have = (~isempty(self.llwh) && ~isempty(self.xygap) && ~isempty(self.data));
+        end
     end
 
     methods (Access=protected)
