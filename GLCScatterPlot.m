@@ -129,10 +129,13 @@ classdef GLCScatterPlot < handle
         % SELF = .setData(DATA)
         function self = setData(self, data)
             glc_assert(isnumeric(data) && ndims(data) <= 3, 'DATA must be a numeric array with <= 3 dims')
-            glc_assert(~isempty(data), 'DATA must not be empty')
             glc_assert(size(data, 2) <= 100, 'DATA must have 100 columns (variables) or less')
 
-            self.data = data;
+            if (isempty(data))
+                self.data = [];
+            else
+                self.data = data;
+            end
             self.checkInvalidate();
 
             self.setPointSize(self.calcPointSize());
