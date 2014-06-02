@@ -101,9 +101,9 @@ function ticks = glc_genticks(lims, maxticks)
         return
     end
 
-    if (any(diglo(di+1:end-1) ~= '0'))
-        % "Add 1 to the digit at position di"
-        diglo(di+1:end-1) = '9';
+    if (any(diglo(di+2:end-1) ~= '0'))
+        % "Add 1 to the digit at position di+1"
+        diglo(di+2:end-1) = '9';
     end
 
     strlo([1, 3:17, 2]) = diglo;
