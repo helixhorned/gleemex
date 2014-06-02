@@ -29,8 +29,12 @@ classdef GLCScatterPlot < handle
         % The text height of the tick labels
         ticktextheight
 
-        % The text height of the variable labels
+        % The max. text height of the variable labels
+        maxvarlabelheight
+        % The really used one, is <= maxvarlabelheight
         varlabelheight
+        % Set to true whenever varlabelheight should be updated from maxvarlabelheight
+        needLabelHeightUpdate
 
         % Display the tiles from bottom to top?
         upwards
@@ -70,6 +74,7 @@ classdef GLCScatterPlot < handle
             glc_assert(isnumeric(ulwh) && isvector(ulwh) && numel(ulwh)==4, ...
                        'ULWH must be a numeric 4-vector')
             self.llwh = ulwh - [0 ulwh(4)-1, 0 0];
+            self.needLabelHeightUpdate = true;
         end
 
         % SELF =.setGaps(XYGAP)
@@ -93,7 +98,8 @@ classdef GLCScatterPlot < handle
         % SELF = .setVarLabelHeight(HEIGHT)
         function self = setVarLabelHeight(self, height)
             GLCScatterPlot.checkTextHeight(height);
-            self.varlabelheight = height;
+            self.maxvarlabelheight = height;
+            self.needLabelHeightUpdate = true;
         end
 
         % SELF = .setTileDirection(UPWARDS)
@@ -137,6 +143,7 @@ classdef GLCScatterPlot < handle
                 self.data = data;
             end
             self.checkInvalidate();
+            self.needLabelHeightUpdate = true;
 
             self.setPointSize(self.calcPointSize());
         end
@@ -157,6 +164,7 @@ classdef GLCScatterPlot < handle
             glc_assert(numel(names) == self.getNumVars(), 'NAMES must have NUMVARS elements')
 
             self.varnames = names;
+            self.needLabelHeightUpdate = true;
         end
 
         % SELF = .setLimits(MINS, MAXS)
@@ -247,6 +255,8 @@ classdef GLCScatterPlot < handle
                 labelofs = [0.5, 1].*self.llwh(3:4) - [0, 4];
                 labelalign = [0 1];
             end
+
+            self.checkVarLabelHeight();
 
             for i=1:numvars  % x-axis variable
                 for j=1:numvars  % y-axis variable
@@ -356,6 +366,36 @@ classdef GLCScatterPlot < handle
                     lim = repmat(lim, [1 1 numdsets]);
                   otherwise,
                     error([name ' must be a scalar or have size [1, NUMVARS [, NUMDSETS]]'])
+                end
+            end
+        end
+
+        % .checkVarLabelHeight()
+        % Calculate .varlabelheight from maxvarlabelheight when necessary, considering
+        % the width of a single scatter plot. Must be called from a context
+        % where drawing is valid.
+        function checkVarLabelHeight(self)
+            maxheight = self.maxvarlabelheight;
+            margins = 4;  % sum of the left and right margins
+            w = self.llwh(3) - margins;
+
+            if (isempty(maxheight) || isempty(self.varnames) || w <= 0)
+                self.varlabelheight = 0;
+            elseif (self.needLabelHeightUpdate)
+                global glc
+                self.needLabelHeightUpdate = false;
+
+                maxwidth = 0;
+                for i=1:self.getNumVars()
+                    textwidth = glcall(glc.text, [0 0], maxheight, self.varnames{i});
+                    maxwidth = max(maxwidth, textwidth);
+                end
+
+                if (maxwidth > w)
+                    f = w/maxwidth;
+                    self.varlabelheight = floor(f*maxheight);
+                else
+                    self.varlabelheight = maxheight;
                 end
             end
         end
