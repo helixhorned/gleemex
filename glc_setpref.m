@@ -7,5 +7,10 @@ function glc_setpref(group, pref, val)
     s.(pref) = val;
 
     filename = glc_prefmatfile(group);
-    save(filename, '-v7', '-append', '-struct', 's');
+    if (~exist(filename, 'file'))
+        % MATLAB errors on -append when file doesn't exist.
+        save(filename, '-v7', '-struct', 's');
+    else
+        save(filename, '-v7', '-append', '-struct', 's');
+    end
 end
