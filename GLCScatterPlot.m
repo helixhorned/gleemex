@@ -179,7 +179,7 @@ classdef GLCScatterPlot < handle
             if (isempty(colors))
                 self.colors = [];
             else
-                glc_assert(ndims(colors)==2 && size(colors)==[3 self.getNumPoints()], ...
+                glc_assert(ndims(colors)==2 && isequal(size(colors), [3 self.getNumPoints()]), ...
                            'COLORS must have size [3 NUMPOINTS]')
                 cls = class(colors);
                 glc_assert(any(strcmp(cls, { 'uint8', 'single', 'double' })), ...
@@ -359,10 +359,14 @@ classdef GLCScatterPlot < handle
             targetsz = [1 numvars numdsets];
 
             if (~isequal(size(lim), targetsz))
-                switch (size(lim))
-                  case [1 1],
+                if (size(lim,1) ~= 1)
+                    error('%s must have one row', name);
+                end
+
+                switch (size(lim,2))
+                  case 1,
                     lim = repmat(lim, targetsz);
-                  case [1 numvars],
+                  case numvars,
                     lim = repmat(lim, [1 1 numdsets]);
                   otherwise,
                     error([name ' must be a scalar or have size [1, NUMVARS [, NUMDSETS]]'])
