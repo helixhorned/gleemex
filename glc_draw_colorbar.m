@@ -8,7 +8,7 @@
 % NUMTICKS: the number of tick marks, divided between min and max
 %  bound. If negative, glc_genticks() is used with -NUMTICKS ticks.
 %  Default: 7
-% TEXTHEIGHT: the text height passed to glcall(glc.text, ...).
+% TEXTHEIGHT: the text height of the tick marks in pixels.
 %  Default: 10
 function glc_draw_colorbar(rect, bounds, label, cmaptexname, format, numticks, textheight)
     global glc GL
@@ -30,8 +30,7 @@ function glc_draw_colorbar(rect, bounds, label, cmaptexname, format, numticks, t
     glcall(glc.draw, GL.QUADS+16, glc_expandrect(rect));
 
     if (~isempty(label))
-        xy_origin = rect(1:2) + [0, (rect(4)-rect(2))/2];
-        glc_rotatetext(xy_origin, 90,  [0 16], 14, label, [0 -1]);
+        glc_draw_colorbar_label(rect, label, 16, 14);
     end
 
     if (numticks < 0)
