@@ -217,16 +217,32 @@ classdef GLCScatterPlot < handle
 
         % XYWH = .calcPosExt(I, J)
         % Get position and extent for glc_drawscatter()'s XYWH.
+        %
+        % I: a scalar or vector of x indices, N := numel(I)
+        % J: a scalar of y indices
+        %
+        % XYWH: an N-by-4 matrix
         function xywh = calcPosExt(self, i, j)
+            glc_assert(isvector(i), 'I must be a vector')
+            glc_assert(numel(j)==1, 'J must be a scalar')
+
             if (self.upwards)
                 j = self.getNumVars() - j + 1;
             end
 
             llwh = self.llwh;
             xygap = self.xygap;
+            z = 0;
 
-            xywh = llwh + [(i-1)*(llwh(3)+xygap(1)), ...
-                           -(j-1)*(llwh(4)+xygap(2)), 0, 0];
+            n = numel(i);
+            if (n ~= 1)
+                i = i(:);
+                j = repmat(j, n,1);
+                z = zeros(n,1);
+            end
+
+            xywh = repmat(llwh, n,1) + ...
+                   [(i-1)*(llwh(3)+xygap(1)), -(j-1)*(llwh(4)+xygap(2)), z, z];
         end
 
         %% Drawing
