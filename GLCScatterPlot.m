@@ -74,6 +74,13 @@ classdef GLCScatterPlot < handle
 
         % Display variables.
 
+        % [W, H] = .getWidthHeight()
+        % Get the width and height of a single scatter plot.
+        function [w, h] = getWidthHeight(self)
+            w = self.llwh(3);
+            h = self.llwh(4);
+        end
+
         % SELF = .getPosExt(ULWH)
         function self = setPosExt(self, ulwh)
             glc_assert(isnumeric(ulwh) && isvector(ulwh) && numel(ulwh)==4, ...
