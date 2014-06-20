@@ -132,6 +132,13 @@ classdef GLCScatterPlot < handle
             numdsets = size(self.data, 3);
         end
 
+        % SELF = .setDummyNumVars(NUMVARS)
+        % Set dummy number of variables.
+        function self = setDummyNumVars(self, numvars)
+            glc_assert(isnumeric(numvars) && numel(numvars)==1, 'NUMVARS must be a numeric scalar')
+            self.data = zeros(0, numvars);
+        end
+
         % SELF = .setData(DATA)
         function self = setData(self, data)
             glc_assert(isnumeric(data) && ndims(data) <= 3, 'DATA must be a numeric array with <= 3 dims')
@@ -243,6 +250,34 @@ classdef GLCScatterPlot < handle
 
             xywh = repmat(llwh, n,1) + ...
                    [(i-1)*(llwh(3)+xygap(1)), -(j-1)*(llwh(4)+xygap(2)), z, z];
+        end
+
+        % XY = .calcPos(I, J)
+        function xy = calcPos(self, i, j)
+            xywh = self.calcPosExt(i, j);
+            xy = xywh(:, 1:2);
+        end
+
+        % [IJ, XYWH] = .checkInPoint(MXY)
+        function [ij, xywh] = checkInPoint(self, mxy)
+            glc_assert(isnumeric(mxy) && numel(mxy)==2, 'MXY must be a numeric pair')
+            numvars = self.getNumVars();
+            mxy = mxy(:).';
+
+            pos0 = self.calcPos(1, 1);
+            pos1 = self.calcPos(numvars+1, numvars+1);
+
+            if (all(pos0 < mxy) && all(mxy <= pos1))
+                ij = ceil(numvars*(mxy-pos0)./(pos1-pos0));
+                xywh = self.calcPosExt(ij(1), ij(2));
+                if (~glc_pointinxywh(mxy, xywh))
+                    ij = [];
+                    xywh = [];
+                end
+            else
+                ij = [];
+                xywh = [];
+            end
         end
 
         %% Drawing
