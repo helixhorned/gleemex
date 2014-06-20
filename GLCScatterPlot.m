@@ -29,6 +29,10 @@ classdef GLCScatterPlot < handle
         % The text height of the tick labels
         ticktextheight
 
+        % A 4-vector of logicals: [B T L R], for bottom, top, left, right.
+        % Draw the tick marks there?
+        marks
+
         % The max. text height of the variable labels
         maxvarlabelheight
         % The really used one, is <= maxvarlabelheight
@@ -61,6 +65,7 @@ classdef GLCScatterPlot < handle
             self.setTileDirection(false);
             self.setTickTextHeight(8);
             self.setVarLabelHeight(10);
+            self.setShowTickMarks('btlr');
             self.setColors([]);
             self.dsi = [1 1];  % Can't use setAxesDataSets() since .data is empty
         end
@@ -114,6 +119,18 @@ classdef GLCScatterPlot < handle
             glc_assert(islogical(doshow) && numel(doshow)==1, ...
                        'DOSHOW must be a logical scalar')
             self.showcolors = doshow;
+        end
+
+        % SELF = .setShowTickMarks(WHICH)
+        % WHICH: a string with chars in 'btlr' (which ones to show)
+        function self = setShowTickMarks(self, which)
+            glc_assert(ischar(which) && numel(which)<=4, ...
+                       'WHICH must be a char array of length at most 4')
+            which = which(:);
+            self.marks = [any(which=='b'), ...
+                          any(which=='t'), ...
+                          any(which=='l'), ...
+                          any(which=='r')];
         end
 
         % State variables.
@@ -362,7 +379,8 @@ classdef GLCScatterPlot < handle
                     pe = self.calcPosExt(i, bottom);  % bottom
                     pe(4) = 0;
                 end
-                glc_drawticks(glc_toxyxy(pe), xlims, self.ticks{i,dsx}, side*4, -textheight);
+                txthei = -textheight * (self.marks(1 + (side > 0)));
+                glc_drawticks(glc_toxyxy(pe), xlims, self.ticks{i,dsx}, side*4, txthei);
 
                 % Y axis: left/right
                 if (side > 0)
@@ -372,7 +390,8 @@ classdef GLCScatterPlot < handle
                     pe = self.calcPosExt(1, i);  % left
                     pe(3) = 0;
                 end
-                glc_drawticks(glc_toxyxy(pe), ylims, self.ticks{i,dsy}, -side*4, -textheight);
+                txthei = -textheight * (self.marks(3 + (side > 0)));
+                glc_drawticks(glc_toxyxy(pe), ylims, self.ticks{i,dsy}, -side*4, txthei);
 
                 side = -side;
             end
