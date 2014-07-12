@@ -1,9 +1,17 @@
 % SIMPLEPLOT(DATA [, IDXS [, COLORS [, KEYCB [, DISPLAYCB [, UD]]]]])
 % Simple interactive plot.
 %
+% Legacy "simple" calling convention
+% ----------------------------------
 % DATA: 3 x numverts or length-#datasets cell with 3-by-numverts_i arrays each
 % IDXS: zero-based, 3 x numfaces, matrix of triangle indices. If IDXS(1) is
 %  negative, -IDXS is taken as a permutation on the dimensions of the data else.
+%
+% New "display list" calling convention
+% -------------------------------------
+% DATA: a cell of size N-by-3, with N > 1 and rows like
+%  { GL.<PRIMITIVE_TYPE>, vertex_coords, struct(...) }
+% Thus, each row contains arguments to glcall(glc.draw, ...).
 function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     % 'simpleplot' can be run with both classdef-enabled M-implementations or those
     % that don't have classdef.
@@ -19,48 +27,55 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         return
     end
 
+    havelist = (iscell(data) && size(data, 1)>1);
+
     data_dims_perm = [];
 
-    if (nargin < 2)
-        idxs = zeros(3,0,'uint32');
+    if (havelist)
+        % Display list trumps all.
+        assert(nargin == 1, 'When passing cell DATA with >1 rows, must have only this inarg')
     else
-        if (~isempty(idxs))
-            if (idxs(1) < 0)
-                data_dims_perm = -idxs;
-                idxs = zeros(3,0,'uint32');
-            else
-                if (~strcmp(class(idxs), 'uint32') && ~strcmp(class(idxs), 'uint8'))
-                    error('IDXS must have class uint32 or uint8')
-                end
+        if (nargin < 2)
+            idxs = zeros(3,0,'uint32');
+        else
+            if (~isempty(idxs))
+                if (idxs(1) < 0)
+                    data_dims_perm = -idxs;
+                    idxs = zeros(3,0,'uint32');
+                else
+                    if (~strcmp(class(idxs), 'uint32') && ~strcmp(class(idxs), 'uint8'))
+                        error('IDXS must have class uint32 or uint8')
+                    end
 
-                if (size(idxs, 1)~=3)
-                    error('IDXS must have 3 rows')
+                    if (size(idxs, 1)~=3)
+                        error('IDXS must have 3 rows')
+                    end
                 end
             end
         end
-    end
 
-    if (nargin < 3)
-        colors = zeros(3, 0);
-    else
-        if (~isempty(colors))
-            if (~strcmp(class(colors), 'double') && ~iscell(colors))
-                error('COLORS must have class double or be a cell')
+        if (nargin < 3)
+            colors = zeros(3, 0);
+        else
+            if (~isempty(colors))
+                if (~strcmp(class(colors), 'double') && ~iscell(colors))
+                    error('COLORS must have class double or be a cell')
+                end
+
+                % size check: left to glcall
             end
-
-            % size check: left to glcall
         end
-    end
 
-    if (nargin >= 4)
-        if (~isa(keycb, 'function_handle'))
-            error('KEYCB must be a function handle');
+        if (nargin >= 4)
+            if (~isa(keycb, 'function_handle'))
+                error('KEYCB must be a function handle');
+            end
         end
-    end
 
-    if (nargin >= 5)
-        if (~isa(keycb, 'function_handle'))
-            error('DISPLAYCB must be a function handle');
+        if (nargin >= 5)
+            if (~isa(keycb, 'function_handle'))
+                error('DISPLAYCB must be a function handle');
+            end
         end
     end
 
@@ -76,37 +91,43 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         va = {};
     end
 
-    %% Argument pre-processing (convenience calling conventions)
-    if (iscell(data))
-        assert(isvector(data), 'Cell DATA must be a vector');
+    simpl.havelist = havelist;
 
-        if (iscell(colors))
-            assert(isvector(colors), 'Cell COLORS must be a vector');
-            assert(numel(data) == numel(colors), '#DATA must macht #COLORS');
+    if (~havelist)
+        %% Argument pre-processing (convenience calling conventions)
+        if (iscell(data))
+            assert(isvector(data), 'Cell DATA must be a vector');
 
-            if (isvector(colors{1}))
-                cc = cell(1, numel(colors));
-                for i=1:numel(colors)
-                    cc{i} = repmat(colors{i}(:), 1, size(data{i}, 2));
+            if (iscell(colors))
+                assert(isvector(colors), 'Cell COLORS must be a vector');
+                assert(numel(data) == numel(colors), '#DATA must macht #COLORS');
+
+                if (isvector(colors{1}))
+                    cc = cell(1, numel(colors));
+                    for i=1:numel(colors)
+                        cc{i} = repmat(colors{i}(:), 1, size(data{i}, 2));
+                    end
+                    colors = [cc{:}];
+                else
+                    colors = [colors{:}];
                 end
-                colors = [cc{:}];
-            else
-                colors = [colors{:}];
             end
+
+            data = [data{:}];
         end
 
-        data = [data{:}];
-    end
-
-    if (~isempty(data_dims_perm))
-        if (numel(data_dims_perm) ~= size(data, 1))
-            error('DATA_DIMS_PERM (negated IDXS) must have as many elements as DATA has rows (2 or 3)')
+        if (~isempty(data_dims_perm))
+            if (numel(data_dims_perm) ~= size(data, 1))
+                error('DATA_DIMS_PERM (negated IDXS) must have as many elements as DATA has rows (2 or 3)')
+            end
+            data = data(data_dims_perm, :);
         end
-        data = data(data_dims_perm, :);
-    end
 
-    %% data-data
-    simpl_setup_data(data, true, idxs, colors, va{:});
+        %% data-data
+        simpl_setup_data(data, idxs, colors, va{:});
+    else
+        simpl_setup_data(data, [], [], va{:});
+    end
 
     %% app data
     simpl.omx = -1;  % old mouse-x position, -1: invalid
@@ -228,9 +249,16 @@ function sp_display()
         glcall(glc.toggle, [GL.FOG 1]);
     end
 
-    if (isa(simpl.displaycb, 'function_handle'))
+    if (simpl.havelist)
+        % Successively draw all elements from the list.
+        for i=1:size(simpl.data, 1)
+            glcall(glc.draw, simpl.data{i, :});
+        end
+    elseif (isa(simpl.displaycb, 'function_handle'))
+        % Run user-provided display callback.
         simpl.displaycb();
-    else
+    elseif (~simpl.havelist)
+        % Run our hard-coded (legacy) drawing code.
         glcall(glc.toggle, [GL.DEPTH_TEST 1]);
         if (simpl.lineidxs(2) > simpl.lineidxs(1))
             glcall(glc.draw, GL.LINE_STRIP, simpl.data(:, simpl.lineidxs(1):simpl.lineidxs(2)), ...
@@ -255,6 +283,8 @@ function sp_display()
 
     glc_axes_finish([0 0 0]); % }}}
 
+    %% Display some text
+
     top = simpl.axxywh(2)+simpl.axxywh(4)-4;
 
     pretty = @(vec)regexprep(num2str(vec(:)'), ' +', ', ');
@@ -262,10 +292,19 @@ function sp_display()
     glcall(glc.text, [28 top-14], 14, ...
            sprintf('means: %s | mins: %s | maxs: %s | fog: %d', pretty(simpl.mean), ...
                    pretty(simpl.min), pretty(simpl.max), simpl.fog));
-    glcall(glc.text, [28 top-14-(8+14)], 14, ...
-           sprintf('[%d  %d..%d  %d], zoom=%.02f, ang=%.02f', 1, simpl.lineidxs(1), simpl.lineidxs(2), ...
-                   simpl.numsamples, simpl.zoom, simpl.ang));
+
+    str = sprintf('zoom=%.02f, ang=%.02f', simpl.zoom, simpl.ang);
+    if (~simpl.havelist)
+        li = simpl.lineidxs;
+        glcall(glc.text, [28 top-14-(8+14)], 14, ...
+               sprintf('[%d  %d..%d  %d], %s', 1, li(1), li(2), simpl.numsamples, str));
+    else
+        glcall(glc.text, [28 top-14-(8+14)], 14, str);
+    end
+
     glcall(glc.text, [28 top-14-2*(8+14)], 14, simpl.moretext);
+
+    %% Coordinates of mouse pointer
 
     [yes, fracs] = glc_pointinxywh(simpl.mxy, simpl.axxywh);
     if (simpl.numdims == 2 && yes)
@@ -302,7 +341,7 @@ function sp_keyboard(key, x, y, mods)
 
     if (isa(simpl.keycb, 'function_handle'))
         simpl.keycb(key, x, y, mods);
-    else
+    elseif (~simpl.havelist)
         mul = (1+9*(~~bitand(mods,GL.MOD_CTRL) + 6*(~~bitand(mods,GL.MOD_SHIFT))));
         switch key
           case { GL.KEY_RIGHT, GL.KEY_LEFT }

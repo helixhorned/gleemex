@@ -13,6 +13,8 @@ classdef GLCSimplePlotData < handle
         moretext
         ud
 
+        havelist
+
         numsamples
         data
         numdims
