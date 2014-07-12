@@ -960,14 +960,14 @@ current window, the behavior is undefined.
 === Instance methods
 
 [float]
-==== `ad.updateWindowPos(self, w, h [, setup2d])`
+==== `ad.updateWindowPos(w, h [, setup2d])`
 
 Updates the window position with the new width `w` and height `h`, as obtained
 from the <<cb_reshape,reshape callback>>. If `setup2d` is passed, it must be a
 scalar logical; in case it is true, <<glc_setup2d,`glc_setup2d`>>`(w, h)` is also called.
 
 [float]
-==== `ad.updateMousePos(self, buttons, x, y)`
+==== `ad.updateMousePos(buttons, x, y)`
 
 Updates the current mouse pointer position with the new mouse button state
 `buttons` and coordinates (`x`, `y`), as obtained from the <<cb_motion,mouse
@@ -996,14 +996,14 @@ is backed up in a private field, for later restoration by `restoreOldWindow`.
   prior to the call to `ad.makeCurrent`.
 
 [float]
-==== `ok = .restoreOldWindow()`
+==== `ok = ad.restoreOldWindow()`
 
 Changes the current window to that which was current before the last call to
 the `makeCurrent` method. The output argument `ok` tells whether that
 succeeded.
 
 [float]
-==== `ok = .postRedisplay()`
+==== `ok = ad.postRedisplay()`
 
 Calls <<glc_redisplay,`glc.redisplay`>> for this `ad`'s window (registered with
 `attachNewWindow`), but wrapping it in backup and restoration of the current

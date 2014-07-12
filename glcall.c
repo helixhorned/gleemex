@@ -2422,7 +2422,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nlhs != 1 || nrhs != 2)
             ourErrMsgTxt("Usage: VALUE = GLCALL(glc.get, WHAT)");
 
-        verifyparam(GET_IN_WHAT, "GLCALL: set: WHAT", VP_SCALAR|VP_INT32);
+        verifyparam(GET_IN_WHAT, "GLCALL: get: WHAT", VP_SCALAR|VP_INT32);
         what = *(int32_t *)mxGetData(GET_IN_WHAT);
 
         if (!inited && what != GLC__WINDOW_ID)
