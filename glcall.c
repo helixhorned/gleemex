@@ -1708,6 +1708,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         uint32_t matrixmode;
         mwSize numel;
 
+        /* XXX: these help strings are useless since they're not reachable when
+         * Gleemex isn't initialized, i.e. from the prompt. */
         static const char *usageText =
             "Usage: GLCALL(glc.mulmatrix [, GL.<MATRIX_MODE>], X), where X can be\n"
             "  * a 4x4 double matrix\n"

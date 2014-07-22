@@ -40,6 +40,7 @@ function simpl_setup_data(data, idxs, colors, maybe_simpl)
     end
 
     simpl.numsamples = size(alldata, 2);
+    assert(simpl.numsamples > 0, 'DATA must not be empty')
 
     % some data stats
     simpl.mean = mean(alldata, 2);
