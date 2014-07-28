@@ -191,3 +191,9 @@ GL.KEY_DELETE = 127;
 % Should be really in GLAux or something?
 GL.TYPEFUNC_TEXTURE = @uint32;
 GL.INVALID_TEXTURE = uint32(0);
+
+% Additional bits to glc.draw's PRIMITIVETYPE
+GL.AS_LINE = uint32(16);
+GL.AS_LINE_FRONT = uint32(16 + 32);
+GL.AS_LINE_BACK = uint32(32 + 64);
+GL.AS_LINE_BITS = uint32(16 + 32 + 64);

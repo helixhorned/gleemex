@@ -1394,7 +1394,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
          *  Some easy means of specifying a rect? (using glRect)
          *  When a lot of data will need to be drawn: Buffer Objects...  */
 
-        uint32_t primitivetype, doline;
+        uint32_t primitivetype, polymode;
         mwSize i, numdims, numtotalverts, numverts;
 
         mwSize colorsz;
@@ -1416,8 +1416,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         primitivetype = *(uint32_t *)mxGetData(DRAW_IN_PRIMITIVETYPE);
 
         /* XXX: This seems like an ugly hack. */
-        doline = primitivetype&16;
-        primitivetype &= ~16;
+        polymode = primitivetype&(16+32+64);
+        primitivetype &= ~(16+32+64);
 
         if (!(/*primitivetype >= GL_POINTS &&*/ primitivetype <= GL_POLYGON))
             ourErrMsgTxt("GLCALL: draw: invalid GL primitive type");
@@ -1493,10 +1493,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             }
         }
 
-        if (doline)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        if ((polymode & 32) == 0)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, polymode ? GL_LINE : GL_FILL);
+        }
         else
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        {
+            glPolygonMode(GL_FRONT, (polymode&16) ? GL_LINE : GL_FILL);
+            glPolygonMode(GL_BACK, (polymode&64) ? GL_LINE : GL_FILL);
+        }
 
         if (!normalar)
             glDisableClientState(GL_NORMAL_ARRAY);
