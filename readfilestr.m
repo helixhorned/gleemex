@@ -7,9 +7,9 @@ function str=readfilestr(filename, readas)
 
     % BrainVision EEG VHDR files have some silly characters in them,
     % therefore open in ISO encoding...
-    try
+    if (~exist('OCTAVE_VERSION', 'builtin'))
         [fid,msg] = fopen(filename, 'r', 'n', 'ISO-8859-1');
-    catch
+    else
         [fid,msg] = fopen(filename, 'r', 'n');
     end
 
