@@ -55,26 +55,16 @@ function fnames = extractsecfuncs(filename, numspace, thedir, askp)
 
     [tmpdir, tmpfn] = fileparts(filename);  % tmpfn strips extension
 
-    badi = false(1, length(tokens));
-
+    % We have only one entry per tokens{i}, the function name.
     for i=1:length(tokens)
-        if (strcmpi(tmpfn, tokens{i}))
-            badi(i) = true;
-        end
+        tokens{i} = tokens{i}{1};
     end
 
+    badi = strcmpi(tmpfn, tokens);
     match(badi) = [];
     tokens(badi) = [];
 
-    try
-        tokens = cell2mat(tokens);  % {}{} -> {}
-    catch
-        % MATLAB: Cannot support cell arrays containing cell arrays or objects.
-        for i=1:length(tokens)
-            tokens{i} = tokens{i}{1};
-        end
-    end
-
+    % The names of the secondary functions.
     fnames = tokens;
 
     if (isequal(askp, 2))
