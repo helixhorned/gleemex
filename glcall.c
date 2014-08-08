@@ -14,6 +14,10 @@
 
 #include <GL/freeglut.h>
 
+#ifdef GLEEMEX_USE_GL2PS
+# include <gl2ps.h>
+#endif
+
 #include "mex.h"
 /**** COMPATIBILITY SWITCHES ****/
 #ifndef HAVE_OCTAVE
@@ -151,6 +155,15 @@
 #define FOG_IN_PARAM (prhs[2])
 #define FOG_IN_COLOR (prhs[3])
 
+#ifdef GLEEMEX_USE_GL2PS
+  /* beginpage */
+  #define BEGINPAGE_IN_FORMAT (prhs[1])
+  #define BEGINPAGE_IN_SORTMODE (prhs[2])
+  #define BEGINPAGE_IN_OPTIONS (prhs[3])
+  #define BEGINPAGE_IN_BUFSIZE (prhs[4])
+  #define BEGINPAGE_IN_FILENAME (prhs[5])
+  #define BEGINPAGE_OUT_STATUS (plhs[0])
+#endif
 
 /**** GET tokens ****/
 /* Use negative values for GLC tokens since we might want to allow GL ones
@@ -218,6 +231,7 @@ enum glcalls_
     GLC_CLOSEWINDOW,
     GLC_READPIXELS,
     GLC_FOG,
+    GLC_BEGINPAGE,
     NUM_GLCALLS,  /* must be last */
 };
 
@@ -250,6 +264,11 @@ const char *glcall_names[] =
     "closewindow",
     "readpixels",
     "fog",
+#ifdef GLEEMEX_USE_GL2PS
+    "beginpage",
+#else
+    "beginpage_UNAVAILABLE",
+#endif
 };
 
 GLC_STATIC_ASSERT(ARRAY_SIZE(glcall_names) == NUM_GLCALLS);
@@ -283,6 +302,19 @@ static struct windata_
 /* The GL texture name for the color map 1D texture. */
 static GLuint cmaptexname /*, proginuse */;
 static GLfloat g_strokefontheight;
+
+/******** GL2PS related ********/
+#ifdef GLEEMEX_USE_GL2PS
+static struct {
+    /* If we successfully issued a call to gl2psBeginPage(), this will be the
+     * stream to which the gl2ps output is written, until gl2psEndPage() is
+     * called. */
+    FILE *fp;
+
+    /* The status of the last gl2psEndPage() call: */
+    int32_t lastStatus;
+} g_tops = { NULL, GL2PS_UNINITIALIZED };
+#endif
 
 /******** UTIL ********/
 static char errstr[256];
@@ -486,7 +518,8 @@ static GLenum verifyparam_ret(const mxArray *ar, const char *arname, uint32_t vp
     return GL_FALSE;
 }
 
-/* verifyparam used only from mexFunction! */
+/* verifyparam() must only ever be called (with MATLAB, macro-instantiated)
+ * from mexFunction()! */
 #ifdef HAVE_OCTAVE
 static void verifyparam(const mxArray *ar, const char *arname, uint32_t vpflags)
 {
@@ -522,7 +555,8 @@ static int32_t verify_callback_name(const mxArray *strmxAr, int32_t slen,
 static int32_t util_dtoi(double d, double minnum, double maxnum, const char *arname)
 {
     if (!(d >= minnum && d <= maxnum))
-        GLC_MEX_ERROR_(INT32_MIN, "%s must be between %d and %d", arname, (int)minnum, (int)maxnum);
+        GLC_MEX_ERROR_(INT32_MIN, "%s must be between %d and %d", arname,
+                       (int32_t)minnum, (int32_t)maxnum);
     return (int32_t)d;
 }
 
@@ -775,6 +809,20 @@ static void display_cb(void)
         if (glutGetWindow())
             glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     }
+
+#ifdef GLEEMEX_USE_GL2PS
+    if (g_tops.fp != NULL)
+    {
+        /* We started drawing to a gl2ps page earlier. Finish it now. */
+
+        if (glutGetWindow())
+            glFlush();
+
+        g_tops.lastStatus = gl2psEndPage();
+        fclose(g_tops.fp);
+        g_tops.fp = NULL;
+    }
+#endif
 
     if (glutGetWindow())
         glutSwapBuffers();
@@ -3090,6 +3138,116 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         glFogfv(GL_FOG_COLOR, (float *)mxGetData(FOG_IN_COLOR));
     }
     break;
+
+#ifdef GLEEMEX_USE_GL2PS
+    case GLC_BEGINPAGE:
+    {
+        double bufsized, status;
+        int32_t format, sortmode, options, bufsize;
+        char *filename;
+
+        if (nlhs == 1 && nrhs == 1)
+        {
+            BEGINPAGE_OUT_STATUS = createScalar(VP_INT32, &g_tops.lastStatus);
+            return;
+        }
+
+        if (nlhs != 1 || nrhs != 6)
+            ourErrMsgTxt("Usage: STATUS = GLCALL(glc.beginpage, FORMAT, SORTMODE, OPTIONS, BUFSIZE, FILENAME)\n"
+                         "    or ENDSTATUS = GLCALL(glc.beginpage)");
+        /* TODO: OPTS struct for setting other gl2ps options (e.g. title, producer). */
+
+        verifyparam(BEGINPAGE_IN_FORMAT, "GLCALL: beginpage: FORMAT", VP_SCALAR|VP_INT32);
+        format = *(int32_t *)mxGetData(BEGINPAGE_IN_FORMAT);
+
+        verifyparam(BEGINPAGE_IN_SORTMODE, "GLCALL: beginpage: SORTMODE", VP_SCALAR|VP_INT32);
+        sortmode = *(int32_t *)mxGetData(BEGINPAGE_IN_SORTMODE);
+
+        verifyparam(BEGINPAGE_IN_OPTIONS, "GLCALL: beginpage: OPTIONS", VP_SCALAR|VP_INT32);
+        options = *(int32_t *)mxGetData(BEGINPAGE_IN_OPTIONS);
+
+        verifyparam(BEGINPAGE_IN_SORTMODE, "GLCALL: beginpage: SORTMODE", VP_SCALAR|VP_INT32);
+        sortmode = *(int32_t *)mxGetData(BEGINPAGE_IN_SORTMODE);
+
+        verifyparam(BEGINPAGE_IN_BUFSIZE, "GLCALL: beginpage: BUFSIZE", VP_SCALAR|VP_DOUBLE);
+        bufsized = *mxGetPr(BEGINPAGE_IN_BUFSIZE);
+        bufsize = util_dtoi(bufsized, 1, INT32_MAX, "GLCALL: beginpage: BUFSIZE");
+
+        verifyparam(BEGINPAGE_IN_FILENAME, "GLCALL: beginpage: FILENAME", VP_VECTOR|VP_CHAR);
+
+        /* Now, validate of some values. */
+
+        if (!(format >= GL2PS_PS && format <= GL2PS_PGF))
+            mexErrMsgTxt("GLCALL: beginpage: invalid FORMAT");
+
+        /* Because we pass NULL for <filename> to gl2psBeginPage(). */
+        if (format == GL2PS_TEX || format == GL2PS_PGF)
+            mexErrMsgTxt("GLCALL: beginpage: TEX or PGF FORMAT not supported");
+
+        if (!(sortmode >= GL2PS_NO_SORT && sortmode <= GL2PS_BSP_SORT))
+            mexErrMsgTxt("GLCALL: beginpage: invalid SORTMODE");
+
+        if (!(options >= GL2PS_NONE && options < GL2PS_TIGHT_BOUNDING_BOX<<1))
+            mexErrMsgTxt("GLCALL: beginpage: invalid bits set in OPTIONS");
+
+        /** Start some actual business... **/
+
+        if (glutGetWindow() == 0)
+            ourErrMsgTxt("GLCALL: beginpage: must have active window");
+
+        /* Get file name now (instead of earlier -- we need to mxFree it). */
+        filename = mxArrayToString(BEGINPAGE_IN_FILENAME);
+        if (filename == NULL)
+            ourErrMsgTxt("GLCALL: beginpage: OUT OF MEMORY");
+
+        /* Close potentially open gl2ps file. This may have happened if a
+         * gl2psEndPage() was not reached after successfully starting a
+         * page. For example,
+         *  - an error happened
+         *  - the window was closed
+         * TODO: handle these cases. Does the begin call fail then? */
+        if (g_tops.fp != NULL)
+            fclose(g_tops.fp);
+
+        g_tops.fp = fopen(filename, (format==GL2PS_PDF || options&GL2PS_COMPRESS) ? "wb" : "w");
+        mxFree(filename);
+
+        if (g_tops.fp == NULL)
+        {
+            status = 1;
+            BEGINPAGE_OUT_STATUS = createScalar(mxDOUBLE_CLASS, &status);
+            return;
+        }
+
+        options |= GL2PS_USE_CURRENT_VIEWPORT;
+        status = gl2psBeginPage("Untitled", "Gleemex", NULL,
+                                format, sortmode, options,
+                                GL_RGBA, 0, NULL, 0,0,0,
+                                bufsize, g_tops.fp, NULL);
+
+        status = (status == GL2PS_SUCCESS ? 0 : 2);
+        BEGINPAGE_OUT_STATUS = createScalar(mxDOUBLE_CLASS, &status);
+
+        if (status != 0)
+        {
+            /* Our checking above ensures that the only error case left is the
+             * "Incorrect viewport" one (see gl2ps.c), or that gl2psBeginPage()
+             * was called with a former one unfinished (see above TODO). */
+            fclose(g_tops.fp);
+            g_tops.fp = NULL;
+
+            return;
+        }
+        /* else, check for GL errors after the command switch(), and tell
+         * FreeGLUT to redisplay at the next suiting occasion: */
+        glutPostRedisplay();
+    }
+    break;
+#endif
+
+    default:
+        ourErrMsgTxt("Unknown command");
+        break;
 
     }  /* end switch(cmd) */
 

@@ -153,7 +153,12 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     if (nargin >= 5)
         simpl.displaycb = displaycb;
     end
-    simpl.moretext = 'Test';
+
+    if (glc_have_beginpage())
+        simpl.moretext = 'Press F12 to take PDF screenshot';
+    else
+        simpl.moretext = '';
+    end
 
     if (nargin < 6)
         % no userdata
@@ -161,6 +166,9 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     else
         simpl.ud = ud;
     end
+
+    simpl.imagenum = 1;
+    simpl.imagestate = 0;
 
     % create the window!
     winid = glcall(glc.newwindow, [20 20], simpl.wh, 'Simple plot');
@@ -302,7 +310,24 @@ function sp_display()
         glcall(glc.text, [28 top-14-(8+14)], 14, str);
     end
 
-    glcall(glc.text, [28 top-14-2*(8+14)], 14, simpl.moretext);
+    if (~isempty(simpl.moretext))
+        glcall(glc.text, [28 top-14-2*(8+14)], 14, simpl.moretext);
+
+        if (simpl.imagestate == 1)
+            simpl.imagestate = 2;
+        elseif (simpl.imagestate == 2)
+            % Now we can check for success of gl2psEndPage().
+            status = glcall(glc.beginpage);
+            if (status == GL.PS_SUCCESS)
+                % See SCREENSHOT_PENDING
+                simpl.moretext = strrep(simpl.moretext, 'pending saving', 'saved');
+            else
+                simpl.moretext = strrep(simpl.moretext, 'pending saving', 'NOT saved');
+                simpl.moretext = sprintf('%s (%s)', simpl.moretext, glc_endpage_errmsg(status));
+            end
+            simpl.imagestate = 0;
+        end
+    end
 
     %% Coordinates of mouse pointer
 
@@ -337,6 +362,46 @@ function sp_keyboard(key, x, y, mods)
     % Common
     if (key==double('f'))
         simpl.fog = ~simpl.fog;
+    elseif (key == GL.KEY_F12 && glc_have_beginpage())
+        % Try taking a gl2ps screenshot.
+
+        try
+            fileprefix = evalin('base', 'SIMPLEPLOT_FILE_PREFIX');
+        catch
+            fileprefix = '';
+        end
+
+        if (~(ischar(fileprefix) && isvector(fileprefix)))
+            simpl.moretext = 'SIMPLEPLOT_FILE_PREFIX (in base workspace) must be file prefix';
+            simpl.imagestate = 0;
+        else
+            fileprefix = fileprefix(:).';
+            fileprefix = sprintf('%s_%02d', fileprefix, simpl.imagenum);
+            simpl.imagenum = simpl.imagenum + 1;
+
+            if (mods == GL.MOD_SHIFT)
+                bufsize = 1024;  % test for GL.PS_OVERFLOW
+            else
+                bufsize = 10*1048576;
+            end
+
+            options = GL.PS_TIGHT_BOUNDING_BOX + GL.PS_OCCLUSION_CULL;
+            [status, fn] = glc_beginpage_ext(GL.PS_PDF, GL.PS_SIMPLE_SORT, options, ...
+                                             bufsize, fileprefix);
+
+            STATUS = { 'failed opening file', 'failed gl2psBeginPage()' };
+
+            if (status ~= GL.PS_SUCCESS)
+                simpl.moretext = sprintf('Screenshot: %s', STATUS{status});
+                simpl.imagestate = 0;
+            else
+                % SCREENSHOT_PENDING
+                simpl.moretext = sprintf('Screenshot pending saving to "%s"', fn);
+                simpl.imagestate = 1;
+            end
+
+            return
+        end
     end
 
     if (isa(simpl.keycb, 'function_handle'))

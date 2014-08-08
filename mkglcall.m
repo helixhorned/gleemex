@@ -1,6 +1,6 @@
-% MKGLCALL([BUILD_RELEASE [, USE_RELEASE]]) Attempt to compile glcall.c into a
-% MEX file suitable for the combination of M language interpreter and
-% OS/compiler.
+% MKGLCALL([BUILD_RELEASE [, USE_RELEASE [, GL2PS]]]) Attempt to compile
+% glcall.c into a MEX file suitable for the combination of M language
+% interpreter and OS/compiler.
 %
 % Currently supported combinations are:
 %  - Octave running on Linux (any supported architecture)
@@ -17,12 +17,18 @@
 %    version of glcall. Else, build a debugging version.
 %  - If USE_RELEASE is true, prefer using a release version of FreeGLUT to a
 %    debugging one.
-function mkglcall(build_release, use_release)
+%
+% GL2PS: if true (default: false), build with gl2ps support, enabling the
+%  glc.beginpage command. Currently, only for Linux.
+function mkglcall(build_release, use_release, gl2ps)
     if (nargin < 1)
         build_release = false;
     end
     if (nargin < 2)
         use_release = false;
+    end
+    if (nargin < 3)
+        gl2ps = false;
     end
 
     if (~exist('OCTAVE_VERSION', 'builtin'))
@@ -57,7 +63,13 @@ function mkglcall(build_release, use_release)
     % (e.g. CC='clang -fsanitizer=address,undefined' mkoctfile ...)
     if (~isempty(strfind(computer(), 'linux')))
         % linux (generic)
-        mkoctfile --mex -g -W -Wall -Wextra -Werror-implicit-function-declaration -lGL -lGLU -lGLEW -lglut glcall.c
+        OPTS = {'--mex', '-g', '-W', '-Wall', '-Wextra', '-Werror-implicit-function-declaration', ...
+                '-lGL', '-lGLU', '-lGLEW', '-lglut'};
+        if (gl2ps)
+            OPTS{end+1} = '-lgl2ps';
+            OPTS{end+1} = '-DGLEEMEX_USE_GL2PS';
+        end
+        mkoctfile(OPTS{:}, 'glcall.c');
     else
         % mingw32
         mkoctfile --mex -g -W -Wall -Wextra -Iourinclude -Llib32 -lopengl32 -lglu32 -lglew32 -lfreeglut glcall.c

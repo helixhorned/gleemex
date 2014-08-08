@@ -477,6 +477,7 @@ Gets the current value of the GL or FreeGLUT state variable denoted by `WHAT`.
 * `GL.WINDOW_ID`: see `glc.set`
 * `GL.WINDOW_SIZE`: see `glc.set`
 * `GL.WINDOW_POS`: TODO
+* `GL.POINT_SIZE`
 
 * `GL.PROJECTION_MATRIX`, `GL.MODELVIEW_MATRIX`: `VALUE` is a 4-by-4
   `double`-typed matrix.
@@ -820,6 +821,102 @@ program.
 
 // TODO: ^^ actually, the implementation for array uniforms is less strict (can
 // set prefix of array, I think). Use case?
+
+
+GL2PS commands and functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:GL2PS: http://www.geuz.org/gl2ps
+
+{GL2PS}[GL2PS] is a library by Christophe Geuzaine that can output geometry
+passed to OpenGL in various vector formats. Gleemex provides an interface to
+GL2PS if it was compiled with GL2PS support (see `mkglcall`).
+
+The constants needed by the interface reside in the `GL` struct under names
+like `GL.PS_TIGHT_BOUNDING_BOX`. That is, they're like the corresponding
+`GL2PS_*` C defines with the `2` omitted.
+
+An example of GL2PS usage is given by the `simpleplot` application packaged
+together with Gleemex.
+
+[float]
+[[glc_have_beginpage]]
+==== `HAVE = glc_have_beginpage()`
+
+Return whether Gleemex was compiled with GL2PS support, that is, if the
+`glc.beginpage` command is available.
+
+[float]
+[[glc_beginpage]]
+==== `STATUS = glcall(glc.beginpage, FORMAT, SORTMODE, OPTIONS, BUFSIZE, FILENAME)`
+
+:gl2psBeginPage: http://www.geuz.org/gl2ps/#sec:gl2psBeginPage
+
+{gl2psBeginPage}[Begin] collecting OpenGL drawing commands for eventual output
+to file `FILENAME` and issue a <<glc_redisplay,redisplay>> request to
+FreeGLUT. The collection will last until the ensuing display callback returns,
+after which a call to `gl2psEndPage()` is issued.  Thus, whether it succeeded
+only becomes known afterwards.
+
+* `FORMAT`: one of `GL.PS_PS`, `GL.PS_EPS`, `GL.PS_PDF` or `GL.PS_SVG`. The two
+  LaTeX formats are not (yet) available.
+
+* `SORTMODE`: one of `GL.PS_NO_SORT`, `GL.PS_SIMPLE_SORT` or `GL.PS_BPS_SORT`.
+
+* `OPTIONS`: a bitwise-OR of individual `GL.PS_*` {gl2psBeginPage}[plot option
+  bits], except that the following ones are not available: `PS_SILENT`,
+  `PS_NO_TEXT`, `PS_NO_PIXMAP`; and `PS_USE_CURRENT_VIEWPORT` which is
+  automatically set by Gleemex. If no options are to be passed, `GL.PS_NONE`
+  should be used.
+
+* `BUFSIZE`: the size of the feedback buffer
+
+* `FILENAME`: the name of the file where the output is to be written
+
+* `STATUS`: an indication of success or failure.
+** 0: starting the geometry collection was successful
+** 1: failed to open a write-only file named `FILENAME`
+** 2: `gl2psBeginPage()` returned `GL2PS_ERROR`. This could mean that the width
+       or height of the <<glc_viewport,current viewport>> is zero.
+
+As noted above, the knowledge of ultimate success only becomes available after
+the return of the subsequent display callback. The following form of
+`glc.beginpage` allows one to examine this status then.
+
+[float]
+[[glc_endpage]]
+==== `ENDSTATUS = glcall(glc.beginpage)`
+(Note that there is no separate [line-through]#`glc.endpage`# command.)
+
+Retrieves the return value of the last {gl2psBeginPage}[`gl2psEndPage()`] call
+as one of the GL2PS status constants: `GL.PS_SUCCESS`, `GL.PS_ERROR`,
+`GL.PS_NO_FEEDBACK`, `GL.PS_OVERFLOW` or `GL.PS_UNINITIALIZED`.
+
+Currently, when `glcall(glc.beginpage, ...)` returned 2 for `STATUS` or this
+form's `ENDSTATUS` is anything other than `GL.PS_SUCCESS`, the file `FILENAME`
+remains on the system and may be empty.
+
+[float]
+[[glc_endpage_errmsg]]
+==== `STR = glc_endpage_errmsg(ENDSTATUS)`
+
+Returns a string for the status code of `gl2psEndPage()`. It is the lowercased
+version of the corresponding `GL.PS_*` error code define, for example
+`'no_feedback'` for `GL.PS_NO_FEEDBACK`.
+
+[float]
+[[glc_beginpage_ext]]
+==== `[STATUS, FILENAME] = glc_beginpage_ext(FORMAT, SORTMODE, OPTIONS, BUFSIZE, FILEPREFIX)`
+
+Calls `glcall(glc.beginpage, ...)` with the provided arguments, expect that
+`FILEPREFIX` automatically gets an extention appended based on the value of
+`FORMAT` and the `GL.PS_COMPRESS` bit of `OPTIONS`.
+
+* `STATUS`: one of the `glcall(glc.beginpage, ...)` return values (0, 1 or 2), or
+   --1 if Gleemex was compiled without GL2PS support.
+
+* `FILENAME`: In case of success (`STATUS` is 0), `FILEPREFIX` with an appended
+  extension.
 
 
 Auxiliary functions

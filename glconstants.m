@@ -197,3 +197,45 @@ GL.AS_LINE = uint32(16);
 GL.AS_LINE_FRONT = uint32(16 + 32);
 GL.AS_LINE_BACK = uint32(32 + 64);
 GL.AS_LINE_BITS = uint32(16 + 32 + 64);
+
+%% For gl2ps/glc.beginpage
+% (defines from gl2ps.h)
+
+% -- Output file formats
+GL.PS_PS = int32(0);
+GL.PS_EPS = int32(1);
+%GL.PS_TEX = int32(2);
+GL.PS_PDF = int32(3);
+GL.PS_SVG = int32(4);
+%GL.PS_PGF = int32(5);
+
+% -- Sorting algorithms
+GL.PS_NO_SORT = int32(1);
+GL.PS_SIMPLE_SORT = int32(2);
+GL.PS_BSP_SORT = int32(3);
+
+% -- Message levels and error codes
+% (in Gleemex, only for the result of gl2psEndPage())
+GL.PS_SUCCESS = int32(0);
+%GL.PS_INFO = int32(1);
+%GL.PS_WARNING = int32(2);
+GL.PS_ERROR = int32(3);
+GL.PS_NO_FEEDBACK = int32(4);
+GL.PS_OVERFLOW = int32(5);
+GL.PS_UNINITIALIZED = int32(6);
+
+% -- Options for gl2psBeginPage
+GL.PS_NONE                 = int32(0);
+GL.PS_DRAW_BACKGROUND      = int32(1);
+GL.PS_SIMPLE_LINE_OFFSET   = int32(2);
+%GL.PS_SILENT               = int32(4);
+GL.PS_BEST_ROOT            = int32(8);
+GL.PS_OCCLUSION_CULL       = int32(16);
+%GL.PS_NO_TEXT              = int32(32);
+GL.PS_LANDSCAPE            = int32(64);
+GL.PS_NO_PS3_SHADING       = int32(128);
+%GL.PS_NO_PIXMAP            = int32(256);
+%GL.PS_USE_CURRENT_VIEWPORT = int32(512);
+GL.PS_COMPRESS             = int32(1024);
+GL.PS_NO_BLENDING          = int32(2048);
+GL.PS_TIGHT_BOUNDING_BOX   = int32(4096);
