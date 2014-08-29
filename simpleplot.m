@@ -1,17 +1,18 @@
 % SIMPLEPLOT(DATA [, IDXS [, COLORS [, KEYCB [, DISPLAYCB [, UD]]]]])
 % Simple interactive plot.
 %
+% New "display list" calling convention
+% -------------------------------------
+% DATA: a cell of size N-by-3, with N >= 1 and rows like
+%  GL.<PRIMITIVE_TYPE>, vertex_coords, struct(...)
+% Thus, each row contains arguments to glcall(glc.draw, ...).
+% This form is detected by checking that DATA{1} is a uint32 scalar.
+%
 % Legacy "simple" calling convention
 % ----------------------------------
 % DATA: 3 x numverts or length-#datasets cell with 3-by-numverts_i arrays each
 % IDXS: zero-based, 3 x numfaces, matrix of triangle indices. If IDXS(1) is
 %  negative, -IDXS is taken as a permutation on the dimensions of the data else.
-%
-% New "display list" calling convention
-% -------------------------------------
-% DATA: a cell of size N-by-3, with N > 1 and rows like
-%  { GL.<PRIMITIVE_TYPE>, vertex_coords, struct(...) }
-% Thus, each row contains arguments to glcall(glc.draw, ...).
 function simpleplot(data, idxs, colors, keycb, displaycb, ud)
     % 'simpleplot' can be run with both classdef-enabled M-implementations or those
     % that don't have classdef.
@@ -27,13 +28,14 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         return
     end
 
-    havelist = (iscell(data) && size(data, 1)>1);
+    havelist = (iscell(data) && ~isempty(data) && ...
+                strcmp(class(data{1}), 'uint32') && numel(data{1})==1);
 
     data_dims_perm = [];
 
     if (havelist)
         % Display list trumps all.
-        assert(nargin == 1, 'When passing cell DATA with >1 rows, must have only this inarg')
+        assert(nargin == 1, 'When passing "display list" DATA, must have only this inarg')
     else
         if (nargin < 2)
             idxs = zeros(3,0,'uint32');
@@ -386,7 +388,7 @@ function sp_keyboard(key, x, y, mods)
             end
 
             options = GL.PS_TIGHT_BOUNDING_BOX + GL.PS_OCCLUSION_CULL;
-            [status, fn] = glc_beginpage_ext(GL.PS_PDF, GL.PS_SIMPLE_SORT, options, ...
+            [status, fn] = glc_beginpage_ext(GL.PS_EPS, GL.PS_NO_SORT, options, ...
                                              bufsize, fileprefix);
 
             STATUS = { 'failed opening file', 'failed gl2psBeginPage()' };
