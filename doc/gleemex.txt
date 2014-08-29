@@ -150,7 +150,7 @@ function hg_display()
 end
 ----------
 
-How the actual function corrensponding to a particular name is looked up
+How the actual function corresponding to a particular name is looked up
 differs between Octave and MATLAB. In Octave, it is possible to call secondary
 functions by name when the primary function is active, but only when the latter
 (here, `hello_gleemex`) has been invoked from the top level!
@@ -176,7 +176,7 @@ Creates a new (sub-)window with the given properties and a separate, new OpenGL
 context. To make the window do something useful, it needs to have callbacks
 attached afterwards.
 
-CAUTION: Gleemex windows and MATLAB handle grahics figures should never be open
+CAUTION: Gleemex windows and MATLAB handle graphics figures should never be open
 at the same time. Mixing them may entail crashes or other undesired behavior.
 
 * `WINDOWNAME`: the name of the window, to be shown in the top bar
@@ -380,7 +380,7 @@ Toggles the {glEnable}[enable] state of various server-side GL capabilities.
 
 * `KV_PAIRS`: A vector of even length containing successive pairs of `KEY` and
   `VALUE`. Must be of type `int32`; this is automatically ensured if `KV_PAIRS`
-  is constructed as concantenation of values containing `GL.*` values, as
+  is constructed as concatenation of values containing `GL.*` values, as
   detailed below.
 
 ** `KEY`: An allowed GL constant denoting the capability: one of
@@ -548,6 +548,7 @@ value.
 
 :glDrawElements: http://www.opengl.org/sdk/docs/man2/xhtml/glDrawElements.xml
 :glBegin: http://www.opengl.org/sdk/docs/man2/xhtml/glBegin.xml
+:glNormalPointer: http://www.opengl.org/sdk/docs/man2/xhtml/glNormalPointer.xml
 
 Passes vertex data to OpenGL, instructing it to draw them as primitives of
 `PRIMITIVE_TYPE` and optionally providing face indices, colors and/or texture
@@ -588,6 +589,9 @@ coordinates.
    elements must be less than `NumTotalVerts`. This bound check has to be done
    every `glc.draw` call, so providing a large amount of indices may be
    expensive.
+
+** `normals`: a floating type matrix of the same size as `VERTEXDATA`, giving
+   the {glNormalPointer}[normals] for each vertex.
 
 ** `tex`: The OpenGL _texture name_ (a non-zero `uint32` number as returned by
    <<glc_texture,`glc.texture`>>) with which the primitives are to be
@@ -785,7 +789,7 @@ created with `glc.newprogram`. If `PROGID` is omitted, disables any program
 for the programmable processors and reverts to OpenGL fixed functionality for
 both vertex and fragment processing.
 
-[red]#COLORMAP_DEF#: When enabling a program, if the fragment shader containes
+[red]#COLORMAP_DEF#: When enabling a program, if the fragment shader contains
 a `cmap` uniform variable, it it set to the texture unit to which the texture
 uploaded with <<glc_colormap,`glc.colormap`>> binds.
 
@@ -909,7 +913,7 @@ version of the corresponding `GL.PS_*` error code define, for example
 ==== `[STATUS, FILENAME] = glc_beginpage_ext(FORMAT, SORTMODE, OPTIONS, BUFSIZE, FILEPREFIX)`
 
 Calls `glcall(glc.beginpage, ...)` with the provided arguments, expect that
-`FILEPREFIX` automatically gets an extention appended based on the value of
+`FILEPREFIX` automatically gets an extension appended based on the value of
 `FORMAT` and the `GL.PS_COMPRESS` bit of `OPTIONS`.
 
 * `STATUS`: one of the `glcall(glc.beginpage, ...)` return values (0, 1 or 2), or
