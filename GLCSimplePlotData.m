@@ -13,6 +13,11 @@ classdef GLCSimplePlotData < handle
         moretext
         ud
 
+        % Sequence number for the vector image saved with gl2ps
+        imagenum
+        % 0: not taken a screenshot, 1: just took one, 2: status will be available
+        imagestate
+
         havelist
 
         numsamples

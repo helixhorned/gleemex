@@ -190,9 +190,9 @@ and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
 {FGAPI}[`glutInitWindowSize`], respectively. Otherwise, they are passed to
 {glutCreateSubWindow}[`glutCreateSubWindow`].
 
+//** `multisample`: Pass `GLUT_MULTISAMPLE` to {FGAPI}[`glutInitDisplayMode`]?
 * `OPTS`: A struct containing additional options:
 
-** `multisample`: Pass `GLUT_MULTISAMPLE` to {FGAPI}[`glutInitDisplayMode`]?
 ** `subwindow`: If true, creates a sub-window in the current window instead of
    a new top-level one.
 
@@ -389,7 +389,7 @@ Toggles the {glEnable}[enable] state of various server-side GL capabilities.
    `GL.POLYGON_OFFSET_POINT`, `GL.POLYGON_OFFSET_LINE`, `GL.POLYGON_OFFSET_FILL`,
    `GL.FOG`.
 
-** `VALUE`: 1 for enabling the capability, 0 for disabling it, or -1 for
+** `VALUE`: 1 for enabling the capability, 0 for disabling it, or --1 for
    flipping its enable state.
 
 * `OLDSTATE`: an `int32` vector of the same size and format as `KV_PAIRS`
@@ -661,6 +661,7 @@ Resource definition commands
 ==== `TEXID = glcall(glc.texture, TEXIMG [, OPTS])` or `glcall(glc.texture, TEXIMG, TEXID [, OPTS])`
 
 :glTexImage2D: http://www.opengl.org/sdk/docs/man2/xhtml/glTexImage2D.xml
+:glTexParameter: http://www.opengl.org/sdk/docs/man2/xhtml/glTexParameter.xml
 
 {glTexImage2D}[Uploads] an image `TEXIMG` for a texture, either creating a new
 GL texture name `TEXID` (first form) or reusing an already given texture name
@@ -688,9 +689,9 @@ various properties of `TEXIMG`:
 * `u32rgba`: described above
 
 * `minmag`: a scalar or 2-vector containing the GL constants denoting the
-  minification and magnification filters. Each one can be `GL.NEAREST` or
-  `GL.LINEAR`. If a scalar is passed, both filters are set to the given
-  mode. The default is `GL.LINEAR`.
+  minification and magnification {glTexParameter}[filters]. Each one can be
+  `GL.NEAREST` or `GL.LINEAR`. If a scalar is passed, both filters are set to
+  the given mode. The default is `GL.LINEAR`.
 
 Currently, there is no way to set the texture's wrapping mode: it is always set
 to `GL_CLAMP_TO_EDGE`. Uploading mipmaps is not supported, either.
@@ -731,6 +732,7 @@ Shader commands
 :glGetActiveUniform: http://www.opengl.org/sdk/docs/man2/xhtml/glGetActiveUniform.xml
 
 :GLSL_1_20: http://www.opengl.org/registry/doc/GLSLangSpec.Full.1.20.8.pdf
+:GLSL_1_50: https://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf
 :GLSL_newer: http://www.opengl.org/documentation/glsl/
 
 Creates a program object to be run on the programmable vertex and/or fragment
@@ -741,8 +743,8 @@ where passing an empty string means that the particular shader should not be
 {glCompileShader}[compiled] as part of the program.
 
 Vertex and fragment shaders are written in the OpenGL Shading Language. See the
-{GLSL_1_20}[1.20] specification for an easier introduction, or the
-{GLSL_newer}[newer versions] for a more complete overview.
+{GLSL_1_20}[1.20] or {GLSL_1_50}[1.50] specification for an easier
+introduction, or the {GLSL_newer}[newer versions] for a more complete overview.
 
 If either the creation of a shader or program object failed, or there was an
 error with compilation or {glLinkProgram}[linking], an M error is issued.
@@ -765,13 +767,13 @@ int main(void) {
 
 On success, returns
 
-* `PROGID`: an identifier by which the created fragment program can be
-  referenced. The fragment program is *not* enabled by creating it, use
+* `PROGID`: an identifier by which the created program can be referenced. The
+  program is *not* enabled by creating it, use
   <<glc_useprogram,`glc.useprogram`>> for this.
 
-* `UNIFORMS`: optionally, a mapping of {glGetActiveUniform}[active uniform]
-  variable names that are also valid MATLAB identifiers to Gleemex-specific
-  handles permissible to <<glc_setuniform,`glc.setuniform`>>. Only names of
+* `UNIFORMS`: a struct mapping {glGetActiveUniform}[active uniform] variable
+  names that are also valid MATLAB identifiers to Gleemex-specific handles
+  permissible to <<glc_setuniform,`glc.setuniform`>>. Only names of
   user-defined uniform variables with the following types are listed (the
   variables may be either scalars or arrays of these _base types_):
 
@@ -785,9 +787,9 @@ On success, returns
 :glUseProgram: http://www.opengl.org/sdk/docs/man2/xhtml/glUseProgram.xml
 
 If `PROGID` is passed, {glUseProgram}[enables] usage of that program previously
-created with `glc.newprogram`. If `PROGID` is omitted, disables any program
-for the programmable processors and reverts to OpenGL fixed functionality for
-both vertex and fragment processing.
+created with `glc.newprogram`. Otherwise, disables any program for the
+programmable processors and reverts to OpenGL fixed functionality for both
+vertex and fragment processing.
 
 [red]#COLORMAP_DEF#: When enabling a program, if the fragment shader contains
 a `cmap` uniform variable, it it set to the texture unit to which the texture
