@@ -15,15 +15,27 @@ function quads = glc_makequads(rects)
 
     % We have: 1st points (1:2), and 3rd points but at the positions of the 2nd (3:4).
 
+    rects = rects.';
+    % Fourth points. x1 and y2.
+    rects(:, 7:8) = rects(:, [1 4]);
+
+    % Third points. x2 and y2.
+    rects(:, 5:6) = rects(:, 3:4);
+
+    % Tweak y of second points from y2 to y1.
+    rects(:, 4) = rects(:, 2);
+    rects = rects.';
+
+%{
+    % Fourth points. x1 and y2.
+    rects(7:8, :) = rects([1 4], :);
+
     % Third points. x2 and y2.
     rects(5:6, :) = rects(3:4, :);
 
-    % Fourth points. x1 and y2.
-    rects(7:8, :) = rects([1 6], :);
-
     % Tweak y of second points from y2 to y1.
     rects(4, :) = rects(2, :);
-
+%}
     % Reshape to the result size.
     quads = reshape(rects, 2, 4*numrects);
 end
