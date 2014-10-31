@@ -19,8 +19,15 @@ classdef GLCApplicationData < handle
 
     methods
         % Constructor
-        function self = GLCApplicationData()
-            self.wh = [800 600];  % arbitrary sensible default
+        % AD = GLCApplicationData([WH])
+        function self = GLCApplicationData(varargin)
+            if (nargin == 0)
+                wh = [800 600];  % arbitrary sensible default
+            else
+                wh = varargin{1};
+                assert(isnumeric(wh) && numel(wh)==2, 'WH must be a numeric pair if passed')
+            end
+            self.wh = double(wh(:).');
             self.mxy = [1 1];
             self.mbutton = 0;
         end
@@ -39,7 +46,7 @@ classdef GLCApplicationData < handle
             end
         end
 
-        % .updateMousePos(X, Y)
+        % .updateMousePos(MBUTTON, X, Y)
         % To be called from the mouse callback of the application.
         function updateMousePos(self, mbutton, x, y)
             % NOTE: invert y
@@ -52,6 +59,11 @@ classdef GLCApplicationData < handle
             global glc
             [self.windowID, self.glutWindowID] = glcall(...
                 glc.newwindow, pos, self.wh, name, varargin{:});
+            winid = self.windowID;
+        end
+
+        % WINID = .getWindowID()
+        function winid = getWindowID(self)
             winid = self.windowID;
         end
 

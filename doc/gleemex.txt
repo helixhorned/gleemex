@@ -1013,6 +1013,16 @@ values:
 
 CAUTION: These members may become private in the future.
 
+The initial height and width may be overridden by passing a `WH` pair to the
+`GLCApplicationData` constructor in that of the derived class, like this:
+[source]
+----------
+        function self = MyApplicationData(wh)
+            self@GLCApplicationData(wh);
+            % additional initialization goes here...
+        end
+----------
+
 === Static methods and functions
 
 [float]
