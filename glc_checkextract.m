@@ -8,13 +8,17 @@ function glc_checkextract(force)
         assert(islogical(force) && numel(force)==1, 'FORCE must be a logical scalar')
     end
 
-    if (~force && exist('OCTAVE_VERSION','builtin'))
-        return
-    end
-
     st = dbstack('-completenames');
     if (numel(st) < 2)
         error('This function must be called from another function')
+    end
+
+    % numel(st) == 2 check: because of this (from the Gleemex manual):
+    %  "In Octave, it is possible to call secondary functions by name when the
+    %   primary function is active, but only when the latter (...) has been
+    %   invoked from the top level!"
+    if (~force && exist('OCTAVE_VERSION','builtin') && numel(st) == 2)
+        return
     end
 
     [callerdir, fn, ext] = fileparts(st(2).file);
