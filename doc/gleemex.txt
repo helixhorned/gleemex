@@ -929,7 +929,10 @@ Auxiliary functions
 -------------------
 
 Gleemex provides a number of convenience functions built on top of the basic
-`glcall` routines.
+`glcall` routines as well as helper routines designed to aid in application
+development.
+
+=== Convenience functions
 
 [float]
 [[glc_setup2d]]
@@ -979,10 +982,21 @@ TODO
 
 TODO
 
+=== Non-graphical helper functions
+
 [float]
 ==== `glc_checkextract()`
 
 TODO
+
+[float]
+==== `[VAL, OK] = glc_getenv(VARNAME)`
+
+Returns the value `VAL` of the variable named `VARNAME` in the base workspace if
+one exists. `OK` is `true` then.
+
+If no variable named `VARNAME` exists, `OK` is `false` and the empty array `[]`
+is returned for `VAL`.
 
 
 Creating applications
