@@ -993,9 +993,9 @@ TODO
 ==== `[VAL, OK] = glc_getenv(VARNAME)`
 
 Returns the value `VAL` of the variable named `VARNAME` in the base workspace if
-one exists. `OK` is `true` then.
+one exists. `OK` is *true* then.
 
-If no variable named `VARNAME` exists, `OK` is `false` and the empty array `[]`
+If no variable named `VARNAME` exists, `OK` is *false* and the empty array `[]`
 is returned for `VAL`.
 
 

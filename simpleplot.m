@@ -262,7 +262,17 @@ function sp_display()
     if (simpl.havelist)
         % Successively draw all elements from the list.
         for i=1:size(simpl.data, 1)
+            if (simpl.data{i, 1} == GL.POINTS + 16)
+                % Specifying GL.POINTS and +16 is redundant, so have this as a special case for:
+                pointsz = glcall(glc.get, GL.POINT_SIZE);
+                glcall(glc.set, GL.POINT_SIZE, 4);
+            end
+
             glcall(glc.draw, simpl.data{i, :});
+
+            if (simpl.data{i, 1} == GL.POINTS + 16)
+                glcall(glc.set, GL.POINT_SIZE, pointsz);
+            end
         end
     elseif (isa(simpl.displaycb, 'function_handle'))
         % Run user-provided display callback.
