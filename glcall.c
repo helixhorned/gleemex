@@ -3074,11 +3074,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             x = util_dtoi(xywh_d[0], 0, winw-1, "GLCALL: readpixels: XYWH(1)");
             y = util_dtoi(xywh_d[1], 0, winh-1, "GLCALL: readpixels: XYWH(2)");
-            w = util_dtoi(xywh_d[2], 1, winw-x, "GLCALL: readpixels: XYWH(3)");
-            h = util_dtoi(xywh_d[3], 1, winh-y, "GLCALL: readpixels: XYWH(4)");
-
             RETIFERR(x);
             RETIFERR(y);
+
+            w = util_dtoi(xywh_d[2], 1, winw-x, "GLCALL: readpixels: XYWH(3)");
+            h = util_dtoi(xywh_d[3], 1, winh-y, "GLCALL: readpixels: XYWH(4)");
             RETIFERR(w);
             RETIFERR(h);
         }
@@ -3172,6 +3172,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         verifyparam(BEGINPAGE_IN_BUFSIZE, "GLCALL: beginpage: BUFSIZE", VP_SCALAR|VP_DOUBLE);
         bufsized = *mxGetPr(BEGINPAGE_IN_BUFSIZE);
         bufsize = util_dtoi(bufsized, 1, INT32_MAX, "GLCALL: beginpage: BUFSIZE");
+        RETIFERR(bufsize);
 
         verifyparam(BEGINPAGE_IN_FILENAME, "GLCALL: beginpage: FILENAME", VP_VECTOR|VP_CHAR);
 
