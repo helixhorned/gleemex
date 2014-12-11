@@ -8,6 +8,8 @@
 % Thus, each row contains arguments to glcall(glc.draw, ...).
 % This form is detected by checking that DATA{1} is a uint32 scalar.
 %
+% IDXS becomes an optioal DISPLAYCB in this convention.
+%
 % Legacy "simple" calling convention
 % ----------------------------------
 % DATA: 3 x numverts or length-#datasets cell with 3-by-numverts_i arrays each
@@ -30,12 +32,16 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
 
     havelist = (iscell(data) && ~isempty(data) && ...
                 strcmp(class(data{1}), 'uint32') && numel(data{1})==1);
+    haveDisplayCb = ((~havelist && nargin >= 5) || (havelist && nargin >= 2));
 
     data_dims_perm = [];
 
     if (havelist)
         % Display list trumps all.
-        assert(nargin == 1, 'When passing "display list" DATA, must have only this inarg')
+        assert(nargin <= 2, 'When passing "display list" DATA, must have 1 or 2 inargs')
+        if (haveDisplayCb)
+            displaycb = idxs;
+        end
     else
         if (nargin < 2)
             idxs = zeros(3,0,'uint32');
@@ -74,8 +80,8 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
             end
         end
 
-        if (nargin >= 5)
-            if (~isa(keycb, 'function_handle'))
+        if (haveDisplayCb)
+            if (~isa(displaycb, 'function_handle'))
                 error('DISPLAYCB must be a function handle');
             end
         end
@@ -152,7 +158,7 @@ function simpleplot(data, idxs, colors, keycb, displaycb, ud)
         simpl.keycb = keycb;
     end
     simpl.displaycb = [];
-    if (nargin >= 5)
+    if (haveDisplayCb)
         simpl.displaycb = displaycb;
     end
 
@@ -355,6 +361,10 @@ function sp_display()
 
         glcall(glc.text, [28 top-14-3*(8+14)], 14, ...
                sprintf('(x, y) = (%.02f, %.02f)', mousedpos(1), mousedpos(2)));
+    end
+
+    if (simpl.havelist && isa(simpl.displaycb, 'function_handle'))
+        simpl.displaycb();
     end
 end
 
