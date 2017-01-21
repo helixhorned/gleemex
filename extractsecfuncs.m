@@ -9,6 +9,12 @@
 % FNAMES: a cell array of length #secfuncs, each element containing the
 %  secondary function's name. If ASKP is true, only if user confirmed, else {}.
 function fnames = extractsecfuncs(filename, numspace, thedir, askp)
+    if (nargin < 1)
+        error('Must pass FILENAME as first argument')
+    elseif (~ischar(filename) || ~isvector(filename))
+        error('FILENAME must be a string')
+    end
+
     if (~exist('numspace', 'var'))
         numspace = 0;
     else
