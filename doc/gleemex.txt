@@ -13,7 +13,7 @@ Introduction
 
 Gleemex is a high-level interface to OpenGL functionality for GNU Octave and
 MATLAB^(R)^. It uses FreeGLUT to provide windowing and peripheral access for
-various platforms, GLEW for OpenGL feature determination, and the MEX API to
+various platforms, GLEW for determining OpenGL features, and the MEX API to
 communicate with the host program. It allows writing interactive graphical
 applications entirely in the M scripting language.
 
@@ -42,7 +42,7 @@ without sacrificing performance where it is needed. Its main virtues are in
 ** After creating a window and adding the desired callbacks, starting the
    FreeGLUT main loop makes it run in a single thread of execution. This is in
    contrast to the native MATLAB ``handle graphics'' system, that allows for
-   some form of concurrency.
+   some form of concurrency, sometimes making program behavior hard to predict.
 
 ** Drawing proceeds in a ``fire and forget'' fashion familiar from game
    programming. Instead of having to _manage_ objects (such as lines) by
@@ -139,7 +139,6 @@ display callback named `hg_display` like this:
 ----------
 function hello_gleemex()
     % ...
-
     glcall(glc.setcallback, glc.cb_display, 'hg_display');
     % ...
 end
@@ -170,7 +169,7 @@ Initialization, setup and teardown commands
 [[glc_newwindow]]
 ==== `[WINID, GLUTWINID] = glcall(glc.newwindow, POS, EXTENT, WINDOWNAME [, OPTS])`
 
-:glutCreateSubWindow: http://www.opengl.org/documentation/specs/glut/spec3/node17.html#SECTION00052000000000000000
+:glutCreateSubWindow: https://www.opengl.org/resources/libraries/glut/spec3/node17.html
 
 Creates a new (sub-)window with the given properties and a separate, new OpenGL
 context. To make the window do something useful, it needs to have callbacks
@@ -228,8 +227,8 @@ and `EXTENT` are passed to {FGAPI}[`glutInitWindowPosition`] and
 *** `idx`: TODO (not yet specified)
 
 The return value `WINID` is a small integer identifying the window for as long
-as it is live. Note that it's *not* the identifier passed from FreeGLUT but one
-specific to Gleemex. Its values are in the range
+as it is live. Note that it is *not* the identifier passed from FreeGLUT but
+one specific to Gleemex. Its values are in the range
 [1{nbsp}..{nbsp}`MAXACTIVEWINDOWS`], where at most `MAXACTIVEWINDOWS` can be
 open at the same time (currently, 32). The identifiers of windows that have
 been closed may subsequently be reused.
@@ -260,7 +259,7 @@ registration functions.
 `glc.cb_display`, [`glutDisplayFunc`]::
 
 Invoked with no arguments when the windows is about to be redrawn. At the end,
-Gleemex always issues a `glutSwapBuffers()`.
+Gleemex always issues a call to `glutSwapBuffers()`.
 
 [[cb_reshape]] `glc.cb_reshape`, [`glutReshapeFunc`]::
 
@@ -294,7 +293,7 @@ arguments can be checked against the `GL.BUTTON_*` and `GL.MWHEEL_*` bit
 constants, `mods` are the pressed modifier keys as with the keyboard callback.
 +
 NOTE: The reported position has the origin at the origin at the *topmost* and
-leftmost pixel. Thus, it's incongruent with <<glc_setup2d,`glc_setup2d`>> in
+leftmost pixel. Thus, it is reversed with <<glc_setup2d,`glc_setup2d`>> in
 the y screen dimension.
 
 [[cb_motion]] `glc.cb_motion`, [`glutMotionFunc`, `glutPassiveMotionFunc`]::
@@ -326,9 +325,9 @@ In most cases, <<glc_closewindow,`glc.closewindow`>> should be preferred.
 Returns information about the last error.
 
 Currently, on Octave, when an error happens, Gleemex immediately issues
-`mexErrMsgText` and thus effectively does non-local control flow back to the
-prompt. *TODO*: it is not clear by itself that this is correct, i.e. doesn't
-leak resources (or worse).
+`mexErrMsgText` and thus effectively jumps back to the prompt. *TODO*: it is
+not clear by itself that this is correct, i.e. doesn't leak resources (or
+worse).
 
 On MATLAB, issuing `mexErrMsgText` while the FreeGLUT main loop is active has
 been found to produce crashes, which is why a different approach is taken: the
@@ -339,7 +338,7 @@ terminating the FreeGLUT main loop.
 The `glc.geterrstr` command can be used to query the messages of the last error
 (`STR1` and `STR2`) as well as obtain the `MException` associated with it,
 `EX`, from the MATLAB prompt. Thus, after your Gleemex app terminates
-abnormally, you'd usually issue
+abnormally, you would usually issue
 
 [source]
 ----------
@@ -559,11 +558,12 @@ coordinates.
   `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN`, `GL.QUADS`, `GL.QUAD_STRIP` or
   `GL.POLYGON`. +
   If 16 is added to `PRIMITIVE_TYPE`, only the outlines of polygons are drawn.
+  (TODO: make a symbolic constant?)
 
 * `VERTEXDATA`: A `(K, NumTotalVerts)` matrix of floating numeric type
   containing the vertex coordinates of the primitives.
 
-** `K`: The number of ``dimensions''. Can be 2, 3 or 4, corresponding to x, y,
+** `K`: The number of dimensions. Can be 2, 3 or 4, corresponding to x, y,
   z and/or w coordinates.
 ** `NumTotalVerts`: The total number of vertices, must be consistent with the
   given `PRIMITIVE_TYPE`. For example, requesting `GL.LINES` expects
@@ -604,7 +604,7 @@ coordinates.
 [float]
 ==== `glcall(glc.text, POS, HEIGHT, TEXT [, XYALIGN] [, OPTS])`
 
-Renders a line of text using a FreeGLUT's roman stroke font.
+Renders a line of text using a FreeGLUT's Roman stroke font.
 
 Assuming that <<glc_setup2d,`glc_setup2d`>> has been used to set up a 2D view,
 the string `TEXT` is drawn at pixel position `POS` and with height `HEIGHT`
@@ -633,8 +633,8 @@ should not contain newlines.
 [[glc_redisplay]]
 ==== `glcall(glc.redisplay [, NOW])`
 
-:glutPostRedisplay: http://www.opengl.org/documentation/specs/glut/spec3/node20.html#SECTION00055000000000000000
-:glutSwapBuffers: http://www.opengl.org/documentation/specs/glut/spec3/node21.html#SECTION00056000000000000000
+:glutPostRedisplay: http://www.opengl.org/resources/libraries/glut/spec3/node20.html
+:glutSwapBuffers: http://www.opengl.org/resources/libraries/glut/spec3/node21.html
 
 With no additional arguments, issues {glutPostRedisplay}[`glutPostRedisplay`].
 If `NOW` is passed, it should be a scalar logical; if `NOW` is true,
@@ -834,9 +834,9 @@ GL2PS commands and functions
 
 :GL2PS: http://www.geuz.org/gl2ps
 
-{GL2PS}[GL2PS] is a library by Christophe Geuzaine that can output geometry
-passed to OpenGL in various vector formats. Gleemex provides an interface to
-GL2PS if it was compiled with GL2PS support (see `mkglcall`).
+{GL2PS}[GL2PS] is a library that can output geometry passed to OpenGL in
+various vector formats. Gleemex provides an interface to GL2PS if it was
+compiled with GL2PS support (see `mkglcall`).
 
 The constants needed by the interface reside in the `GL` struct under names
 like `GL.PS_TIGHT_BOUNDING_BOX`. That is, they're like the corresponding
@@ -867,7 +867,7 @@ only becomes known afterwards.
 * `FORMAT`: one of `GL.PS_PS`, `GL.PS_EPS`, `GL.PS_PDF` or `GL.PS_SVG`. The two
   LaTeX formats are not (yet) available.
 
-* `SORTMODE`: one of `GL.PS_NO_SORT`, `GL.PS_SIMPLE_SORT` or `GL.PS_BPS_SORT`.
+* `SORTMODE`: one of `GL.PS_NO_SORT`, `GL.PS_SIMPLE_SORT` or `GL.PS_BSP_SORT`.
 
 * `OPTIONS`: a bitwise-OR of individual `GL.PS_*` {gl2psBeginPage}[plot option
   bits], except that the following ones are not available: `PS_SILENT`,
@@ -1068,11 +1068,11 @@ for example, `'MyApplicationData'` -- previously registered with
 ==== `nset = GLCApplicationData.setCallbacks(prefix [, suffix])`
 
 Registers callbacks for the current window. For each of the strings
-`'display'`, `'reshape'`, `'keyboard'`, `'mouse'`, `'motion'` and `'position'`, a
-potential function name is constructed by concatenating it in between `prefix`
-(which must be non-empty) and `suffix` (which is empty by default). Then, if a
-file existence check for this name suffixed with `'.m'` yields a positive
-result, the corresponding callback function is <<glc_setcallback,registered>>.
+`'display'`, `'reshape'`, `'keyboard'`, `'mouse'`, `'motion'` and `'position'`,
+a function name is constructed by concatenating it in between `prefix` (which
+must be non-empty) and `suffix` (which is empty by default). Then, if a file
+existence check for this name suffixed with `'.m'` yields a positive result,
+the corresponding callback function is <<glc_setcallback,registered>>.
 
 The returned value `nset` is the number of successfully registered callbacks.
 
