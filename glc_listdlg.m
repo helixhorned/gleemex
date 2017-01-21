@@ -327,7 +327,7 @@ end
 function key=glc_listdlg_get_keyname(v)
     key = '<unknown>';
     if (v>=33 && v<=126)
-        key = ['<' v '>'];
+        key = ['<' char(v) '>'];
     elseif (v>=65536+1 && v<=65536+12)
         key = sprintf('<F%d>', v-65536);
     elseif (v>=65536+100 && v<=65536+108)
