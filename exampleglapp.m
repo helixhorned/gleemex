@@ -1,4 +1,4 @@
-% vertposns: (#verts, 2 or 3) matrix
+% vertposns: (optional) (#verts, 2 or 3) matrix
 function exampleglapp(vertposns)
     global GL glc glex
 
@@ -117,7 +117,7 @@ function exampleglapp(vertposns)
 
     [glex.shaderid, glex.shaderuniforms] = glcall(glc.newprogram, SHADERSRC);
 
-    % XXX: treat errors between newwindow and entermainloop properly
+    % TODO: treat errors between newwindow and entermainloop properly
     glex.tex = glcall(glc.texture, glex.im, struct('u32rgba',~imagetex));
     glcall(glc.colormap, uint8(jet(256)' * 255));
     glcall(glc.setcallback, glc.cb_reshape, 'ex_reshape');
@@ -392,11 +392,6 @@ function ex_motion(buttonsdown, x, y)
     glcall(glc.redisplay);
 end
 
-%function toggle_button()
-%    global glex
-%    glex.togbtnstate=~glex.togbtnstate;
-%end
-
 function ex_mouse(button, downp, x, y, mods)
     global GL glex
 
@@ -407,8 +402,6 @@ function ex_mouse(button, downp, x, y, mods)
 
     if (button==GL.BUTTON_LEFT && downp)
         glc_callbutton([80 400 120 20], glex.mxy, 'glc_listdlg(''ListString'', {''qwe'',''asd'',''QWEQWE'',''ASDASD''}, ''Name'',''SDFG'');');
-%        @uigetfile);
-%        glc_callbutton([80 430 120 20], glex.mxy, @toggle_button);
         glc_callbutton([80 430 120 20], glex.mxy, 'global glex; glex.togbtnstate=~glex.togbtnstate;');
     end
 end
