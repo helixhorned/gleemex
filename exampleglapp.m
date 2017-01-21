@@ -41,14 +41,16 @@ function exampleglapp(vertposns)
     glex.gsp = gsp;
 
     if (imagetex)
-        %    try
-        %        OCTAVE_VERSION;
-        %        im = uint8(100*randn(256,256,3));
-        %    catch
-        % Reading this particular JPG crashes Octave at exit when run under gdb
-        % as of 2012-09-23.
-        im = imread('../connectivity_visualization/brain_area.jpg');
-        %    end
+        im = uint8(100*randn(256,256,3));
+
+        % XXX: Doesn't work with octave on ubuntu 16.04 from some point on (!), giving:
+        %
+        % error: Magick++ exception: Magick: No decode delegate for this image format (/tmp/oct-yS3ZhQ) reported by magick/constitute.c:1535 (ReadImage)
+        % error: called from
+        %    __imread__ at line 86 column 10
+        %    imageIO at line 117 column 26
+        % (...)
+%        im = imread('fireworks.png');
 
         if (mod(size(im,1),2)==1)
             im(end+1, :, :) = im(end, :, :);
